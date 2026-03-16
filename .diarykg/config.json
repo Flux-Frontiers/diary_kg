@@ -1,0 +1,8 @@
+{
+  "source_file": "diary/pepys_clean_small.txt",
+  "built_at": "2026-03-16T21:50:04.839686+00:00",
+  "chunk_count": 10,
+  "batch_size": 4,
+  "chunking_strategy": "sentence_group",
+  "chunk_size": 512
+}

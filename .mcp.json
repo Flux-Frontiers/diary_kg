@@ -1,15 +1,21 @@
 {
   "mcpServers": {
     "diarykg": {
-      "command": "/home/user/diary_kg/.venv/bin/diarykg-mcp",
+      "command": "/Users/egs/repos/diary_kg/.venv/bin/diarykg-mcp",
       "args": [
-        "--repo", "/home/user/diary_kg"
+        "--repo", "//Users/egs/repos/diary_kg/"
       ]
     },
     "dockg": {
-      "command": "/home/user/diary_kg/.venv/bin/dockg-mcp",
+      "command": "/Users/egs/repos/diary_kg/.venv/bin/dockg-mcp",
       "args": [
-        "--repo", "/home/user/diary_kg"
+        "--repo", "/Users/egs/repos/diary_kg/"
+      ]
+    },
+    "codekg": {
+      "command": "/Users/egs/repos/diary_kg/.venv/bin/codekg-mcp",
+      "args": [
+        "--repo", "/Users/egs/repos/diary_kg/"
       ]
     }
   }

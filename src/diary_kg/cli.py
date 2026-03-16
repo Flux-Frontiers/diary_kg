@@ -40,6 +40,10 @@ def _kg(root: str, source_file: str | None = None):
     return DiaryKG(root, source_file=source_file)
 
 
+class DiaryKGRef:
+    KG_DIR = ".diarykg"
+
+
 # ---------------------------------------------------------------------------
 # Root group
 # ---------------------------------------------------------------------------
@@ -120,10 +124,6 @@ def build(root, source_file, wipe, batch_size, seed, max_chunks,
             console.print(f"\n[green]✓ Snapshot saved[/green]  key: {snap['key'][:12]}...")
         except Exception as exc:  # pylint: disable=broad-exception-caught
             console.print(f"[yellow]Warning:[/yellow] snapshot failed: {exc}")
-
-
-class DiaryKGRef:
-    KG_DIR = ".diarykg"
 
 
 # ---------------------------------------------------------------------------
@@ -491,9 +491,11 @@ def snapshot_diff(key_a, key_b, root, as_json):
         return
 
     d = diff.get("delta", {})
+    snap_a = diff.get("a", {})
+    snap_b = diff.get("b", {})
     console.print(f"\n[bold]Snapshot diff[/bold]")
-    console.print(f"  From : {diff['from']['key'][:12]}  {(diff['from'].get('timestamp') or '')[:19]}  {diff['from'].get('label') or ''}")
-    console.print(f"  To   : {diff['to']['key'][:12]}  {(diff['to'].get('timestamp') or '')[:19]}  {diff['to'].get('label') or ''}")
+    console.print(f"  From : {snap_a.get('key', '')[:12]}  {(snap_a.get('timestamp') or '')[:19]}  {snap_a.get('label') or ''}")
+    console.print(f"  To   : {snap_b.get('key', '')[:12]}  {(snap_b.get('timestamp') or '')[:19]}  {snap_b.get('label') or ''}")
     console.print()
     console.print(f"  Δ chunks  : {d.get('chunks', 'n/a'):+}" if isinstance(d.get('chunks'), int) else f"  Δ chunks  : n/a")
     console.print(f"  Δ entries : {d.get('entries', 'n/a'):+}" if isinstance(d.get('entries'), int) else f"  Δ entries : n/a")
