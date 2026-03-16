@@ -15,6 +15,6 @@ Typical usage::
 
 from __future__ import annotations
 
-from .kg import DiaryKG
+from .kg import DEFAULT_MODEL, DiaryKG
 
-__all__ = ["DiaryKG"]
+__all__ = ["DiaryKG", "DEFAULT_MODEL"]

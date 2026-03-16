@@ -53,6 +53,7 @@ pre-commit = ">=3.0.0"
 
 [tool.poetry.scripts]
 diarykg         = "diary_kg.cli:main"
+diarykg-mcp     = "diary_kg.mcp_server:main"
 
 [tool.ruff]
 line-length = 100

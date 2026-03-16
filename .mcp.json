@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "codekg": {
-      "command": "/home/user/diary_kg/.venv/bin/codekg-mcp",
+    "diarykg": {
+      "command": "/home/user/diary_kg/.venv/bin/diarykg-mcp",
       "args": [
         "--repo", "/home/user/diary_kg"
       ]
