@@ -9,15 +9,14 @@ from pathlib import Path
 
 import pytest
 
-from diary_transformer.models import DiaryEntry, EntryChunk
-
 
 # ---------------------------------------------------------------------------
 # Diary entry / chunk fixtures
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def diary_entry() -> DiaryEntry:
+def diary_entry():
+    from diary_transformer.models import DiaryEntry  # noqa: PLC0415
     return DiaryEntry(
         timestamp=datetime(1667, 4, 15, 22, 30),
         original_type="raw",
@@ -29,7 +28,8 @@ def diary_entry() -> DiaryEntry:
 
 
 @pytest.fixture
-def diary_entry_no_source() -> DiaryEntry:
+def diary_entry_no_source():
+    from diary_transformer.models import DiaryEntry  # noqa: PLC0415
     return DiaryEntry(
         timestamp=datetime(1660, 1, 1, 0, 0),
         original_type="raw",
@@ -39,7 +39,8 @@ def diary_entry_no_source() -> DiaryEntry:
 
 
 @pytest.fixture
-def entry_chunk(diary_entry) -> EntryChunk:
+def entry_chunk(diary_entry):
+    from diary_transformer.models import EntryChunk  # noqa: PLC0415
     return EntryChunk(
         timestamp=diary_entry.timestamp,
         semantic_category="social",

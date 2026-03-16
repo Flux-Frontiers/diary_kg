@@ -24,7 +24,7 @@ from diary_kg.cli import cli
 # ---------------------------------------------------------------------------
 
 def _runner() -> CliRunner:
-    return CliRunner(mix_stderr=False)
+    return CliRunner()
 
 
 def _mock_kg(

@@ -1,0 +1,161 @@
+{
+  "key": "11a5d90fa6ac3eb559eb141db7913663254343ad",
+  "branch": "main",
+  "timestamp": "2026-03-16T21:34:32.525446+00:00",
+  "version": "v0.1.0",
+  "metrics": {
+    "total_nodes": 8211,
+    "total_edges": 11576,
+    "meaningful_nodes": 912,
+    "docstring_coverage": 0.368,
+    "node_counts": {
+      "class": 128,
+      "function": 199,
+      "method": 523,
+      "module": 62,
+      "symbol": 7299
+    },
+    "edge_counts": {
+      "ATTR_ACCESS": 2242,
+      "CALLS": 3278,
+      "CONTAINS": 850,
+      "IMPORTS": 510,
+      "INHERITS": 2,
+      "RESOLVES_TO": 4694
+    },
+    "critical_issues": 2,
+    "complexity_median": 13,
+    "module_node_counts": {
+      "pepys/analyze_pepys_entities.py": 280,
+      "pepys/analyze_sentence_structure.py": 194,
+      "pepys/diary_kg/__init__.py": 2,
+      "pepys/diary_kg/cli.py": 229,
+      "pepys/diary_kg/kg.py": 236,
+      "pepys/diary_kg/snapshots.py": 199,
+      "pepys/diary_transformer/__init__.py": 2,
+      "pepys/diary_transformer/chunker.py": 94,
+      "pepys/diary_transformer/classifier.py": 70,
+      "pepys/diary_transformer/cli.py": 126,
+      "pepys/diary_transformer/features.py": 132,
+      "pepys/diary_transformer/models.py": 3,
+      "pepys/diary_transformer/parser.py": 29,
+      "pepys/diary_transformer/state.py": 93,
+      "pepys/diary_transformer/topic_classifier.py": 91,
+      "pepys/diary_transformer/transformer.py": 204,
+      "pepys/diary_transformer_example.py": 32,
+      "pepys/pepys_proper_parse.py": 134,
+      "pepys/tests/__init__.py": 1,
+      "pepys/tests/conftest.py": 39,
+      "pepys/tests/test_diary_kg.py": 243,
+      "pepys/tests/test_diary_kg_adapter.py": 186,
+      "pepys/tests/test_diary_kg_cli.py": 298,
+      "pepys/tests/test_diary_kg_snapshots.py": 335,
+      "pepys/tests/test_diary_transformer_classifier.py": 116,
+      "pepys/tests/test_diary_transformer_cli.py": 209,
+      "pepys/tests/test_diary_transformer_models.py": 68,
+      "pepys/tests/test_diary_transformer_parser.py": 59,
+      "pepys/tests/test_diary_transformer_state.py": 164,
+      "pepys/topic_classifier.py": 91,
+      "scripts/benchmark_embedders.py": 139,
+      "scripts/generate_wiki.py": 159,
+      "src/diary_kg/__init__.py": 2,
+      "src/diary_kg/cli.py": 231,
+      "src/diary_kg/kg.py": 242,
+      "src/diary_kg/mcp_server.py": 63,
+      "src/diary_kg/module/__init__.py": 2,
+      "src/diary_kg/module/base.py": 60,
+      "src/diary_kg/module/types.py": 11,
+      "src/diary_kg/primitives.py": 10,
+      "src/diary_kg/snapshots.py": 199,
+      "src/diary_transformer/__init__.py": 2,
+      "src/diary_transformer/chunker.py": 94,
+      "src/diary_transformer/classifier.py": 70,
+      "src/diary_transformer/cli.py": 126,
+      "src/diary_transformer/features.py": 132,
+      "src/diary_transformer/models.py": 3,
+      "src/diary_transformer/parser.py": 29,
+      "src/diary_transformer/state.py": 93,
+      "src/diary_transformer/topic_classifier.py": 91,
+      "src/diary_transformer/transformer.py": 204,
+      "tests/__init__.py": 1,
+      "tests/conftest.py": 39,
+      "tests/test_diary_kg.py": 243,
+      "tests/test_diary_kg_adapter.py": 186,
+      "tests/test_diary_kg_cli.py": 298,
+      "tests/test_diary_kg_snapshots.py": 335,
+      "tests/test_diary_transformer_classifier.py": 116,
+      "tests/test_diary_transformer_cli.py": 209,
+      "tests/test_diary_transformer_models.py": 68,
+      "tests/test_diary_transformer_parser.py": 59,
+      "tests/test_diary_transformer_state.py": 164
+    }
+  },
+  "hotspots": [
+    {
+      "name": "m:pepys/diary_kg/kg.py:DiaryKG.info",
+      "callers": 18,
+      "callees": 21,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG.info",
+      "callers": 18,
+      "callees": 21,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:pepys/diary_kg/kg.py:DiaryKG.stats",
+      "callers": 16,
+      "callees": 3,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG.stats",
+      "callers": 16,
+      "callees": 3,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:pepys/diary_kg/kg.py:DiaryKG._read_config",
+      "callers": 15,
+      "callees": 3,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG._read_config",
+      "callers": 15,
+      "callees": 3,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/module/base.py:DiaryKGAdapter._load",
+      "callers": 13,
+      "callees": 3,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:pepys/diary_kg/kg.py:DiaryKG.is_built",
+      "callers": 13,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG.is_built",
+      "callers": 13,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "fn:src/diary_transformer/classifier.py:classify_chunk",
+      "callers": 11,
+      "callees": 3,
+      "risk_level": "low"
+    }
+  ],
+  "issues": [
+    "[LOW] Low docstring coverage (36.8%) \u2014 semantic query quality will be poor; embedding undocumented nodes yields only structured identifiers, not NL-searchable text. Prioritize docstrings on high-fan-in functions first.",
+    "[WARN] 6 orphaned functions found (`test_empty_string`, `test_missing_frontmatter_returns_empty`, `test_missing_frontmatter_returns_empty`, `test_empty_string`, `TestParseDiaryFile`, `test_empty_file_returns_empty`) -- consider archiving or documenting"
+  ],
+  "vs_previous": null,
+  "vs_baseline": null
+}
