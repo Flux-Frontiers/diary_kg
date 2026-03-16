@@ -1,7 +1,7 @@
 """
 test_diary_kg_adapter.py
 
-Unit tests for kg_rag.adapters.diary_adapter — DiaryKGAdapter.
+Unit tests for diary_kg.module — DiaryKGAdapter.
 
 All tests mock ``diary_kg.kg.DiaryKG`` so no real DocKG or LanceDB is needed.
 """
@@ -14,8 +14,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kg_rag.adapters.diary_adapter import DiaryKGAdapter
-from kg_rag.primitives import CrossHit, CrossSnippet, KGEntry, KGKind
+from diary_kg.module import DiaryKGAdapter
+from diary_kg.primitives import CrossHit, CrossSnippet, KGEntry, KGKind
 
 
 # ---------------------------------------------------------------------------
