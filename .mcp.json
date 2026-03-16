@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "codekg": {
+      "command": "/home/user/diary_kg/.venv/bin/codekg-mcp",
+      "args": [
+        "--repo", "/home/user/diary_kg"
+      ]
+    },
+    "dockg": {
+      "command": "/home/user/diary_kg/.venv/bin/dockg-mcp",
+      "args": [
+        "--repo", "/home/user/diary_kg"
+      ]
+    }
+  }
+}
