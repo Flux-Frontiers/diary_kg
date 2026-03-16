@@ -16,12 +16,17 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+#: Default sentence-transformer model — mirrors DocKG / KGRAG default.
+#: Override via the ``DIARYKG_MODEL`` environment variable.
+DEFAULT_MODEL: str = os.environ.get("DIARYKG_MODEL", "all-mpnet-base-v2")
 
 
 _FM_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
@@ -53,9 +58,15 @@ class DiaryKG:
 
     KG_DIR = ".diarykg"
 
-    def __init__(self, root: str | Path, source_file: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        root: str | Path,
+        source_file: Optional[str] = None,
+        model: str = DEFAULT_MODEL,
+    ) -> None:
         self.root = Path(root).resolve()
         self._source_file_override = source_file
+        self._model = model
 
         self._kg_dir = self.root / self.KG_DIR
         self._corpus_dir = self._kg_dir / "corpus"
@@ -127,6 +138,7 @@ class DiaryKG:
             corpus_root=str(self._corpus_dir),
             db_path=str(self._db_path),
             lancedb_dir=str(self._lancedb_dir),
+            model=self._model,
         )
         return self._dockg
 
@@ -225,6 +237,7 @@ class DiaryKG:
                 corpus_root=str(self._corpus_dir),
                 db_path=str(self._db_path),
                 lancedb_dir=str(self._lancedb_dir),
+                model=self._model,
             )
             dockg.build()
             self._dockg = dockg

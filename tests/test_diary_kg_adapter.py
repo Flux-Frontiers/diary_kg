@@ -14,8 +14,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kg_rag.adapters.diary_adapter import DiaryKGAdapter
-from kg_rag.primitives import CrossHit, CrossSnippet, KGEntry, KGKind
+from diary_kg.module import DiaryKGAdapter
+from diary_kg.primitives import CrossHit, CrossSnippet, KGEntry, KGKind
 
 
 # ---------------------------------------------------------------------------
