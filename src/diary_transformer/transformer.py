@@ -175,7 +175,7 @@ class DiaryTransformer:
             if i > 0 and i % 10 == 0:
                 pct = (i + 1) * 100 // len(all_chunks)
                 print(f"  Chunk {i + 1}/{len(all_chunks)} ({pct}%)")
-            category, _ = classify_chunk_hybrid(chunk, categories, self.topic_classifier)
+            category, topic_scores = classify_chunk_hybrid(chunk, categories, self.topic_classifier)
             context = extract_context(chunk, self.nlp)
             memory_chunks.append(
                 EntryChunk(
@@ -187,6 +187,7 @@ class DiaryTransformer:
                     phase="immediate",
                     source_entry_index=entry_idx,
                     source_entry=entry,
+                    topics=topic_scores,
                 )
             )
 
@@ -349,6 +350,10 @@ class DiaryTransformer:
             src = mem.source_entry
             sf = (src.source_file if src and src.source_file else src_label) if src else src_label
 
+            # Serialize topics as "name:score,name:score" sorted by confidence.
+            top_topics = sorted(mem.topics.items(), key=lambda x: x[1], reverse=True)[:5]
+            topics_str = ",".join(f"{t}:{s:.4f}" for t, s in top_topics)
+
             frontmatter = (
                 "---\n"
                 f"source_file: {sf}\n"
@@ -357,10 +362,19 @@ class DiaryTransformer:
                 f"timestamp: {mem.timestamp.strftime('%Y-%m-%dT%H:%M')}\n"
                 f"category: {mem.semantic_category}\n"
                 f"context: {mem.context_classification}\n"
-                "---\n"
+                + (f"topics: {topics_str}\n" if topics_str else "")
+                + "---\n"
             )
+
+            # Semantic seeding: prepend topic labels so DocKG embeddings encode topic context.
+            topic_labels = [t for t, _ in top_topics]
+            if topic_labels:
+                body = f"[Topics: {', '.join(topic_labels)}]\n\n{mem.content}\n"
+            else:
+                body = mem.content + "\n"
+
             fname = f"entry_{eidx:04d}_chunk_{cidx}.md"
-            (out_dir / fname).write_text(frontmatter + "\n" + mem.content + "\n", encoding="utf-8")
+            (out_dir / fname).write_text(frontmatter + "\n" + body, encoding="utf-8")
             written += 1
 
         print(f"✓ Wrote {written} chunk files to {corpus_dir}")

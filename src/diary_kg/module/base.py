@@ -245,3 +245,25 @@ class DiaryKGAdapter:
             lineno=None,
             end_lineno=None,
         )
+
+    @property
+    def embedder(self) -> Embedder:
+        """Embedding backend (lazy-initialised, shared between index and query)."""
+        if self._embedder is None:
+            suppress_ingestion_logging()
+            self._embedder = SentenceTransformerEmbedder(self.model_name)
+        return self._embedder
+
+    @property
+    def index(self) -> SemanticIndex:
+        """LanceDB semantic index (lazy-initialised)."""
+        if self._index is None:
+            extractor = self.make_extractor()
+            self._index = SemanticIndex(
+                self.lancedb_dir,
+                embedder=self.embedder,
+                table=self.table_name,
+                index_kinds=extractor.meaningful_node_kinds(),
+            )
+        return self._index
+
