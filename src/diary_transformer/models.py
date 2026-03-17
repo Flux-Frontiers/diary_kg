@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -41,6 +41,7 @@ class EntryChunk:
     :param phase: Processing phase label.
     :param source_entry_index: Index of the originating DiaryEntry.
     :param source_entry: Reference to the originating DiaryEntry.
+    :param topics: Topic name → confidence score from the hybrid classifier.
     """
 
     timestamp: datetime
@@ -51,3 +52,4 @@ class EntryChunk:
     phase: str = "immediate"
     source_entry_index: int = -1
     source_entry: Optional[DiaryEntry] = field(default=None, repr=False)
+    topics: Dict[str, float] = field(default_factory=dict)

@@ -250,6 +250,10 @@ class DiaryKG:
                 check=True,
             )
 
+        # Step 3 — inject classifier topic edges into the DocKG graph
+        n_edges = self._inject_topic_edges()
+        print(f"Injected {n_edges} classifier HAS_TOPIC edges.")
+
         # Persist config
         self._write_config({
             "source_file": sf,
@@ -262,6 +266,94 @@ class DiaryKG:
 
         print(f"DiaryKG build complete: {n} chunks indexed.")
         return n
+
+    def _inject_topic_edges(self) -> int:
+        """Inject classifier-derived topic nodes and HAS_TOPIC edges into the graph.
+
+        Reads ``topics:`` frontmatter from every corpus ``.md`` file, looks up
+        all DocKG chunk nodes that originate from that file, then upserts a
+        ``topic`` node and a ``HAS_TOPIC`` edge (with classifier confidence) for
+        each topic.  Uses ``INSERT OR REPLACE`` so repeated builds stay idempotent.
+
+        :return: Number of HAS_TOPIC edges written.
+        """
+        import json as _json  # pylint: disable=import-outside-toplevel
+        import sqlite3  # pylint: disable=import-outside-toplevel
+
+        if not self._db_path.exists() or not self._corpus_dir.exists():
+            return 0
+
+        md_files = sorted(self._corpus_dir.glob("*.md"))
+        if not md_files:
+            return 0
+
+        edges_written = 0
+
+        with sqlite3.connect(str(self._db_path)) as con:
+            cur = con.cursor()
+
+            for md_path in md_files:
+                text = md_path.read_text(encoding="utf-8")
+                fm = _parse_frontmatter(text)
+                topics_raw = fm.get("topics", "").strip()
+                if not topics_raw:
+                    continue
+
+                # Parse "name:score,name:score" pairs
+                topic_scores: dict[str, float] = {}
+                for pair in topics_raw.split(","):
+                    pair = pair.strip()
+                    if ":" in pair:
+                        name, _, score_str = pair.rpartition(":")
+                        try:
+                            topic_scores[name.strip()] = float(score_str)
+                        except ValueError:
+                            pass
+                    elif pair:
+                        topic_scores[pair] = 1.0
+
+                if not topic_scores:
+                    continue
+
+                # Find all DocKG chunk nodes for this file
+                filename = md_path.name
+                cur.execute(
+                    "SELECT id FROM nodes WHERE kind='chunk' AND file_path=?",
+                    (filename,),
+                )
+                chunk_ids = [row[0] for row in cur.fetchall()]
+                if not chunk_ids:
+                    continue
+
+                for topic_name, score in topic_scores.items():
+                    # Derive stable topic node ID matching DocKG's convention
+                    slug = re.sub(r"[^a-z0-9]+", "-", topic_name.lower()).strip("-")
+                    topic_id = f"topic:{slug}"
+                    topic_label = topic_name.replace("_", " ")
+
+                    # Upsert topic node
+                    cur.execute(
+                        "INSERT OR REPLACE INTO nodes"
+                        " (id, kind, name, title, text)"
+                        " VALUES (?, 'topic', ?, ?, ?)",
+                        (topic_id, f"topic:{topic_name}", topic_id, topic_label),
+                    )
+
+                    for chunk_id in chunk_ids:
+                        evidence = _json.dumps(
+                            {"confidence": round(score, 4), "source": "classifier"},
+                            separators=(",", ":"),
+                        )
+                        cur.execute(
+                            "INSERT OR REPLACE INTO edges (src, rel, dst, evidence)"
+                            " VALUES (?, 'HAS_TOPIC', ?, ?)",
+                            (chunk_id, topic_id, evidence),
+                        )
+                        edges_written += 1
+
+            con.commit()
+
+        return edges_written
 
     # ------------------------------------------------------------------
     # Query / Pack
