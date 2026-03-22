@@ -269,11 +269,49 @@ class DiarySnapshotManager:
         )
 
     def load_snapshot(self, key: str) -> DiarySnapshot | None:
-        """Load a full snapshot by tree-hash key."""
+        """Load a full snapshot by tree-hash key, or ``'latest'`` for the most recent."""
+        if key == "latest":
+            manifest = self.load_manifest()
+            if not manifest.snapshots:
+                return None
+            entry = max(manifest.snapshots, key=lambda x: x.get("timestamp", ""))
+            key = entry["key"]
+
         snap_file = self.snapshots_dir / f"{key}.json"
         if not snap_file.exists():
             return None
-        return DiarySnapshot.from_dict(json.loads(snap_file.read_text(encoding="utf-8")))
+        snap = DiarySnapshot.from_dict(json.loads(snap_file.read_text(encoding="utf-8")))
+
+        # Backfill deltas for snapshots that predate persisted deltas
+        if snap.vs_previous is None or snap.vs_baseline is None:
+            manifest = self.load_manifest()
+            entries = sorted(
+                manifest.snapshots,
+                key=lambda x: x.get("timestamp", ""),
+                reverse=True,
+            )
+            idx = next((i for i, s in enumerate(entries) if s.get("key") == snap.key), None)
+
+            if idx is not None:
+                if snap.vs_previous is None and idx + 1 < len(entries):
+                    prev_m = entries[idx + 1].get("metrics", {})
+                    snap.vs_previous = DiarySnapshotDelta(
+                        chunks=snap.metrics.chunk_count - prev_m.get("chunk_count", 0),
+                        entries=snap.metrics.entry_count - prev_m.get("entry_count", 0),
+                        nodes=snap.metrics.node_count - prev_m.get("node_count", 0),
+                        edges=snap.metrics.edge_count - prev_m.get("edge_count", 0),
+                    )
+
+                if snap.vs_baseline is None and entries:
+                    base_m = entries[-1].get("metrics", {})
+                    snap.vs_baseline = DiarySnapshotDelta(
+                        chunks=snap.metrics.chunk_count - base_m.get("chunk_count", 0),
+                        entries=snap.metrics.entry_count - base_m.get("entry_count", 0),
+                        nodes=snap.metrics.node_count - base_m.get("node_count", 0),
+                        edges=snap.metrics.edge_count - base_m.get("edge_count", 0),
+                    )
+
+        return snap
 
     # ------------------------------------------------------------------
     # Queries

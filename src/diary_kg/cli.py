@@ -504,6 +504,102 @@ def snapshot_diff(key_a, key_b, root, as_json):
 
 
 # ---------------------------------------------------------------------------
+# install-hooks
+# ---------------------------------------------------------------------------
+
+_PRE_COMMIT_HOOK = """\
+#!/usr/bin/env bash
+# DiaryKG pre-commit hook — keeps local index in sync and captures metrics
+# snapshots BEFORE quality checks run.
+# Installed by: diarykg install-hooks
+# Skip with: DIARYKG_SKIP_SNAPSHOT=1 git commit ...
+set -euo pipefail
+
+[ "${DIARYKG_SKIP_SNAPSHOT:-0}" = "1" ] && exit 0
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+cd "$REPO_ROOT"
+
+# Capture the tree hash of the staged index NOW — before any tool modifies files.
+TREE_HASH=$(git write-tree)
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Snapshot DiaryKG (no rebuild needed — corpus is source-of-truth).
+"$REPO_ROOT/.venv/bin/diarykg" snapshot save . \\
+  || { echo "[diarykg] snapshot skipped (run 'diarykg build' to initialize)" >&2; }
+
+# Stage snapshot directory so it is included in the commit.
+git add .diarykg/snapshots/ 2>/dev/null || true
+
+# Run pre-commit framework checks (ruff, mypy, detect-secrets, etc.) AFTER
+# snapshots are captured and staged. Delegates to .pre-commit-config.yaml so
+# quality checks stay in one place.
+PRECOMMIT="$REPO_ROOT/.venv/bin/pre-commit"
+if [ -x "$PRECOMMIT" ]; then
+    "$PRECOMMIT" run || exit 1
+elif command -v pre-commit &>/dev/null; then
+    pre-commit run || exit 1
+fi
+
+exit 0
+"""
+
+
+@cli.command("install-hooks")
+@click.option(
+    "--repo",
+    default=".",
+    type=click.Path(exists=True),
+    show_default=True,
+    help="Repository root.",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Overwrite an existing pre-commit hook.",
+)
+def install_hooks(repo: str, force: bool) -> None:
+    """Install the DiaryKG pre-commit git hook.
+
+    After installation, before each commit:
+      1. Captures a metrics snapshot keyed by git tree hash
+      2. Stages .diarykg/snapshots/ atomically
+      3. Runs pre-commit framework checks (ruff, mypy, etc.)
+
+    Skip with: DIARYKG_SKIP_SNAPSHOT=1 git commit ...
+
+    Example:
+        diarykg install-hooks --repo .
+    """
+    import stat  # pylint: disable=import-outside-toplevel
+
+    repo_root = Path(repo).resolve()
+    git_dir = repo_root / ".git"
+
+    if not git_dir.is_dir():
+        console.print(f"[red]Error:[/red] {repo_root} is not a git repository.")
+        raise SystemExit(1)
+
+    hooks_dir = git_dir / "hooks"
+    hooks_dir.mkdir(exist_ok=True)
+    hook_path = hooks_dir / "pre-commit"
+
+    if hook_path.exists() and not force:
+        console.print(f"Hook already exists: {hook_path}")
+        console.print("Use --force to overwrite.")
+        raise SystemExit(1)
+
+    hook_path.write_text(_PRE_COMMIT_HOOK)
+    mode = hook_path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+    hook_path.chmod(mode)
+
+    console.print(f"[green]OK[/green] Installed pre-commit hook: {hook_path}")
+    console.print("  Snapshots will be captured automatically before each commit.")
+    console.print("  Run 'diarykg build' first if you haven't built the graph yet.")
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
