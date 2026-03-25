@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `diary_embedder.py`: standalone multi-process corpus embedding pipeline using
+  `nomic-ai/nomic-embed-text-v1` (768-d) for purely local embedding; temporal
+  sampling across the full date range, sharded via `multiprocessing.Pool` where
+  each worker loads its own `SentenceTransformer` instance; outputs
+  `pepys_embeddings.json` (N × 768 float32) for downstream manifold analysis
+- `pepys/nlp_ingestion_workflow.md`: end-to-end NLP ingestion workflow
+  documentation covering parse → sample → embed → cache stages
+- `pepys/COMPLETE_TECHNICAL_ARTICLE.md`: updated with Stage 3 multi-process
+  corpus embedding section covering temporal sampling, nomic-embed-text-v1,
+  sharded Pool execution, and JSON cache output
+- `analysis/diary_kg_analysis_20260324.md`: CodeKG architectural analysis
+  snapshot (2026-03-24)
+- `.vscode/settings.json`: VSCode pytest integration config
+
+### Fixed
+- `tests/test_diary_transformer_cli.py`: removed `mix_stderr=False` from
+  `CliRunner()` constructor — argument dropped in Click 8.2
+
+### Changed
+- `pyproject.toml`: added `pythonpath = ["src"]` to `[tool.pytest.ini_options]`
+  so pytest resolves `diary_kg` and `diary_transformer` without installation
+
 - `EntryChunk.topics` field (`Dict[str, float]`): stores topic name → classifier confidence
   score from `classify_chunk_hybrid()`, previously discarded via `_`
 - `DiaryKG._inject_topic_edges()`: post-DocKG-build step that walks corpus `.md` files,

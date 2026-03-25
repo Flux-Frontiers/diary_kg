@@ -284,6 +284,9 @@ class DiaryTransformer:
         seed: Optional[int] = None,
         max_chunks_per_entry: int = 3,
         source_file: Optional[str] = None,
+        embed_cache: Optional[str] = None,
+        embed_model: str = "nomic-ai/nomic-embed-text-v1",
+        embed_workers: int = 0,
     ) -> int:
         """Transform diary entries and write DocKG-compatible Markdown files.
 
@@ -291,6 +294,10 @@ class DiaryTransformer:
         provenance fields that ``DocKG`` can index.  The ``source_file`` value
         surfaces the original source ``.txt`` path — not the generated chunk
         file — so cross-KG queries can cite the real document.
+
+        Optionally, after writing the corpus, embeds all chunk texts via
+        ``diary_embedder.embed_multiprocess`` (nomic-ai model, multi-process)
+        and writes a JSON cache consumable by ``pepys_manifold_explorer.py``.
 
         Directory layout::
 
@@ -315,6 +322,11 @@ class DiaryTransformer:
         :param max_chunks_per_entry: Max chunks emitted per entry.
         :param source_file: Override provenance path written into frontmatter.
             Defaults to the basename of *input_path*.
+        :param embed_cache: If set, path for the JSON embedding cache produced
+            by ``diary_embedder``.  Skipped when ``None`` (default).
+        :param embed_model: HuggingFace model id passed to
+            ``embed_multiprocess`` (default: ``nomic-ai/nomic-embed-text-v1``).
+        :param embed_workers: Parallel embedding workers (0 = ``os.cpu_count()``).
         :return: Number of ``.md`` files written.
         """
         from pathlib import Path as _Path  # pylint: disable=import-outside-toplevel
@@ -378,6 +390,25 @@ class DiaryTransformer:
             written += 1
 
         print(f"✓ Wrote {written} chunk files to {corpus_dir}")
+
+        if embed_cache:
+            from .diary_embedder import (  # pylint: disable=import-outside-toplevel
+                embed_multiprocess,
+                save_cache,
+            )
+            print(f"\n[Embedding] Building cache ({len(memory_entries)} chunks) → {embed_cache} …")
+            embed_texts = [
+                f"{m.semantic_category} | {m.context_classification} | {m.content}"
+                for m in memory_entries
+            ]
+            embed_timestamps = [m.timestamp for m in memory_entries]
+            E = embed_multiprocess(
+                embed_texts,
+                model=embed_model,
+                n_workers=embed_workers or None,
+            )
+            save_cache(embed_cache, E, embed_texts, embed_timestamps)
+
         return written
 
     def transform_file_incremental(

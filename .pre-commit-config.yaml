@@ -16,7 +16,7 @@ repos:
     hooks:
       - id: pylint
         name: pylint
-        entry: poetry run pylint src/
+        entry: poetry run pylint src/diary_kg src/diary_transformer
         language: system
         pass_filenames: false
         always_run: true

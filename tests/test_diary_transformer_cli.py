@@ -24,7 +24,7 @@ from diary_transformer.cli import cli
 # ---------------------------------------------------------------------------
 
 def _runner() -> CliRunner:
-    return CliRunner(mix_stderr=False)
+    return CliRunner()
 
 
 def _mock_dt(ingest_return: int = 5) -> MagicMock:

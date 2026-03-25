@@ -68,16 +68,15 @@ PyQt5 = { version = ">=5.15.0", optional = true }
 param = { version = ">=2.0.0", optional = true }
 markdown = { version = ">=3.6", optional = true }
 trame-vtk = { version = ">=2.0.0", optional = true }
+spacy = "^3.8.11"
 doc-kg = { git = "https://github.com/Flux-Frontiers/doc_kg.git" }
 code-kg = { git = "https://github.com/Flux-Frontiers/code_kg.git" }
-spacy = "^3.8.11"
+ftree-kg = { git = "https://github.com/Flux-Frontiers/ftree_kg.git" }
 
 
 [tool.poetry.extras]
 viz = ["streamlit", "pyvis", "plotly"]
 viz3d = ["pyvista", "pyvistaqt", "PyQt5", "param", "markdown", "trame-vtk"]
-doc-kg = ["doc-kg"]
-code-kg = ["code-kg"]
 
 
 [tool.poetry.group.viz3d]
@@ -124,6 +123,7 @@ explicit_package_bases = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+pythonpath = ["src"]
 
 [tool.pylint.messages_control]
 disable = ["all"]
