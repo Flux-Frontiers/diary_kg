@@ -1,0 +1,14 @@
+feat(embedder,corpus,tests): add diary_embedder multi-process pipeline, fix pytest src path and CliRunner compat
+
+- Add diary_embedder.py: local multi-process embedding via nomic-ai/nomic-embed-text-v1
+  (768-d) with temporal sampling and sharded Pool execution; outputs N×768 JSON cache
+  for downstream manifold analysis
+- Add pepys/nlp_ingestion_workflow.md: full parse→sample→embed→cache workflow docs
+- Update pepys/COMPLETE_TECHNICAL_ARTICLE.md with Stage 3 multi-process embedding section
+- Add analysis/diary_kg_analysis_20260324.md: CodeKG architectural snapshot (2026-03-24)
+- Add .vscode/settings.json: VSCode pytest integration
+- pyproject.toml: add pythonpath=["src"] to pytest so imports resolve without install
+- tests/test_diary_transformer_cli.py: drop mix_stderr=False (removed in Click 8.2)
+- kg.py, snapshots.py, transformer.py: topic pipeline wiring and snapshot delta backfill
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
