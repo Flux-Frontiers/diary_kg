@@ -324,7 +324,11 @@ class DiarySnapshotManager:
             (s["timestamp"] for s in manifest.snapshots if s.get("key") == key), None
         )
         if not current_ts:
-            return None
+            # Key not yet in manifest (unsaved snapshot) — return the most recent saved one
+            if not manifest.snapshots:
+                return None
+            latest = max(manifest.snapshots, key=lambda x: x["timestamp"])
+            return self.load_snapshot(latest["key"])
         prev_entry = None
         for s in sorted(manifest.snapshots, key=lambda x: x["timestamp"], reverse=True):
             if s["timestamp"] < current_ts:

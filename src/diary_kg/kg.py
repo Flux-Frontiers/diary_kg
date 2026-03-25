@@ -168,11 +168,15 @@ class DiaryKG:
         workers: int = 1,
         topics_file: Optional[str] = None,
         wipe: bool = False,
+        embed_cache: Optional[str] = None,
+        embed_model: str = "nomic-ai/nomic-embed-text-v1",
+        embed_workers: int = 0,
     ) -> int:
         """Run the full build pipeline: ingest → index.
 
         1. ``DiaryTransformer.ingest_to_corpus()`` → ``.diarykg/corpus/*.md``
         2. ``dockg build`` → ``.diarykg/graph.sqlite`` + ``.diarykg/lancedb/``
+        3. (optional) ``diary_embedder`` → JSON embedding cache
 
         :param batch_size: Entries to sample (``0`` = all).
         :param seed: RNG seed for reproducible sampling.
@@ -183,6 +187,11 @@ class DiaryKG:
         :param workers: Parallel workers for feature extraction.
         :param topics_file: Path to YAML topics override.
         :param wipe: Delete existing corpus + DBs before rebuilding.
+        :param embed_cache: Path for the JSON embedding cache written by
+            ``diary_embedder``.  Pass ``None`` (default) to skip.
+        :param embed_model: HuggingFace model id for embedding
+            (default: ``nomic-ai/nomic-embed-text-v1``).
+        :param embed_workers: Parallel workers for embedding (0 = cpu_count).
         :return: Number of ``.md`` chunk files written.
         :raises ValueError: If no source file is configured.
         """
@@ -227,6 +236,9 @@ class DiaryKG:
             seed=seed,
             max_chunks_per_entry=max_chunks_per_entry,
             source_file=sf,
+            embed_cache=embed_cache,
+            embed_model=embed_model,
+            embed_workers=embed_workers,
         )
 
         # Step 2 — build DocKG index

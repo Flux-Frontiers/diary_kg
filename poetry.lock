@@ -792,7 +792,6 @@ description = "A tool to build a searchable knowledge graph from Python reposito
 optional = false
 python-versions = ">=3.12,<3.14"
 groups = ["main"]
-markers = "extra == \"doc-kg\" or extra == \"code-kg\""
 files = []
 develop = false
 
@@ -1415,7 +1414,6 @@ description = "A tool to build a semantically searchable knowledge graph from ma
 optional = false
 python-versions = ">=3.12,<3.14"
 groups = ["main"]
-markers = "extra == \"doc-kg\""
 files = []
 develop = false
 
@@ -1782,6 +1780,30 @@ test = ["aiohttp (!=4.0.0a0,!=4.0.0a1)", "numpy", "pytest", "pytest-asyncio (!=0
 test-downstream = ["aiobotocore (>=2.5.4,<3.0.0)", "dask[dataframe,test]", "moto[server] (>4,<5)", "pytest-timeout", "xarray"]
 test-full = ["adlfs", "aiohttp (!=4.0.0a0,!=4.0.0a1)", "backports-zstd ; python_version < \"3.14\"", "cloudpickle", "dask", "distributed", "dropbox", "dropboxdrivefs", "fastparquet", "fusepy", "gcsfs", "jinja2", "kerchunk", "libarchive-c", "lz4", "notebook", "numpy", "ocifs", "pandas (<3.0.0)", "panel", "paramiko", "pyarrow", "pyarrow (>=1)", "pyftpdlib", "pygit2", "pytest", "pytest-asyncio (!=0.22.0)", "pytest-benchmark", "pytest-cov", "pytest-mock", "pytest-recording", "pytest-rerunfailures", "python-snappy", "requests", "smbprotocol", "tqdm", "urllib3", "zarr", "zstandard ; python_version < \"3.14\""]
 tqdm = ["tqdm"]
+
+[[package]]
+name = "ftree-kg"
+version = "0.2.0"
+description = "KGModule for file tree knowledge graphs"
+optional = false
+python-versions = ">=3.12,<3.14"
+groups = ["main"]
+files = []
+develop = false
+
+[package.dependencies]
+click = "^8.1.0"
+
+[package.extras]
+code-kg = ["code-kg @ git+https://github.com/Flux-Frontiers/code_kg.git"]
+doc-kg = ["doc-kg @ git+https://github.com/Flux-Frontiers/doc_kg.git"]
+kgrag = ["code-kg @ git+https://github.com/Flux-Frontiers/code_kg.git", "doc-kg @ git+https://github.com/Flux-Frontiers/doc_kg.git", "kg-rag @ git+https://github.com/Flux-Frontiers/KGRAG.git"]
+
+[package.source]
+type = "git"
+url = "https://github.com/Flux-Frontiers/ftree_kg.git"
+reference = "HEAD"
+resolved_reference = "71e3976aaee075d99c21fb6ba506f92d565ad258"
 
 [[package]]
 name = "gitdb"
@@ -7825,12 +7847,10 @@ multidict = ">=4.0"
 propcache = ">=0.2.1"
 
 [extras]
-code-kg = ["code-kg"]
-doc-kg = ["doc-kg"]
 viz = ["plotly", "pyvis", "streamlit"]
 viz3d = ["PyQt5", "markdown", "param", "pyvista", "pyvistaqt", "trame-vtk"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "a513b0f0e220d31c357b865e07760e089e07e27380b570398464ca2128ca4d76"
+content-hash = "d99910117653d0a1f64d4223fd127718f04f25ee09563f29110d4db0389e4437"

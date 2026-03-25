@@ -222,6 +222,31 @@ This single architectural decision **transformed local execution from impossible
 │  • Temporal relationship discovery                              │
 │  • Background consolidation operations                          │
 └─────────────────────────────────────────────────────────────────┘
+
+ ┌──────────────────────── ALSO FROM PHASE 5 OUTPUT ────────────────────────┐
+ │  (pepys_enriched_full.txt branches here for manifold analysis)            │
+ └────────────────────────────────┬─────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│        STAGE 3: MULTI-PROCESS CORPUS EMBEDDING                  │
+│        (pepys_embedder.py)                                      │
+│  • Temporal sampling (--n): evenly spaced across 1660–1669      │
+│  • nomic-ai/nomic-embed-text-v1 (768-d), task prefix applied    │
+│  • Sharded across os.cpu_count() workers via Pool               │
+│  • Each worker loads its own SentenceTransformer instance       │
+│  • Output: pepys_embeddings.json (N × 768 float32)              │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│        STAGE 4: MANIFOLD & MRL ANALYSIS                         │
+│        (pepys_manifold_explorer.py)                             │
+│  • Intrinsic dimensionality: PCA elbow, Participation Ratio,    │
+│    TwoNN estimator                                              │
+│  • MRL truncation quality: MRR@10 at 64/128/256/512/768 dims    │
+│  • ManifoldWalker cosine-space flight (origin → destination)    │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.2 Integration with Hindsight
@@ -610,6 +635,109 @@ def save_entries(
             # Write memory in pipe-delimited format
             f.write(f"{memory.timestamp} | {memory.category} | {memory.context} | {memory.content}\n")
 ```
+
+### 3.6 Stage 3: Multi-Process Corpus Embedding (`pepys_embedder.py`)
+
+**Goal**: Produce a dense float32 embedding matrix for every entry in the enriched corpus, suitable for manifold analysis, intrinsic dimensionality estimation, and MRL retrieval benchmarking.  This stage is **entirely local**—no external inference API is needed.
+
+**Input**: `pepys_enriched_full.txt` (pipe-delimited, output of Stage 2)
+**Output**: `pepys_embeddings.json` — an aligned cache of embeddings, texts, and ISO timestamps
+
+#### Pipeline
+
+| Step | Description |
+|------|-------------|
+| 1 | Parse `TIMESTAMP \| TYPE \| CATEGORY \| CONTENT` lines |
+| 2 | Optionally truncate long entries (`--max-chars`) |
+| 3 | Optionally subsample *N* entries with even temporal spacing (`--n`) |
+| 4 | Shard texts across `--workers` processes; each loads its own `SentenceTransformer` |
+| 5 | Concatenate shards → float32 **(N × 768)** matrix |
+| 6 | Write JSON cache: `{"embeddings": [...], "texts": [...], "timestamps": [...]}` |
+
+#### Temporal Sampling
+
+`--n` does **not** head-slice—it picks indices evenly across the full 1660–1669 arc:
+
+```python
+indices = [round(i * (total - 1) / (n - 1)) for i in range(n)]
+```
+
+This ensures temporal diversity is preserved regardless of sample size.
+
+#### Multi-Process Architecture
+
+The expensive encoding step is parallelised across CPU cores using Python's `multiprocessing.Pool`. Each worker subprocess loads its own independent `SentenceTransformer` instance—no shared state, no GIL contention:
+
+```python
+def _embed_shard(args: tuple) -> np.ndarray:
+    texts_shard, model_id, batch_size, worker_id = args
+    embedder = SentenceTransformer(model_id, trust_remote_code=True)
+    prefixed = [f"search_document: {t}" for t in texts_shard]
+    vecs = embedder.encode(
+        prefixed,
+        batch_size=batch_size,
+        convert_to_numpy=True,
+        show_progress_bar=(worker_id == 0),   # only first worker shows bar
+    )
+    return vecs.astype(np.float32)
+```
+
+**Why spawn-based multiprocessing?** CUDA contexts and HuggingFace tokenizer state are not fork-safe. Using `multiprocessing.set_start_method("spawn")` (set at `__main__` entry) ensures each worker initialises its environment cleanly.
+
+#### Embedding Model
+
+| Property | Value |
+|----------|-------|
+| Model | `nomic-ai/nomic-embed-text-v1` |
+| Dimension | 768 |
+| Task prefix | `search_document: <TYPE> \| <CATEGORY> \| <content>` |
+| Parallelism | `--workers` (default: `os.cpu_count()`) |
+| Batch size | `--batch-size` (default: 64) |
+
+The `search_document:` task prefix is required by the Nomic v1 model to activate its asymmetric retrieval mode, which is better suited to document-length diary entries than the symmetric default.
+
+#### Cache Format
+
+```json
+{
+  "embeddings": [[0.12, -0.04, ...], ...],   // float32, shape (N, 768)
+  "texts":      ["pepys domestic | Home | ...", ...],
+  "timestamps": ["1660-01-01T00:00:00", ...]
+}
+```
+
+The aligned triple (embeddings, texts, timestamps) allows downstream analysis to correlate geometric position in 768-D space with entry content and date without reloading the original corpus.
+
+#### Usage
+
+```bash
+# Full corpus (all 3355 entries)
+python src/diary_transformer/pepys_embedder.py
+
+# Temporally sampled subset (1000 entries, evenly spaced 1660–1669)
+python src/diary_transformer/pepys_embedder.py --n 1000
+
+# Custom paths / model / workers
+python src/diary_transformer/pepys_embedder.py \
+    --diary  path/to/pepys_enriched_full.txt \
+    --output path/to/my_cache.json \
+    --model  nomic-ai/nomic-embed-text-v1 \
+    --workers 8 \
+    --batch-size 128
+
+# Force overwrite existing cache
+python src/diary_transformer/pepys_embedder.py --force
+```
+
+#### Design Decisions
+
+1. **Local-only**: Model loaded directly from HuggingFace; no inference API, no network calls after first download.
+2. **Spawn start method**: Required for tokenizer/CUDA safety in multi-process encoding.
+3. **Task-prefix prepended per shard**: Nomic v1 requires the prefix; it is applied inside `_embed_shard` so there is no memory overhead for the prefixed strings in the main process.
+4. **Force flag**: Avoids silent overwrites; `--force` deletes the old cache before writing the new one.
+5. **Clean separation from ingestion**: The embedder is a standalone script that operates entirely on the enriched corpus file—it has no dependency on Hindsight or the database.
+
+---
 
 ## 4. Batch Ingestion System
 
@@ -1091,6 +1219,25 @@ Small models struggle with this complexity. Our breakthrough: **We already have 
 - Graceful fallback on corruption
 
 **Impact**: Rapid iteration during development.
+
+### 7.6 Multi-Process Corpus Embedding for Local Manifold Analysis
+
+**Problem**: Embedding all 3,355 enriched diary entries sequentially is CPU-bound and slow; using a remote API defeats the local-first goal and exposes content.
+
+**Solution**: `pepys_embedder.py` shards the corpus across `os.cpu_count()` subprocesses via `multiprocessing.Pool`. Each worker loads its own `SentenceTransformer(nomic-ai/nomic-embed-text-v1)` instance independently—no GIL contention, no shared GPU state. Workers are launched with the `spawn` start method for tokenizer safety. Results are concatenated in original order, producing a single float32 (N × 768) matrix written to a JSON cache consumable by downstream analysis scripts.
+
+**Results**:
+- Full 3,355-entry corpus embedded entirely locally—no inference API
+- Linear scaling up to ~8 workers; beyond that I/O and model-load overhead flatten throughput
+- JSON cache (`pepys_embeddings.json`) consumed by `pepys_manifold_explorer.py` without reloading the corpus
+- Temporal sampling (`--n`) preserves even date coverage from 1660 to 1669
+
+**Downstream analysis unlocked** by the embedding cache:
+- **Intrinsic dimensionality**: PCA elbow (90/95/99%), Participation Ratio, TwoNN estimator
+- **MRL truncation quality**: MRR@10 at 64/128/256/512/768 dims with Pepys-specific queries
+- **ManifoldWalker**: Cosine-space flight from a semantic origin to a destination, walking through the most similar entries at each step
+
+**Impact**: Enables rigorous evaluation of embedding geometry, retrieval quality at reduced dimensionalities, and semantic navigation of historical prose—all offline, on standard consumer hardware.
 
 ## 8. Lessons Learned
 
@@ -1756,6 +1903,7 @@ This work establishes a **general-purpose, production-ready pipeline** for trans
 - **Pre-processing**: Smart parsing with temporal inference (adaptable to any domain)
 - **5-phase transformation**: Semantic chunking, hybrid classification, diversity sampling
 - **Direct temporal integration**: Bypasses LLM extraction, enables local execution
+- **Multi-process corpus embedding**: Fully local 768-d embeddings via `nomic-ai/nomic-embed-text-v1`, sharded across CPU cores for manifold and MRL analysis
 - **Production-grade infrastructure**: 99.9% success rate, resumable processing, comprehensive error handling
 
 **Validated on the Hardest Test Case**:
@@ -1770,6 +1918,7 @@ This work establishes a **general-purpose, production-ready pipeline** for trans
 3. **Direct temporal writes**: 100% accuracy, no LLM hallucinations, reduces context requirements
 4. **Hybrid classification**: Domain-specific (YAML config) + semantic discovery fallback
 5. **Local-first optimization**: Works with 16K-32K context models, not just cloud
+6. **Multi-process corpus embedding**: Spawn-safe parallel embedding pipeline produces float32 (N × 768) cache for manifold/MRL analysis without any external inference API
 
 ### What This Enables
 
@@ -1855,9 +2004,11 @@ This is how knowledge becomes interactive. This is how prose becomes conversatio
 **Natural Language Processing:**
 - **spaCy** (v3.7+). Industrial-strength Natural Language Processing in Python. Explosion AI. https://spacy.io | GitHub: https://github.com/explosion/spaCy
   - Honnibal, M., & Montani, I. (2017). spaCy 2: Natural language understanding with Bloom embeddings, convolutional neural networks and incremental parsing.
-- **Sentence-Transformers** (v2.2+). Python framework for state-of-the-art sentence, text and image embeddings. GitHub: https://github.com/UKPLab/sentence-transformers | Documentation: https://www.sbert.net
+- **Sentence-Transformers** (v5.0+). Python framework for state-of-the-art sentence, text and image embeddings. GitHub: https://github.com/UKPLab/sentence-transformers | Documentation: https://www.sbert.net
   - Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks. *Proceedings of EMNLP-IJCNLP 2019*. https://arxiv.org/abs/1908.10084
-  - Model used: `all-MiniLM-L6-v2` - 384-dimensional dense vector space for semantic similarity.
+  - Model used for chunking: `all-MiniLM-L6-v2` — 384-dimensional dense vector space for semantic similarity.
+  - Model used for corpus embedding: `nomic-ai/nomic-embed-text-v1` — 768-dimensional asymmetric retrieval model requiring task prefix (`search_document:` / `search_query:`). Nussbaum, Z., et al. (2024). Nomic Embed: Training a Reproducible Long Context Text Embedder. *arXiv:2402.01613*. HuggingFace: https://huggingface.co/nomic-ai/nomic-embed-text-v1
+- **tqdm** (v4+). Fast, extensible progress bar for Python and CLI. GitHub: https://github.com/tqdm/tqdm
 
 **Database and Vector Storage:**
 - **PostgreSQL** (v14+). The World's Most Advanced Open Source Relational Database. https://www.postgresql.org
@@ -1974,6 +2125,6 @@ This is how knowledge becomes interactive. This is how prose becomes conversatio
 
 ---
 
-*Last Updated: 2026-02-15*
-*Article Length: ~8,500 words*
+*Last Updated: 2026-03-24*
+*Article Length: ~9,500 words*
 *Target Audience: NLP engineers, digital humanities researchers, memory systems developers*
