@@ -84,6 +84,7 @@ class DiaryKGAdapter:
             return
 
         try:
+            # pylint: disable-next=import-outside-toplevel
             from diary_kg.kg import DiaryKG  # noqa: PLC0415
         except ImportError as exc:
             raise ImportError(
@@ -110,7 +111,8 @@ class DiaryKGAdapter:
         :return: ``True`` if this adapter can serve queries.
         """
         try:
-            import diary_kg  # noqa: F401, PLC0415
+            import diary_kg  # noqa: F401, PLC0415  # pylint: disable=import-outside-toplevel
+
             return bool(self.entry.is_built)
         except ImportError:
             return False
@@ -133,7 +135,7 @@ class DiaryKGAdapter:
         self._load()
         try:
             raw: list[dict[str, Any]] = self._kg.query(q, k=k)  # type: ignore[union-attr]
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return []
         return [self._to_hit(r) for r in raw]
 
@@ -155,7 +157,7 @@ class DiaryKGAdapter:
         self._load()
         try:
             raw: list[dict[str, Any]] = self._kg.pack(q, k=k)  # type: ignore[union-attr]
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return []
         return [self._to_snippet(r) for r in raw]
 
@@ -171,7 +173,7 @@ class DiaryKGAdapter:
         self._load()
         try:
             return self._kg.stats()  # type: ignore[union-attr]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return {"kind": "diary", "error": str(exc)}
 
     def analyze(self) -> str:
@@ -185,7 +187,7 @@ class DiaryKGAdapter:
         self._load()
         try:
             return self._kg.analyze()  # type: ignore[union-attr]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return f"# DiaryKG Analysis\n\nAnalysis failed: {exc}\n"
 
     # ------------------------------------------------------------------
@@ -202,7 +204,7 @@ class DiaryKGAdapter:
         self._load()
         try:
             return self._kg.info()  # type: ignore[union-attr]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return {"error": str(exc)}
 
     # ------------------------------------------------------------------
@@ -245,25 +247,3 @@ class DiaryKGAdapter:
             lineno=None,
             end_lineno=None,
         )
-
-    @property
-    def embedder(self) -> Embedder:
-        """Embedding backend (lazy-initialised, shared between index and query)."""
-        if self._embedder is None:
-            suppress_ingestion_logging()
-            self._embedder = SentenceTransformerEmbedder(self.model_name)
-        return self._embedder
-
-    @property
-    def index(self) -> SemanticIndex:
-        """LanceDB semantic index (lazy-initialised)."""
-        if self._index is None:
-            extractor = self.make_extractor()
-            self._index = SemanticIndex(
-                self.lancedb_dir,
-                embedder=self.embedder,
-                table=self.table_name,
-                index_kinds=extractor.meaningful_node_kinds(),
-            )
-        return self._index
-

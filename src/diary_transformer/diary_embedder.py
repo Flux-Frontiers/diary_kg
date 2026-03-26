@@ -61,7 +61,6 @@ from pathlib import Path
 import numpy as np
 from rich.console import Console
 from sentence_transformers import SentenceTransformer
-from tqdm import tqdm
 
 console = Console()
 
@@ -69,9 +68,7 @@ console = Console()
 # Defaults
 # ---------------------------------------------------------------------------
 DEFAULT_MODEL = "nomic-ai/nomic-embed-text-v1"
-DEFAULT_DIARY = str(
-    Path(__file__).parent / "pepys" / "pepys_enriched_full.txt"
-)
+DEFAULT_DIARY = str(Path(__file__).parent / "pepys" / "pepys_enriched_full.txt")
 DEFAULT_OUTPUT = str(Path(__file__).parent / "pepys_embeddings.json")
 
 
@@ -191,14 +188,9 @@ def embed_multiprocess(
     ]
     actual_workers = len(shards)
 
-    pool_args = [
-        (shard, model, batch_size, idx)
-        for idx, shard in enumerate(shards)
-    ]
+    pool_args = [(shard, model, batch_size, idx) for idx, shard in enumerate(shards)]
 
-    console.print(
-        f"  Spawning {actual_workers} workers × {chunk_size} entries each …"
-    )
+    console.print(f"  Spawning {actual_workers} workers × {chunk_size} entries each …")
     with multiprocessing.Pool(actual_workers) as pool:
         results = pool.map(_embed_shard, pool_args)
 
@@ -297,8 +289,7 @@ def main() -> None:
     output_path = Path(args.output)
     if output_path.exists() and not args.force:
         console.print(
-            f"[yellow]Output already exists: {output_path}\n"
-            "Pass --force to overwrite.[/yellow]"
+            f"[yellow]Output already exists: {output_path}\nPass --force to overwrite.[/yellow]"
         )
         sys.exit(0)
 
@@ -309,8 +300,9 @@ def main() -> None:
     # Step 1: Parse
     console.print(f"\n[bold]Step 1:[/bold] Parsing {diary_path} …")
     texts, timestamps = parse_diary(str(diary_path))
-    console.print(f"  Parsed {len(texts)} total entries  "
-                  f"({timestamps[0].date()} → {timestamps[-1].date()})")
+    console.print(
+        f"  Parsed {len(texts)} total entries  ({timestamps[0].date()} → {timestamps[-1].date()})"
+    )
 
     # Step 2: Truncate
     if args.max_chars:
@@ -352,7 +344,7 @@ def main() -> None:
     )
 
     # Step 5: Save
-    console.print(f"\n[bold]Step 3:[/bold] Saving cache …")
+    console.print("\n[bold]Step 3:[/bold] Saving cache …")
     save_cache(str(output_path), E, texts, timestamps)
 
 

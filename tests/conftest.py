@@ -9,14 +9,15 @@ from pathlib import Path
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Diary entry / chunk fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def diary_entry():
     from diary_transformer.models import DiaryEntry  # noqa: PLC0415
+
     return DiaryEntry(
         timestamp=datetime(1667, 4, 15, 22, 30),
         original_type="raw",
@@ -30,6 +31,7 @@ def diary_entry():
 @pytest.fixture
 def diary_entry_no_source():
     from diary_transformer.models import DiaryEntry  # noqa: PLC0415
+
     return DiaryEntry(
         timestamp=datetime(1660, 1, 1, 0, 0),
         original_type="raw",
@@ -41,6 +43,7 @@ def diary_entry_no_source():
 @pytest.fixture
 def entry_chunk(diary_entry):
     from diary_transformer.models import EntryChunk  # noqa: PLC0415
+
     return EntryChunk(
         timestamp=diary_entry.timestamp,
         semantic_category="social",
@@ -88,16 +91,51 @@ def built_kg_root(tmp_kg_root, sample_diary_txt) -> Path:
 
     # Write a handful of fake chunk .md files
     chunks = [
-        ("1660-01-01T00:00", "domestic", "Home", "pepys_diary.txt", 0, 0,
-         "Blessed be God, at the end of the last year I was in very good health."),
-        ("1660-01-02T09:00", "work", "Work", "pepys_diary.txt", 1, 0,
-         "This morning I went to the office and there did some business."),
-        ("1660-01-03T20:00", "domestic", "Home", "pepys_diary.txt", 2, 0,
-         "Home and to supper, and so to bed."),
-        ("1661-04-23T00:00", "work", "Office", "pepys_diary.txt", 3, 0,
-         "Up early and to the office, where much business."),
-        ("1667-04-15T22:30", "social", "General", "pepys_diary.txt", 4, 0,
-         "So home and to bed, being very sleepy after great mirth."),
+        (
+            "1660-01-01T00:00",
+            "domestic",
+            "Home",
+            "pepys_diary.txt",
+            0,
+            0,
+            "Blessed be God, at the end of the last year I was in very good health.",
+        ),
+        (
+            "1660-01-02T09:00",
+            "work",
+            "Work",
+            "pepys_diary.txt",
+            1,
+            0,
+            "This morning I went to the office and there did some business.",
+        ),
+        (
+            "1660-01-03T20:00",
+            "domestic",
+            "Home",
+            "pepys_diary.txt",
+            2,
+            0,
+            "Home and to supper, and so to bed.",
+        ),
+        (
+            "1661-04-23T00:00",
+            "work",
+            "Office",
+            "pepys_diary.txt",
+            3,
+            0,
+            "Up early and to the office, where much business.",
+        ),
+        (
+            "1667-04-15T22:30",
+            "social",
+            "General",
+            "pepys_diary.txt",
+            4,
+            0,
+            "So home and to bed, being very sleepy after great mirth.",
+        ),
     ]
     for ts, cat, ctx, sf, eidx, cidx, body in chunks:
         fname = f"entry_{eidx:04d}_chunk_{cidx}.md"
@@ -114,13 +152,15 @@ def built_kg_root(tmp_kg_root, sample_diary_txt) -> Path:
 
     # config.json
     (kg_dir / "config.json").write_text(
-        json.dumps({
-            "source_file": "pepys_diary.txt",
-            "built_at": datetime.now(UTC).isoformat(),
-            "chunk_count": len(chunks),
-            "chunking_strategy": "sentence_group",
-            "chunk_size": 512,
-        }),
+        json.dumps(
+            {
+                "source_file": "pepys_diary.txt",
+                "built_at": datetime.now(UTC).isoformat(),
+                "chunk_count": len(chunks),
+                "chunking_strategy": "sentence_group",
+                "chunk_size": 512,
+            }
+        ),
         encoding="utf-8",
     )
 

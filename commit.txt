@@ -1,14 +1,30 @@
-feat(embedder,corpus,tests): add diary_embedder multi-process pipeline, fix pytest src path and CliRunner compat
+feat(benchmarks,transformer,lint): mpnet manifold explorer, Rich UI, ruff cleanup
 
-- Add diary_embedder.py: local multi-process embedding via nomic-ai/nomic-embed-text-v1
-  (768-d) with temporal sampling and sharded Pool execution; outputs N×768 JSON cache
-  for downstream manifold analysis
-- Add pepys/nlp_ingestion_workflow.md: full parse→sample→embed→cache workflow docs
-- Update pepys/COMPLETE_TECHNICAL_ARTICLE.md with Stage 3 multi-process embedding section
-- Add analysis/diary_kg_analysis_20260324.md: CodeKG architectural snapshot (2026-03-24)
-- Add .vscode/settings.json: VSCode pytest integration
-- pyproject.toml: add pythonpath=["src"] to pytest so imports resolve without install
-- tests/test_diary_transformer_cli.py: drop mix_stderr=False (removed in Click 8.2)
-- kg.py, snapshots.py, transformer.py: topic pipeline wiring and snapshot delta backfill
+Add mpnet manifold exploration suite in benchmarks/ using diary_kg's native
+all-mpnet-base-v2 stack (intrinsic dimensionality, MRR@k, ManifoldWalker cosine
+flights) against a nomic-embed-text-v1 reference manifold.  Replace DiaryTransformer
+print() calls with Rich console + progress bars.  Full ruff pass resolves 253 lint
+issues across the codebase.
+
+Benchmarks & corpora:
+- benchmarks/: pepys_mpnet_explorer.py, pepys_manifold_explorer_reference.py,
+  pepys_embedder.py, pepys_temporal_flight.py, results JSON/PNG, MISSION_BRIEFING.md
+- pepys/: diverse_1000.txt, diverse_chunked.txt, pepys_enriched_full.txt corpus files
+
+Docs:
+- docs/personal_agent_pipeline_article.md (+ _internal.md)
+- docs/COMPLETE_TECHNICAL_ARTICLE.md moved from pepys/
+
+DiaryTransformer:
+- transformer.py: Rich Console + Progress bars replace all bare print() calls
+- pyproject.toml: add proteuspy ^0.99.35 dependency
+
+Ruff fixes (253 total, 236 auto + 17 manual):
+- Deprecated typing generics → builtins (Dict→dict, List→list, Optional→X|None)
+- Import ordering (isort), unused imports, unused variables, f-string cleanup
+- KGKind now inherits from StrEnum (UP042)
+- module/base.py: TYPE_CHECKING guard for Embedder/SemanticIndex from doc_kg.index
+- kg.py: TYPE_CHECKING for DiarySnapshotManager; removed dead node_count/edge_count
+- Tests: restored result capture in test_dockg_not_found_exits_nonzero
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>

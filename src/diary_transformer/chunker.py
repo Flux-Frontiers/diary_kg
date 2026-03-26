@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -32,12 +32,12 @@ def _extract_temporal_preamble(content: str) -> str:
     return (match.group(1) + " ") if match else ""
 
 
-def _split_by_length(text: str, max_chunk_length: int) -> List[str]:
+def _split_by_length(text: str, max_chunk_length: int) -> list[str]:
     """Split text at sentence boundaries to stay within *max_chunk_length*."""
     if len(text) <= max_chunk_length:
         return [text]
 
-    chunks: List[str] = []
+    chunks: list[str] = []
     current = ""
 
     for sentence in re.split(r"[.!?]+\s+", text):
@@ -69,26 +69,21 @@ def _split_by_length(text: str, max_chunk_length: int) -> List[str]:
     return chunks
 
 
-def _chunk_by_sentence_groups(sentences: List[str], n: int) -> List[str]:
+def _chunk_by_sentence_groups(sentences: list[str], n: int) -> list[str]:
     """Group consecutive sentences in batches of *n*."""
     if len(sentences) <= 1:
         return sentences
-    return [
-        " ".join(sentences[i : i + n])
-        for i in range(0, len(sentences), n)
-    ]
+    return [" ".join(sentences[i : i + n]) for i in range(0, len(sentences), n)]
 
 
-def _chunk_hybrid(
-    sentences: List[str], n: int, max_chunk_length: int
-) -> List[str]:
+def _chunk_hybrid(sentences: list[str], n: int, max_chunk_length: int) -> list[str]:
     """Group by *n* sentences but hard-cap at *max_chunk_length* characters."""
     if len(sentences) == 1:
         s = sentences[0]
         return _split_by_length(s, max_chunk_length) if len(s) > max_chunk_length else [s]
 
-    chunks: List[str] = []
-    current: List[str] = []
+    chunks: list[str] = []
+    current: list[str] = []
     current_len = 0
 
     for sentence in sentences:
@@ -117,11 +112,11 @@ def _chunk_hybrid(
 
 
 def _chunk_semantic(
-    sentences: List[str],
+    sentences: list[str],
     clean_content: str,
     max_chunk_length: int,
     sentence_model: Any,
-) -> List[str]:
+) -> list[str]:
     """Split at points of low cosine similarity between adjacent sentences."""
     if len(sentences) <= 1:
         return (
@@ -142,7 +137,7 @@ def _chunk_semantic(
     threshold = float(np.mean(similarities) - np.std(similarities))
     breaks = [0] + [i + 1 for i, s in enumerate(similarities) if s < threshold] + [len(sentences)]
 
-    chunks: List[str] = []
+    chunks: list[str] = []
     for a, b in zip(breaks, breaks[1:]):
         chunk_text = " ".join(sentences[a:b])
         if len(chunk_text) > max_chunk_length:
@@ -160,8 +155,8 @@ def segment_content(
     chunking_strategy: str,
     sentences_per_chunk: int,
     max_chunks_per_entry: int = 3,
-    timestamp: Optional[datetime] = None,  # kept for backward-compat; unused
-) -> List[str]:
+    timestamp: datetime | None = None,  # kept for backward-compat; unused
+) -> list[str]:
     """Segment diary entry content into one or more chunks.
 
     :param content: Raw diary entry text.
@@ -175,7 +170,7 @@ def segment_content(
     :return: List of non-trivial chunk strings.
     """
     preamble = _extract_temporal_preamble(content)
-    clean = content[len(preamble):].lstrip() if preamble else content
+    clean = content[len(preamble) :].lstrip() if preamble else content
 
     doc = nlp(clean)
     sentences = [s.text.strip() for s in doc.sents if s.text.strip()]

@@ -20,9 +20,9 @@ import sys
 from pathlib import Path
 
 import click
+from rich import box
 from rich.console import Console
 from rich.table import Table
-from rich import box
 
 console = Console()
 
@@ -37,6 +37,7 @@ _ROOT_ARG = click.argument(
 def _kg(root: str, source_file: str | None = None):
     """Instantiate DiaryKG, importing lazily to keep CLI startup fast."""
     from diary_kg.kg import DiaryKG  # pylint: disable=import-outside-toplevel
+
     return DiaryKG(root, source_file=source_file)
 
 
@@ -48,6 +49,7 @@ class DiaryKGRef:
 # Root group
 # ---------------------------------------------------------------------------
 
+
 @click.group()
 def cli():
     """DiaryKG — knowledge graph for diaries and journals."""
@@ -57,28 +59,51 @@ def cli():
 # build
 # ---------------------------------------------------------------------------
 
+
 @cli.command("build")
 @_ROOT_ARG
-@click.option("--source", "-s", "source_file", default=None,
-              help="Diary .txt path relative to ROOT (required on first build).")
+@click.option(
+    "--source",
+    "-s",
+    "source_file",
+    default=None,
+    help="Diary .txt path relative to ROOT (required on first build).",
+)
 @click.option("--wipe", is_flag=True, help="Delete existing corpus + DBs before rebuilding.")
-@click.option("--batch-size", "-b", default=0, show_default=True,
-              help="Entries to sample (0 = all).")
+@click.option(
+    "--batch-size", "-b", default=0, show_default=True, help="Entries to sample (0 = all)."
+)
 @click.option("--seed", default=None, type=int, help="RNG seed.")
-@click.option("--max-chunks", "-m", default=3, show_default=True,
-              help="Max chunks per diary entry.")
-@click.option("--chunking",
-              type=click.Choice(["sentence_group", "semantic", "hybrid"]),
-              default="sentence_group", show_default=True)
-@click.option("--chunk-size", default=512, show_default=True,
-              help="Max characters per chunk.")
-@click.option("--workers", "-w", default=1, show_default=True,
-              help="Parallel workers for feature extraction.")
+@click.option(
+    "--max-chunks", "-m", default=3, show_default=True, help="Max chunks per diary entry."
+)
+@click.option(
+    "--chunking",
+    type=click.Choice(["sentence_group", "semantic", "hybrid"]),
+    default="sentence_group",
+    show_default=True,
+)
+@click.option("--chunk-size", default=512, show_default=True, help="Max characters per chunk.")
+@click.option(
+    "--workers", "-w", default=1, show_default=True, help="Parallel workers for feature extraction."
+)
 @click.option("--topics-file", default=None, help="YAML topics override.")
-@click.option("--snapshot", "save_snapshot", is_flag=True,
-              help="Capture a snapshot after a successful build.")
-def build(root, source_file, wipe, batch_size, seed, max_chunks,
-          chunking, chunk_size, workers, topics_file, save_snapshot):
+@click.option(
+    "--snapshot", "save_snapshot", is_flag=True, help="Capture a snapshot after a successful build."
+)
+def build(
+    root,
+    source_file,
+    wipe,
+    batch_size,
+    seed,
+    max_chunks,
+    chunking,
+    chunk_size,
+    workers,
+    topics_file,
+    save_snapshot,
+):
     """Build the DiaryKG: ingest diary → index into SQLite + LanceDB.
 
     \b
@@ -108,6 +133,7 @@ def build(root, source_file, wipe, batch_size, seed, max_chunks,
         sys.exit(1)
     except Exception as exc:  # pylint: disable=broad-exception-caught
         import traceback  # pylint: disable=import-outside-toplevel
+
         console.print(f"[red]Error:[/red] {exc}")
         traceback.print_exc()
         sys.exit(1)
@@ -129,6 +155,7 @@ def build(root, source_file, wipe, batch_size, seed, max_chunks,
 # ---------------------------------------------------------------------------
 # query
 # ---------------------------------------------------------------------------
+
 
 @cli.command("query")
 @click.argument("query_str", metavar="QUERY")
@@ -192,12 +219,18 @@ def query(query_str, root, k, as_json):
 # pack
 # ---------------------------------------------------------------------------
 
+
 @cli.command("pack")
 @click.argument("query_str", metavar="QUERY")
 @_ROOT_ARG
 @click.option("-k", default=8, show_default=True, help="Number of snippets.")
-@click.option("--output", "-o", default=None, type=click.Path(),
-              help="Write output to file instead of stdout.")
+@click.option(
+    "--output",
+    "-o",
+    default=None,
+    type=click.Path(),
+    help="Write output to file instead of stdout.",
+)
 @click.option("--json", "as_json", is_flag=True, help="Output raw JSON.")
 def pack(query_str, root, k, output, as_json):
     """Extract LLM-ready diary snippets matching a query.
@@ -244,10 +277,12 @@ def pack(query_str, root, k, output, as_json):
 # analyze
 # ---------------------------------------------------------------------------
 
+
 @cli.command("analyze")
 @_ROOT_ARG
-@click.option("--output", "-o", default=None, type=click.Path(),
-              help="Write Markdown report to file.")
+@click.option(
+    "--output", "-o", default=None, type=click.Path(), help="Write Markdown report to file."
+)
 def analyze(root, output):
     """Generate a Markdown analysis report for the diary corpus.
 
@@ -262,7 +297,9 @@ def analyze(root, output):
     """
     kg = _kg(root)
     if not kg.is_built():
-        console.print("[red]Error:[/red] DiaryKG is not built. Run [bold]diarykg build[/bold] first.")
+        console.print(
+            "[red]Error:[/red] DiaryKG is not built. Run [bold]diarykg build[/bold] first."
+        )
         sys.exit(1)
 
     report = kg.analyze()
@@ -277,6 +314,7 @@ def analyze(root, output):
 # ---------------------------------------------------------------------------
 # status
 # ---------------------------------------------------------------------------
+
 
 @cli.command("status")
 @_ROOT_ARG
@@ -293,13 +331,13 @@ def status(root):
         if not p.exists():
             return "missing"
         if p.is_dir():
-            total = sum(f.stat().st_size for f in p.rglob("*") if f.is_file())
+            total: float = sum(f.stat().st_size for f in p.rglob("*") if f.is_file())
         else:
-            total = p.stat().st_size
+            total = float(p.stat().st_size)
         for unit in ("B", "KB", "MB", "GB"):
             if total < 1024:
                 return f"{total:.1f} {unit}"
-            total /= 1024
+            total = total / 1024
         return f"{total:.1f} TB"
 
     config = kg._read_config()  # pylint: disable=protected-access
@@ -324,6 +362,7 @@ def status(root):
 # snapshot group
 # ---------------------------------------------------------------------------
 
+
 @cli.group("snapshot")
 def snapshot():
     """Manage DiaryKG point-in-time snapshots."""
@@ -331,7 +370,9 @@ def snapshot():
 
 @snapshot.command("save")
 @_ROOT_ARG
-@click.option("--version", "-v", default="0.1.0", show_default=True, help="Version string for this snapshot.")
+@click.option(
+    "--version", "-v", default="0.1.0", show_default=True, help="Version string for this snapshot."
+)
 @click.option("--label", "-l", default=None, help="Human-readable label for this snapshot.")
 def snapshot_save(root, version, label):
     """Capture a snapshot of current corpus metrics.
@@ -353,7 +394,7 @@ def snapshot_save(root, version, label):
         sys.exit(1)
 
     m = snap.get("metrics", {})
-    console.print(f"[green]✓ Snapshot saved[/green]")
+    console.print("[green]✓ Snapshot saved[/green]")
     console.print(f"  Key     : {snap['key']}")
     console.print(f"  Branch  : {snap.get('branch')}")
     console.print(f"  Chunks  : {m.get('chunk_count')}")
@@ -447,10 +488,14 @@ def snapshot_show(key, root, as_json):
 
     if snap.get("vs_previous"):
         d = snap["vs_previous"]
-        console.print(f"\n  vs previous → Δchunks={d.get('chunks'):+d}  Δentries={d.get('entries'):+d}")
+        console.print(
+            f"\n  vs previous → Δchunks={d.get('chunks'):+d}  Δentries={d.get('entries'):+d}"
+        )
     if snap.get("vs_baseline"):
         d = snap["vs_baseline"]
-        console.print(f"  vs baseline → Δchunks={d.get('chunks'):+d}  Δentries={d.get('entries'):+d}")
+        console.print(
+            f"  vs baseline → Δchunks={d.get('chunks'):+d}  Δentries={d.get('entries'):+d}"
+        )
 
     topics = m.get("topic_counts", {})
     if topics:
@@ -493,13 +538,29 @@ def snapshot_diff(key_a, key_b, root, as_json):
     d = diff.get("delta", {})
     snap_a = diff.get("a", {})
     snap_b = diff.get("b", {})
-    console.print(f"\n[bold]Snapshot diff[/bold]")
-    console.print(f"  From : {snap_a.get('key', '')[:12]}  {(snap_a.get('timestamp') or '')[:19]}  {snap_a.get('label') or ''}")
-    console.print(f"  To   : {snap_b.get('key', '')[:12]}  {(snap_b.get('timestamp') or '')[:19]}  {snap_b.get('label') or ''}")
+    console.print("\n[bold]Snapshot diff[/bold]")
+    console.print(
+        f"  From : {snap_a.get('key', '')[:12]}  {(snap_a.get('timestamp') or '')[:19]}  {snap_a.get('label') or ''}"
+    )
+    console.print(
+        f"  To   : {snap_b.get('key', '')[:12]}  {(snap_b.get('timestamp') or '')[:19]}  {snap_b.get('label') or ''}"
+    )
     console.print()
-    console.print(f"  Δ chunks  : {d.get('chunks', 'n/a'):+}" if isinstance(d.get('chunks'), int) else f"  Δ chunks  : n/a")
-    console.print(f"  Δ entries : {d.get('entries', 'n/a'):+}" if isinstance(d.get('entries'), int) else f"  Δ entries : n/a")
-    console.print(f"  Δ nodes   : {d.get('nodes', 'n/a'):+}" if isinstance(d.get('nodes'), int) else f"  Δ nodes   : n/a")
+    console.print(
+        f"  Δ chunks  : {d.get('chunks', 'n/a'):+}"
+        if isinstance(d.get("chunks"), int)
+        else "  Δ chunks  : n/a"
+    )
+    console.print(
+        f"  Δ entries : {d.get('entries', 'n/a'):+}"
+        if isinstance(d.get("entries"), int)
+        else "  Δ entries : n/a"
+    )
+    console.print(
+        f"  Δ nodes   : {d.get('nodes', 'n/a'):+}"
+        if isinstance(d.get("nodes"), int)
+        else "  Δ nodes   : n/a"
+    )
     console.print()
 
 
@@ -509,7 +570,7 @@ def snapshot_diff(key_a, key_b, root, as_json):
 
 _PRE_COMMIT_HOOK = """\
 #!/usr/bin/env bash
-# DiaryKG pre-commit hook — keeps local index in sync and captures metrics
+# DiaryKG pre-commit hook — keeps local indices in sync and captures metrics
 # snapshots BEFORE quality checks run.
 # Installed by: diarykg install-hooks
 # Skip with: DIARYKG_SKIP_SNAPSHOT=1 git commit ...
@@ -524,13 +585,33 @@ cd "$REPO_ROOT"
 # Capture the tree hash of the staged index NOW — before any tool modifies files.
 TREE_HASH=$(git write-tree)
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
+VERSION=$(grep '^version' pyproject.toml 2>/dev/null | head -1 | cut -d'"' -f2)
 
-# Snapshot DiaryKG (no rebuild needed — corpus is source-of-truth).
-"$REPO_ROOT/.venv/bin/diarykg" snapshot save . \\
-  || { echo "[diarykg] snapshot skipped (run 'diarykg build' to initialize)" >&2; }
+# Rebuild CodeKG index for diary_kg source code.
+"$REPO_ROOT/.venv/bin/codekg" build --repo "$REPO_ROOT" || exit 1
 
-# Stage snapshot directory so it is included in the commit.
-git add .diarykg/snapshots/ 2>/dev/null || true
+# Rebuild DocKG index from docs/ corpus in this repo.
+"$REPO_ROOT/.venv/bin/dockg" build --repo "$REPO_ROOT" --wipe || true
+
+# Snapshot CodeKG (VERSION optional — auto-detects from installed package).
+"$REPO_ROOT/.venv/bin/codekg" snapshot save \\
+    --repo . \\
+    --tree-hash "$TREE_HASH" \\
+    --branch "$BRANCH" \\
+  || { echo "[codekg] snapshot skipped (run 'codekg build' to initialize)" >&2; }
+
+# Snapshot DocKG if available (VERSION required — read from pyproject.toml).
+if [ -f "$REPO_ROOT/.dockg/graph.sqlite" ]; then
+    "$REPO_ROOT/.venv/bin/dockg" snapshot save "${VERSION:-unknown}" \\
+        --repo . \\
+        --tree-hash "$TREE_HASH" \\
+        --branch "$BRANCH" \\
+      || { echo "[dockg] snapshot skipped" >&2; }
+fi
+
+# Stage both snapshot directories so they are included in the commit.
+git add .codekg/snapshots/ 2>/dev/null || true
+git add .dockg/snapshots/ 2>/dev/null || true
 
 # Run pre-commit framework checks (ruff, mypy, detect-secrets, etc.) AFTER
 # snapshots are captured and staged. Delegates to .pre-commit-config.yaml so
@@ -563,9 +644,10 @@ def install_hooks(repo: str, force: bool) -> None:
     """Install the DiaryKG pre-commit git hook.
 
     After installation, before each commit:
-      1. Captures a metrics snapshot keyed by git tree hash
-      2. Stages .diarykg/snapshots/ atomically
-      3. Runs pre-commit framework checks (ruff, mypy, etc.)
+      1. Rebuilds CodeKG and DocKG indices from staged content
+      2. Captures metrics snapshots keyed by git tree hash
+      3. Stages .codekg/snapshots/ and .dockg/snapshots/ atomically
+      4. Runs pre-commit framework checks (ruff, mypy, etc.)
 
     Skip with: DIARYKG_SKIP_SNAPSHOT=1 git commit ...
 
@@ -595,13 +677,16 @@ def install_hooks(repo: str, force: bool) -> None:
     hook_path.chmod(mode)
 
     console.print(f"[green]OK[/green] Installed pre-commit hook: {hook_path}")
-    console.print("  Snapshots will be captured automatically before each commit.")
-    console.print("  Run 'diarykg build' first if you haven't built the graph yet.")
+    console.print("  CodeKG and DocKG indices will be rebuilt and snapshotted before each commit.")
+    console.print(
+        "  Run 'codekg build --repo .' and 'dockg build --repo .' first if not yet built."
+    )
 
 
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     """Console-script entry point."""

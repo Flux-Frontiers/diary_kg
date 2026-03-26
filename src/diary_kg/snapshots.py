@@ -24,10 +24,10 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Dataclasses
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class DiarySnapshotMetrics:
@@ -35,8 +35,8 @@ class DiarySnapshotMetrics:
 
     chunk_count: int
     entry_count: int
-    node_count: int          # DocKG total nodes
-    edge_count: int          # DocKG total edges
+    node_count: int  # DocKG total nodes
+    edge_count: int  # DocKG total edges
     topic_counts: dict[str, int] = field(default_factory=dict)
     context_counts: dict[str, int] = field(default_factory=dict)
     temporal_span: dict[str, str] = field(default_factory=dict)  # {start, end}
@@ -59,7 +59,7 @@ class DiarySnapshot:
     """A temporal snapshot of DiaryKG metrics."""
 
     branch: str
-    timestamp: str       # ISO 8601 UTC
+    timestamp: str  # ISO 8601 UTC
     version: str
     metrics: DiarySnapshotMetrics
     vs_previous: DiarySnapshotDelta | None = None
@@ -129,6 +129,7 @@ class DiarySnapshotManifest:
 # ---------------------------------------------------------------------------
 # Manager
 # ---------------------------------------------------------------------------
+
 
 class DiarySnapshotManager:
     """Manages DiaryKG snapshot storage, retrieval, and comparison."""
@@ -264,9 +265,7 @@ class DiarySnapshotManager:
         )
 
     def _save_manifest(self, manifest: DiarySnapshotManifest) -> None:
-        self.manifest_path.write_text(
-            json.dumps(manifest.to_dict(), indent=2), encoding="utf-8"
-        )
+        self.manifest_path.write_text(json.dumps(manifest.to_dict(), indent=2), encoding="utf-8")
 
     def load_snapshot(self, key: str) -> DiarySnapshot | None:
         """Load a full snapshot by tree-hash key, or ``'latest'`` for the most recent."""
@@ -320,9 +319,7 @@ class DiarySnapshotManager:
     def get_previous(self, key: str) -> DiarySnapshot | None:
         """Return the snapshot immediately before this one (by timestamp)."""
         manifest = self.load_manifest()
-        current_ts = next(
-            (s["timestamp"] for s in manifest.snapshots if s.get("key") == key), None
-        )
+        current_ts = next((s["timestamp"] for s in manifest.snapshots if s.get("key") == key), None)
         if not current_ts:
             # Key not yet in manifest (unsaved snapshot) — return the most recent saved one
             if not manifest.snapshots:

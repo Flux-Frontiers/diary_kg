@@ -22,7 +22,10 @@ import subprocess
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from diary_kg.snapshots import DiarySnapshotManager
 
 #: Default sentence-transformer model — mirrors DocKG / KGRAG default.
 #: Override via the ``DIARYKG_MODEL`` environment variable.
@@ -32,18 +35,17 @@ DEFAULT_MODEL: str = os.environ.get("DIARYKG_MODEL", "all-mpnet-base-v2")
 _FM_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
 
-def _parse_frontmatter(text: str) -> Dict[str, str]:
+def _parse_frontmatter(text: str) -> dict[str, str]:
     """Return frontmatter key-value dict from a Markdown chunk file."""
     m = _FM_RE.match(text)
     if not m:
         return {}
-    result: Dict[str, str] = {}
+    result: dict[str, str] = {}
     for line in m.group(1).splitlines():
         if ": " in line:
             k, _, v = line.partition(": ")
             result[k.strip()] = v.strip()
     return result
-
 
 
 class DiaryKG:
@@ -61,7 +63,7 @@ class DiaryKG:
     def __init__(
         self,
         root: str | Path,
-        source_file: Optional[str] = None,
+        source_file: str | None = None,
         model: str = DEFAULT_MODEL,
     ) -> None:
         self.root = Path(root).resolve()
@@ -82,7 +84,7 @@ class DiaryKG:
     # ------------------------------------------------------------------
 
     @property
-    def source_path(self) -> Optional[Path]:
+    def source_path(self) -> Path | None:
         """Absolute path to the source diary file (if set / resolvable)."""
         sf = self._source_file_override or self._read_config().get("source_file")
         if sf:
@@ -91,7 +93,7 @@ class DiaryKG:
         return None
 
     @property
-    def source_file(self) -> Optional[str]:
+    def source_file(self) -> str | None:
         """Relative source file label (used in frontmatter + provenance)."""
         return self._source_file_override or self._read_config().get("source_file")
 
@@ -103,7 +105,7 @@ class DiaryKG:
     # Config helpers
     # ------------------------------------------------------------------
 
-    def _read_config(self) -> Dict[str, Any]:
+    def _read_config(self) -> dict[str, Any]:
         if self._config_path.exists():
             try:
                 return json.loads(self._config_path.read_text(encoding="utf-8"))
@@ -111,7 +113,7 @@ class DiaryKG:
                 pass
         return {}
 
-    def _write_config(self, data: Dict[str, Any]) -> None:
+    def _write_config(self, data: dict[str, Any]) -> None:
         self._kg_dir.mkdir(parents=True, exist_ok=True)
         existing = self._read_config()
         existing.update(data)
@@ -131,9 +133,7 @@ class DiaryKG:
                 "doc-kg is not installed. Install it with: pip install doc-kg"
             ) from exc
         if not self.is_built():
-            raise RuntimeError(
-                f"DiaryKG is not built yet. Run DiaryKG.build() first."
-            )
+            raise RuntimeError("DiaryKG is not built yet. Run DiaryKG.build() first.")
         self._dockg = DocKG(
             corpus_root=str(self._corpus_dir),
             db_path=str(self._db_path),
@@ -143,13 +143,13 @@ class DiaryKG:
         return self._dockg
 
     @staticmethod
-    def _source_from_node(node: Dict[str, Any], fallback_sf: Optional[str]) -> str:
+    def _source_from_node(node: dict[str, Any], fallback_sf: str | None) -> str:
         """Extract original source file label from a DocKG result node."""
         meta = node.get("metadata") or {}
         return meta.get("source_file") or fallback_sf or node.get("file_path") or ""
 
     @staticmethod
-    def _timestamp_from_node(node: Dict[str, Any]) -> Optional[str]:
+    def _timestamp_from_node(node: dict[str, Any]) -> str | None:
         meta = node.get("metadata") or {}
         return meta.get("timestamp")
 
@@ -160,15 +160,15 @@ class DiaryKG:
     def build(
         self,
         batch_size: int = 0,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         max_chunks_per_entry: int = 3,
         chunking_strategy: str = "sentence_group",
         chunk_size: int = 512,
         sentences_per_chunk: int = 4,
         workers: int = 1,
-        topics_file: Optional[str] = None,
+        topics_file: str | None = None,
         wipe: bool = False,
-        embed_cache: Optional[str] = None,
+        embed_cache: str | None = None,
         embed_model: str = "nomic-ai/nomic-embed-text-v1",
         embed_workers: int = 0,
     ) -> int:
@@ -209,13 +209,14 @@ class DiaryKG:
 
         if wipe:
             import shutil  # pylint: disable=import-outside-toplevel
+
             for target in (self._corpus_dir, self._lancedb_dir):
                 if target.exists():
                     shutil.rmtree(target)
             if self._db_path.exists():
                 self._db_path.unlink()
             self._dockg = None
-            print(f"Wiped existing corpus + databases.")
+            print("Wiped existing corpus + databases.")
 
         self._corpus_dir.mkdir(parents=True, exist_ok=True)
 
@@ -245,6 +246,7 @@ class DiaryKG:
         print(f"Building DocKG index for {self._corpus_dir}...")
         try:
             from doc_kg.kg import DocKG  # pylint: disable=import-outside-toplevel
+
             dockg = DocKG(
                 corpus_root=str(self._corpus_dir),
                 db_path=str(self._db_path),
@@ -255,10 +257,17 @@ class DiaryKG:
             self._dockg = dockg
         except ImportError:
             # Fallback: invoke dockg CLI
-            result = subprocess.run(
-                ["dockg", "build", "--repo", str(self._corpus_dir),
-                 "--db", str(self._db_path),
-                 "--lancedb", str(self._lancedb_dir)],
+            subprocess.run(
+                [
+                    "dockg",
+                    "build",
+                    "--repo",
+                    str(self._corpus_dir),
+                    "--db",
+                    str(self._db_path),
+                    "--lancedb",
+                    str(self._lancedb_dir),
+                ],
                 check=True,
             )
 
@@ -267,14 +276,16 @@ class DiaryKG:
         print(f"Injected {n_edges} classifier HAS_TOPIC edges.")
 
         # Persist config
-        self._write_config({
-            "source_file": sf,
-            "built_at": datetime.now(UTC).isoformat(),
-            "chunk_count": n,
-            "batch_size": batch_size,
-            "chunking_strategy": chunking_strategy,
-            "chunk_size": chunk_size,
-        })
+        self._write_config(
+            {
+                "source_file": sf,
+                "built_at": datetime.now(UTC).isoformat(),
+                "chunk_count": n,
+                "batch_size": batch_size,
+                "chunking_strategy": chunking_strategy,
+                "chunk_size": chunk_size,
+            }
+        )
 
         print(f"DiaryKG build complete: {n} chunks indexed.")
         return n
@@ -371,7 +382,7 @@ class DiaryKG:
     # Query / Pack
     # ------------------------------------------------------------------
 
-    def query(self, q: str, k: int = 8) -> List[Dict[str, Any]]:
+    def query(self, q: str, k: int = 8) -> list[dict[str, Any]]:
         """Semantic search over the diary corpus.
 
         :param q: Natural-language query string.
@@ -386,18 +397,20 @@ class DiaryKG:
         hits = []
         for node in result.nodes[:k]:
             relevance = node.get("relevance") or {}
-            hits.append({
-                "node_id": node.get("id", ""),
-                "score": relevance.get("score", 0.0),
-                "summary": node.get("text") or node.get("title", ""),
-                "source_file": self._source_from_node(node, sf),
-                "timestamp": self._timestamp_from_node(node),
-                "category": (node.get("metadata") or {}).get("category", ""),
-                "context": (node.get("metadata") or {}).get("context", ""),
-            })
+            hits.append(
+                {
+                    "node_id": node.get("id", ""),
+                    "score": relevance.get("score", 0.0),
+                    "summary": node.get("text") or node.get("title", ""),
+                    "source_file": self._source_from_node(node, sf),
+                    "timestamp": self._timestamp_from_node(node),
+                    "category": (node.get("metadata") or {}).get("category", ""),
+                    "context": (node.get("metadata") or {}).get("context", ""),
+                }
+            )
         return hits
 
-    def pack(self, q: str, k: int = 8) -> List[Dict[str, Any]]:
+    def pack(self, q: str, k: int = 8) -> list[dict[str, Any]]:
         """Return source snippets for LLM ingestion.
 
         :param q: Natural-language query string.
@@ -411,20 +424,22 @@ class DiaryKG:
         snippets = []
         for node in pack_result.nodes:
             relevance = node.get("relevance") or {}
-            snippets.append({
-                "node_id": node.get("id", ""),
-                "score": relevance.get("score", 0.0),
-                "content": node.get("text") or "",
-                "source_file": self._source_from_node(node, sf),
-                "timestamp": self._timestamp_from_node(node),
-            })
+            snippets.append(
+                {
+                    "node_id": node.get("id", ""),
+                    "score": relevance.get("score", 0.0),
+                    "content": node.get("text") or "",
+                    "source_file": self._source_from_node(node, sf),
+                    "timestamp": self._timestamp_from_node(node),
+                }
+            )
         return snippets
 
     # ------------------------------------------------------------------
     # Info / Stats / Analyze
     # ------------------------------------------------------------------
 
-    def info(self) -> Dict[str, Any]:
+    def info(self) -> dict[str, Any]:
         """Return diary-specific corpus information.
 
         Reads config + corpus frontmatter without loading the full DocKG.
@@ -437,7 +452,7 @@ class DiaryKG:
         config = self._read_config()
         md_files = list(self._corpus_dir.rglob("*.md")) if self._corpus_dir.exists() else []
 
-        timestamps: List[str] = []
+        timestamps: list[str] = []
         categories: Counter = Counter()
         contexts: Counter = Counter()
         entry_indices: set = set()
@@ -457,23 +472,11 @@ class DiaryKG:
                 continue
 
         timestamps.sort()
-        span: Optional[Dict[str, str]] = None
+        span: dict[str, str] | None = None
         if len(timestamps) >= 2:
             span = {"start": timestamps[0], "end": timestamps[-1]}
         elif timestamps:
             span = {"start": timestamps[0], "end": timestamps[0]}
-
-        # DocKG node/edge counts (only if built and loaded)
-        node_count: Any = "n/a"
-        edge_count: Any = "n/a"
-        if self.is_built():
-            try:
-                dockg = self._load_dockg()
-                s = dockg.store.stats()
-                node_count = s.get("total_nodes", "n/a")
-                edge_count = s.get("total_edges", "n/a")
-            except Exception:  # pylint: disable=broad-exception-caught
-                pass
 
         return {
             "source_file": config.get("source_file", self._source_file_override),
@@ -485,7 +488,7 @@ class DiaryKG:
             "context_counts": dict(contexts.most_common()),
         }
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Return KG storage statistics (node + edge counts).
 
         Matches the contract expected by the KGRAG cross-KG ``analyze``
@@ -515,7 +518,7 @@ class DiaryKG:
         span = info.get("temporal_span") or {}
         span_str = f"{span.get('start', '?')} → {span.get('end', '?')}" if span else "n/a"
 
-        lines: List[str] = [
+        lines: list[str] = [
             "# DiaryKG Analysis Report",
             "",
             f"**Root:** `{self.root}`  |  **Source:** `{info.get('source_file', 'unknown')}`",
@@ -554,11 +557,12 @@ class DiaryKG:
     # Snapshots  (delegated to DiarySnapshotManager)
     # ------------------------------------------------------------------
 
-    def _snapshot_mgr(self) -> "DiarySnapshotManager":
+    def _snapshot_mgr(self) -> DiarySnapshotManager:  # type: ignore[name-defined]
         from .snapshots import DiarySnapshotManager  # pylint: disable=import-outside-toplevel
+
         return DiarySnapshotManager(self._snapshot_dir)
 
-    def snapshot_save(self, version: str = "0.1.0", label: Optional[str] = None) -> Dict[str, Any]:
+    def snapshot_save(self, version: str = "0.1.0", label: str | None = None) -> dict[str, Any]:
         """Capture a point-in-time snapshot of corpus metrics.
 
         Key is the git tree hash (``HEAD^{tree}``), matching the code_kg
@@ -584,7 +588,7 @@ class DiaryKG:
         mgr.save_snapshot(snap)
         return snap.to_dict()
 
-    def snapshot_list(self, branch: Optional[str] = None) -> List[Dict[str, Any]]:
+    def snapshot_list(self, branch: str | None = None) -> list[dict[str, Any]]:
         """Return all snapshots in reverse-chronological order.
 
         :param branch: Filter by branch name if provided.
@@ -592,7 +596,7 @@ class DiaryKG:
         """
         return self._snapshot_mgr().list_snapshots(branch=branch)
 
-    def snapshot_show(self, key: str) -> Dict[str, Any]:
+    def snapshot_show(self, key: str) -> dict[str, Any]:
         """Load a full snapshot by tree-hash key.
 
         :param key: Git tree hash (from ``snapshot_list()``).
@@ -604,7 +608,7 @@ class DiaryKG:
             raise FileNotFoundError(f"Snapshot not found: {key}")
         return snap.to_dict()
 
-    def snapshot_diff(self, key_a: str, key_b: str) -> Dict[str, Any]:
+    def snapshot_diff(self, key_a: str, key_b: str) -> dict[str, Any]:
         """Compare two snapshots and return a delta report.
 
         :param key_a: Earlier snapshot tree-hash key.

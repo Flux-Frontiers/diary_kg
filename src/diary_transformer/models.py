@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional
 
 
 @dataclass
@@ -25,8 +24,8 @@ class DiaryEntry:
     category: str
     content: str
     source_file: str = ""
-    index: Optional[int] = None
-    chunks: Optional[List[str]] = field(default=None, repr=False)
+    index: int | None = None
+    chunks: list[str] | None = field(default=None, repr=False)
 
 
 @dataclass
@@ -51,5 +50,5 @@ class EntryChunk:
     confidence: float = 1.0
     phase: str = "immediate"
     source_entry_index: int = -1
-    source_entry: Optional[DiaryEntry] = field(default=None, repr=False)
-    topics: Dict[str, float] = field(default_factory=dict)
+    source_entry: DiaryEntry | None = field(default=None, repr=False)
+    topics: dict[str, float] = field(default_factory=dict)

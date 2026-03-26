@@ -8,19 +8,16 @@ stats) mock the internal _dockg attribute.
 
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from diary_kg.kg import DiaryKG, _parse_frontmatter
 
-
 # ---------------------------------------------------------------------------
 # _parse_frontmatter helper
 # ---------------------------------------------------------------------------
+
 
 class TestParseFrontmatter:
     def test_extracts_key_value_pairs(self):
@@ -39,6 +36,7 @@ class TestParseFrontmatter:
 # ---------------------------------------------------------------------------
 # DiaryKG.is_built()
 # ---------------------------------------------------------------------------
+
 
 class TestIsBuilt:
     def test_unbuilt_returns_false(self, tmp_kg_root):
@@ -60,6 +58,7 @@ class TestIsBuilt:
 # DiaryKG.source_file / source_path
 # ---------------------------------------------------------------------------
 
+
 class TestSourceFile:
     def test_override_takes_priority(self, tmp_kg_root):
         kg = DiaryKG(tmp_kg_root, source_file="override.txt")
@@ -78,6 +77,7 @@ class TestSourceFile:
 # ---------------------------------------------------------------------------
 # DiaryKG._read_config / _write_config
 # ---------------------------------------------------------------------------
+
 
 class TestConfig:
     def test_read_missing_config_returns_empty(self, tmp_kg_root):
@@ -110,6 +110,7 @@ class TestConfig:
 # ---------------------------------------------------------------------------
 # DiaryKG.info()
 # ---------------------------------------------------------------------------
+
 
 class TestInfo:
     def test_info_returns_dict(self, built_kg_root):
@@ -162,6 +163,7 @@ class TestInfo:
 # DiaryKG.stats()
 # ---------------------------------------------------------------------------
 
+
 class TestStats:
     def test_stats_returns_kind_diary(self, built_kg_root):
         kg = DiaryKG(built_kg_root)
@@ -191,6 +193,7 @@ class TestStats:
 # DiaryKG.analyze()
 # ---------------------------------------------------------------------------
 
+
 class TestAnalyze:
     def test_analyze_returns_markdown_string(self, built_kg_root):
         kg = DiaryKG(built_kg_root)
@@ -219,6 +222,7 @@ class TestAnalyze:
 # ---------------------------------------------------------------------------
 # DiaryKG.snapshot_list / snapshot_show / snapshot_diff
 # ---------------------------------------------------------------------------
+
 
 class TestSnapshotHelpers:
     def test_snapshot_list_empty_initially(self, built_kg_root):

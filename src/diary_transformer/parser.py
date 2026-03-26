@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import List
 
 from .models import DiaryEntry
 
@@ -28,7 +27,7 @@ def is_meaningless_fragment(text: str) -> bool:
     return False
 
 
-def parse_diary_file(file_path: str) -> List[DiaryEntry]:
+def parse_diary_file(file_path: str) -> list[DiaryEntry]:
     """Parse a pipe-delimited diary file into DiaryEntry objects.
 
     Expected line format::
@@ -42,9 +41,9 @@ def parse_diary_file(file_path: str) -> List[DiaryEntry]:
     :return: Ordered list of DiaryEntry objects.
     """
     print(f"Parsing diary file: {file_path}")
-    entries: List[DiaryEntry] = []
+    entries: list[DiaryEntry] = []
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         raw = f.read()
 
     lines = [ln.strip() for ln in raw.split("\n") if ln.strip()]
