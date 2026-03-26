@@ -12,21 +12,22 @@ from __future__ import annotations
 
 import json
 import pickle
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any
 
 from .models import DiaryEntry
-
 
 # ---------------------------------------------------------------------------
 # Chunk cache I/O
 # ---------------------------------------------------------------------------
 
+
 def save_chunks_to_cache(
-    entries: List[DiaryEntry],
+    entries: list[DiaryEntry],
     cache_path: str,
-    segment_fn: Callable[..., List[str]],
+    segment_fn: Callable[..., list[str]],
 ) -> None:
     """Segment all entries and persist to a pickle cache.
 
@@ -38,7 +39,7 @@ def save_chunks_to_cache(
     pkl_path = cache_path.replace(".json", ".pkl")
     print(f"Caching {len(entries)} chunked entries to {pkl_path}")
 
-    cache_data: Dict[str, Any] = {
+    cache_data: dict[str, Any] = {
         "version": "1.0",
         "created": datetime.now().isoformat(),
         "total_entries": len(entries),
@@ -61,7 +62,7 @@ def save_chunks_to_cache(
     print(f"✓ Cached {len(entries)} entries with chunks")
 
 
-def load_chunks_from_cache(cache_path: str) -> List[DiaryEntry]:
+def load_chunks_from_cache(cache_path: str) -> list[DiaryEntry]:
     """Load chunked diary entries from pickle (or legacy JSON) cache.
 
     :param cache_path: Base cache path (``.json`` or ``.pkl``).
@@ -76,12 +77,12 @@ def load_chunks_from_cache(cache_path: str) -> List[DiaryEntry]:
             data = pickle.load(f)
     elif Path(cache_path).exists():
         print(f"Loading chunked entries from legacy JSON cache: {cache_path}")
-        with open(cache_path, "r", encoding="utf-8") as f:
+        with open(cache_path, encoding="utf-8") as f:
             data = json.load(f)
     else:
         raise FileNotFoundError(f"Cache not found: {pkl_path} or {cache_path}")
 
-    entries: List[DiaryEntry] = []
+    entries: list[DiaryEntry] = []
     for ed in data["entries"]:
         entry = DiaryEntry(
             timestamp=datetime.fromisoformat(ed["timestamp"]),
@@ -101,9 +102,8 @@ def load_chunks_from_cache(cache_path: str) -> List[DiaryEntry]:
 # Entry filtering
 # ---------------------------------------------------------------------------
 
-def filter_uninjected(
-    entries: List[DiaryEntry], injected_indices: Set[int]
-) -> List[DiaryEntry]:
+
+def filter_uninjected(entries: list[DiaryEntry], injected_indices: set[int]) -> list[DiaryEntry]:
     """Return entries whose index has not yet been injected.
 
     :param entries: All available entries.
@@ -123,6 +123,7 @@ def filter_uninjected(
 # StateManager
 # ---------------------------------------------------------------------------
 
+
 class StateManager:
     """Persist and restore incremental-processing state.
 
@@ -141,15 +142,15 @@ class StateManager:
 
     def __init__(self, state_file: str) -> None:
         self.state_file = state_file
-        self.injected_entry_indices: Set[int] = set()
-        self.chunk_cache_file: Optional[str] = None
-        self.processing_stats: Dict[str, Any] = {
+        self.injected_entry_indices: set[int] = set()
+        self.chunk_cache_file: str | None = None
+        self.processing_stats: dict[str, Any] = {
             "total_runs": 0,
             "total_entries_injected": 0,
             "last_run": None,
         }
 
-    def load(self, input_path: Optional[str] = None) -> bool:
+    def load(self, input_path: str | None = None) -> bool:
         """Load state from disk.
 
         :param input_path: Unused; retained for API compatibility.
@@ -160,7 +161,7 @@ class StateManager:
             print(f"No existing state file found at {self.state_file}")
             return False
         try:
-            with open(state_path, "r", encoding="utf-8") as f:
+            with open(state_path, encoding="utf-8") as f:
                 state = json.load(f)
             self.injected_entry_indices = set(state.get("injected_entry_indices", []))
             self.chunk_cache_file = state.get("chunk_cache_file")
@@ -173,7 +174,7 @@ class StateManager:
             print(f"Warning: Failed to load state file: {exc}")
             return False
 
-    def save(self, output_file: str, run_params: Dict) -> None:
+    def save(self, output_file: str, run_params: dict) -> None:
         """Persist state to disk.
 
         :param output_file: Path to the output entries file.
@@ -194,7 +195,7 @@ class StateManager:
         except OSError as exc:
             print(f"Warning: Failed to save state file: {exc}")
 
-    def mark_injected(self, entries: List[DiaryEntry]) -> None:
+    def mark_injected(self, entries: list[DiaryEntry]) -> None:
         """Record entry indices as injected.
 
         :param entries: Entries that were processed in this run.

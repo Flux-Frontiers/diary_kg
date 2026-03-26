@@ -8,9 +8,6 @@ parse_diary_file.
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
-
-import pytest
 
 from diary_transformer.parser import is_meaningless_fragment, parse_diary_file
 
@@ -82,10 +79,7 @@ class TestParseDiaryFile:
         assert len(entries) == 2
 
     def test_skips_comment_lines(self, tmp_path):
-        content = (
-            "# This is a comment\n"
-            "1660-01-01T00:00 | raw | DiaryEntry | Real entry.\n"
-        )
+        content = "# This is a comment\n1660-01-01T00:00 | raw | DiaryEntry | Real entry.\n"
         f = tmp_path / "diary.txt"
         f.write_text(content, encoding="utf-8")
         entries = parse_diary_file(str(f))

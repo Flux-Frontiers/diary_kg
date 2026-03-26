@@ -28,10 +28,8 @@ import argparse
 import re
 import statistics
 import sys
-from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple
 
 from rich import box
 from rich.console import Console
@@ -42,7 +40,7 @@ from rich.text import Text
 console = Console()
 
 
-def parse_entries(file_path: Path) -> List[Tuple[str, str]]:
+def parse_entries(file_path: Path) -> list[tuple[str, str]]:
     """Parse diary entries from file.
 
     :param file_path: Path to input file
@@ -50,14 +48,14 @@ def parse_entries(file_path: Path) -> List[Tuple[str, str]]:
     """
     entries = []
 
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            if not line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
 
             # Parse format: TIMESTAMP | TYPE | CATEGORY | CONTENT
-            parts = line.split(' | ', maxsplit=3)
+            parts = line.split(" | ", maxsplit=3)
             if len(parts) == 4:
                 timestamp, _, _, content = parts
                 entries.append((timestamp, content))
@@ -65,7 +63,7 @@ def parse_entries(file_path: Path) -> List[Tuple[str, str]]:
     return entries
 
 
-def split_into_sentences(text: str) -> List[str]:
+def split_into_sentences(text: str) -> list[str]:
     """Split text into sentences using regex pattern.
 
     Handles multiple punctuation marks and preserves sentence boundaries.
@@ -74,7 +72,7 @@ def split_into_sentences(text: str) -> List[str]:
     :return: List of sentences
     """
     # Split on sentence-ending punctuation followed by whitespace + capital letter
-    sentence_pattern = r'[.!?]+(?=\s+[A-Z]|$)'
+    sentence_pattern = r"[.!?]+(?=\s+[A-Z]|$)"
     sentences = re.split(sentence_pattern, text)
 
     # Clean and filter
@@ -83,7 +81,7 @@ def split_into_sentences(text: str) -> List[str]:
     return sentences
 
 
-def analyze_entry_lengths(entries: List[Tuple[str, str]]) -> dict:
+def analyze_entry_lengths(entries: list[tuple[str, str]]) -> dict:
     """Analyze length distribution of diary entries.
 
     :param entries: List of (timestamp, content) tuples
@@ -93,22 +91,21 @@ def analyze_entry_lengths(entries: List[Tuple[str, str]]) -> dict:
 
     sorted_lengths = sorted(lengths)
     percentiles = {
-        p: sorted_lengths[int(len(sorted_lengths) * p / 100)]
-        for p in [10, 25, 50, 75, 90, 95, 99]
+        p: sorted_lengths[int(len(sorted_lengths) * p / 100)] for p in [10, 25, 50, 75, 90, 95, 99]
     }
 
     return {
-        'count': len(lengths),
-        'mean': statistics.mean(lengths),
-        'median': statistics.median(lengths),
-        'stdev': statistics.stdev(lengths) if len(lengths) > 1 else 0,
-        'min': min(lengths),
-        'max': max(lengths),
-        'percentiles': percentiles,
+        "count": len(lengths),
+        "mean": statistics.mean(lengths),
+        "median": statistics.median(lengths),
+        "stdev": statistics.stdev(lengths) if len(lengths) > 1 else 0,
+        "min": min(lengths),
+        "max": max(lengths),
+        "percentiles": percentiles,
     }
 
 
-def analyze_sentences(entries: List[Tuple[str, str]]) -> dict:
+def analyze_sentences(entries: list[tuple[str, str]]) -> dict:
     """Analyze sentence-level patterns.
 
     :param entries: List of (timestamp, content) tuples
@@ -126,40 +123,43 @@ def analyze_sentences(entries: List[Tuple[str, str]]) -> dict:
     sorted_lengths = sorted(sentence_lengths)
 
     percentiles = {
-        p: sorted_lengths[int(len(sorted_lengths) * p / 100)]
-        for p in [10, 25, 50, 75, 90, 95, 99]
+        p: sorted_lengths[int(len(sorted_lengths) * p / 100)] for p in [10, 25, 50, 75, 90, 95, 99]
     }
 
     # Distribution buckets
     buckets = [
-        (0, 50, 'very_short'),
-        (50, 100, 'short'),
-        (100, 200, 'medium'),
-        (200, 400, 'long'),
-        (400, 800, 'very_long'),
-        (800, float('inf'), 'extreme'),
+        (0, 50, "very_short"),
+        (50, 100, "short"),
+        (100, 200, "medium"),
+        (200, 400, "long"),
+        (400, 800, "very_long"),
+        (800, float("inf"), "extreme"),
     ]
 
     distribution = {}
     for low, high, label in buckets:
-        count = sum(1 for l in sentence_lengths if low <= l < high)
+        count = sum(1 for n in sentence_lengths if low <= n < high)
         distribution[label] = {
-            'range': f'{low}-{high if high != float("inf") else "∞"}',
-            'count': count,
-            'percentage': count / len(sentence_lengths) * 100 if sentence_lengths else 0,
+            "range": f"{low}-{high if high != float('inf') else '∞'}",
+            "count": count,
+            "percentage": count / len(sentence_lengths) * 100 if sentence_lengths else 0,
         }
 
     return {
-        'total_sentences': len(all_sentences),
-        'mean_length': statistics.mean(sentence_lengths) if sentence_lengths else 0,
-        'median_length': statistics.median(sentence_lengths) if sentence_lengths else 0,
-        'stdev_length': statistics.stdev(sentence_lengths) if len(sentence_lengths) > 1 else 0,
-        'min_length': min(sentence_lengths) if sentence_lengths else 0,
-        'max_length': max(sentence_lengths) if sentence_lengths else 0,
-        'percentiles': percentiles,
-        'distribution': distribution,
-        'avg_sentences_per_entry': statistics.mean(sentences_per_entry) if sentences_per_entry else 0,
-        'median_sentences_per_entry': statistics.median(sentences_per_entry) if sentences_per_entry else 0,
+        "total_sentences": len(all_sentences),
+        "mean_length": statistics.mean(sentence_lengths) if sentence_lengths else 0,
+        "median_length": statistics.median(sentence_lengths) if sentence_lengths else 0,
+        "stdev_length": statistics.stdev(sentence_lengths) if len(sentence_lengths) > 1 else 0,
+        "min_length": min(sentence_lengths) if sentence_lengths else 0,
+        "max_length": max(sentence_lengths) if sentence_lengths else 0,
+        "percentiles": percentiles,
+        "distribution": distribution,
+        "avg_sentences_per_entry": statistics.mean(sentences_per_entry)
+        if sentences_per_entry
+        else 0,
+        "median_sentences_per_entry": statistics.median(sentences_per_entry)
+        if sentences_per_entry
+        else 0,
     }
 
 
@@ -170,60 +170,74 @@ def recommend_chunk_sizes(entry_stats: dict, sentence_stats: dict) -> dict:
     :param sentence_stats: Sentence-level statistics
     :return: Dict with recommendations
     """
-    median_entry = entry_stats['median']
-    p75_entry = entry_stats['percentiles'][75]
-    median_sentence = sentence_stats['median_length']
-    avg_sentences_per_entry = sentence_stats['avg_sentences_per_entry']
+    median_entry = entry_stats["median"]
+    p75_entry = entry_stats["percentiles"][75]
+    median_sentence = sentence_stats["median_length"]
 
     recommendations = {
-        'current_state': {
-            'median_entry_size': median_entry,
-            'assessment': 'Very coarse' if median_entry > 1500 else 'Moderate' if median_entry > 800 else 'Fine-grained',
+        "current_state": {
+            "median_entry_size": median_entry,
+            "assessment": "Very coarse"
+            if median_entry > 1500
+            else "Moderate"
+            if median_entry > 800
+            else "Fine-grained",
         },
-        'strategies': []
+        "strategies": [],
     }
 
     # Strategy 1: Keep as-is
-    recommendations['strategies'].append({
-        'name': 'No Chunking (Current)',
-        'target_size': median_entry,
-        'pros': ['Preserves full context', 'No splitting overhead'],
-        'cons': ['May overwhelm semantic search', 'Loses fine-grained retrieval'],
-        'use_case': 'Full-text search, reading entire entries',
-    })
+    recommendations["strategies"].append(
+        {
+            "name": "No Chunking (Current)",
+            "target_size": median_entry,
+            "pros": ["Preserves full context", "No splitting overhead"],
+            "cons": ["May overwhelm semantic search", "Loses fine-grained retrieval"],
+            "use_case": "Full-text search, reading entire entries",
+        }
+    )
 
     # Strategy 2: Split large entries
     if p75_entry > 2000:
-        recommendations['strategies'].append({
-            'name': 'Split Large Entries',
-            'target_size': 1500,
-            'method': 'Split entries >2000 chars at sentence boundaries',
-            'pros': ['Handles outliers', 'Maintains reasonable chunk sizes'],
-            'cons': ['Inconsistent chunk sizes', 'Complex logic'],
-            'use_case': 'Hybrid approach for mixed content',
-        })
+        recommendations["strategies"].append(
+            {
+                "name": "Split Large Entries",
+                "target_size": 1500,
+                "method": "Split entries >2000 chars at sentence boundaries",
+                "pros": ["Handles outliers", "Maintains reasonable chunk sizes"],
+                "cons": ["Inconsistent chunk sizes", "Complex logic"],
+                "use_case": "Hybrid approach for mixed content",
+            }
+        )
 
     # Strategy 3: Semantic chunks (3-5 sentences)
     target_sentences = 4
     target_size = int(median_sentence * target_sentences)
-    recommendations['strategies'].append({
-        'name': 'Semantic Chunks (Recommended)',
-        'target_size': target_size,
-        'method': f'Group {target_sentences} sentences (~{target_size} chars)',
-        'pros': ['Natural semantic boundaries', 'Consistent granularity', 'Better retrieval'],
-        'cons': ['More chunks to process', 'Requires sentence detection'],
-        'use_case': 'Semantic search, fine-grained retrieval',
-    })
+    recommendations["strategies"].append(
+        {
+            "name": "Semantic Chunks (Recommended)",
+            "target_size": target_size,
+            "method": f"Group {target_sentences} sentences (~{target_size} chars)",
+            "pros": ["Natural semantic boundaries", "Consistent granularity", "Better retrieval"],
+            "cons": ["More chunks to process", "Requires sentence detection"],
+            "use_case": "Semantic search, fine-grained retrieval",
+        }
+    )
 
     # Strategy 4: Fixed size with sentence boundaries
-    recommendations['strategies'].append({
-        'name': 'Fixed Size (512 chars)',
-        'target_size': 512,
-        'method': 'Fill to 512 chars, break at sentence boundaries',
-        'pros': ['Consistent size', 'Transformer-friendly'],
-        'cons': [f'Breaks {sentence_stats["distribution"]["very_long"]["percentage"]:.1f}% of sentences', 'Arbitrary boundary'],
-        'use_case': 'Fixed-size embeddings, standardized processing',
-    })
+    recommendations["strategies"].append(
+        {
+            "name": "Fixed Size (512 chars)",
+            "target_size": 512,
+            "method": "Fill to 512 chars, break at sentence boundaries",
+            "pros": ["Consistent size", "Transformer-friendly"],
+            "cons": [
+                f"Breaks {sentence_stats['distribution']['very_long']['percentage']:.1f}% of sentences",
+                "Arbitrary boundary",
+            ],
+            "use_case": "Fixed-size embeddings, standardized processing",
+        }
+    )
 
     return recommendations
 
@@ -243,7 +257,7 @@ def display_entry_analysis(stats: dict):
     table.add_row("Maximum", f"{stats['max']:,} chars")
     table.add_row("", "")  # Spacer
 
-    for p, val in stats['percentiles'].items():
+    for p, val in stats["percentiles"].items():
         table.add_row(f"{p}th Percentile", f"{val:,} chars")
 
     console.print(table)
@@ -276,19 +290,14 @@ def display_distribution(stats: dict):
     table.add_column("Percentage", style="green", justify="right")
     table.add_column("Visualization", style="blue")
 
-    for label, data in stats['distribution'].items():
-        count = data['count']
-        pct = data['percentage']
+    for label, data in stats["distribution"].items():
+        count = data["count"]
+        pct = data["percentage"]
         bar_width = int(pct / 2)  # Scale to 50 chars max
         visual_bar = "█" * bar_width
 
-        label_text = label.replace('_', ' ').title()
-        table.add_row(
-            f"{label_text} ({data['range']})",
-            f"{count:,}",
-            f"{pct:.1f}%",
-            visual_bar
-        )
+        label_text = label.replace("_", " ").title()
+        table.add_row(f"{label_text} ({data['range']})", f"{count:,}", f"{pct:.1f}%", visual_bar)
 
     console.print(table)
 
@@ -296,7 +305,7 @@ def display_distribution(stats: dict):
 def display_recommendations(recommendations: dict):
     """Display chunking strategy recommendations."""
     # Current state panel
-    current = recommendations['current_state']
+    current = recommendations["current_state"]
     panel_content = Text()
     panel_content.append("Median Entry Size: ", style="bold cyan")
     panel_content.append(f"{current['median_entry_size']:.0f} chars\n", style="white")
@@ -313,30 +322,22 @@ def display_recommendations(recommendations: dict):
     table.add_column("Pros & Cons", style="white")
     table.add_column("Use Case", style="green")
 
-    for strategy in recommendations['strategies']:
-        pros = "\n".join([f"✓ {p}" for p in strategy['pros']])
-        cons = "\n".join([f"✗ {c}" for c in strategy['cons']])
+    for strategy in recommendations["strategies"]:
+        pros = "\n".join([f"✓ {p}" for p in strategy["pros"]])
+        cons = "\n".join([f"✗ {c}" for c in strategy["cons"]])
         pros_cons = f"{pros}\n{cons}"
 
-        name = strategy['name']
-        if 'Recommended' in name:
+        name = strategy["name"]
+        if "Recommended" in name:
             name = f"[bold green]{name}[/bold green]"
 
-        table.add_row(
-            name,
-            f"{strategy['target_size']:,}",
-            pros_cons,
-            strategy['use_case']
-        )
+        table.add_row(name, f"{strategy['target_size']:,}", pros_cons, strategy["use_case"])
 
     console.print(table)
 
 
 def generate_markdown_report(
-    entry_stats: dict,
-    sentence_stats: dict,
-    recommendations: dict,
-    output_path: Path
+    entry_stats: dict, sentence_stats: dict, recommendations: dict, output_path: Path
 ):
     """Generate markdown analysis report.
 
@@ -347,7 +348,7 @@ def generate_markdown_report(
     """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write("# Sentence Structure Analysis Report\n\n")
         f.write(f"**Generated**: {timestamp}\n\n")
 
@@ -362,7 +363,7 @@ def generate_markdown_report(
         f.write("### Percentiles\n\n")
         f.write("| Percentile | Length (chars) |\n")
         f.write("|------------|---------------|\n")
-        for p, val in entry_stats['percentiles'].items():
+        for p, val in entry_stats["percentiles"].items():
             f.write(f"| {p}th | {val:,} |\n")
         f.write("\n")
 
@@ -372,39 +373,47 @@ def generate_markdown_report(
         f.write(f"- **Mean Length**: {sentence_stats['mean_length']:.0f} chars\n")
         f.write(f"- **Median Length**: {sentence_stats['median_length']:.0f} chars\n")
         f.write(f"- **Std Deviation**: {sentence_stats['stdev_length']:.0f} chars\n")
-        f.write(f"- **Range**: {sentence_stats['min_length']:,} - {sentence_stats['max_length']:,} chars\n")
-        f.write(f"- **Avg Sentences per Entry**: {sentence_stats['avg_sentences_per_entry']:.1f}\n\n")
+        f.write(
+            f"- **Range**: {sentence_stats['min_length']:,} - {sentence_stats['max_length']:,} chars\n"
+        )
+        f.write(
+            f"- **Avg Sentences per Entry**: {sentence_stats['avg_sentences_per_entry']:.1f}\n\n"
+        )
 
         f.write("### Distribution\n\n")
         f.write("| Range | Count | Percentage |\n")
         f.write("|-------|-------|------------|\n")
-        for label, data in sentence_stats['distribution'].items():
-            label_text = label.replace('_', ' ').title()
-            f.write(f"| {label_text} ({data['range']}) | {data['count']:,} | {data['percentage']:.1f}% |\n")
+        for label, data in sentence_stats["distribution"].items():
+            label_text = label.replace("_", " ").title()
+            f.write(
+                f"| {label_text} ({data['range']}) | {data['count']:,} | {data['percentage']:.1f}% |\n"
+            )
         f.write("\n")
 
         # Recommendations
         f.write("## 💡 Chunking Recommendations\n\n")
-        f.write(f"**Current State**: {recommendations['current_state']['median_entry_size']:.0f} chars per entry ")
+        f.write(
+            f"**Current State**: {recommendations['current_state']['median_entry_size']:.0f} chars per entry "
+        )
         f.write(f"({recommendations['current_state']['assessment']})\n\n")
 
-        for strategy in recommendations['strategies']:
-            name = strategy['name']
-            if 'Recommended' in name:
+        for strategy in recommendations["strategies"]:
+            name = strategy["name"]
+            if "Recommended" in name:
                 f.write(f"### {name} ⭐\n\n")
             else:
                 f.write(f"### {name}\n\n")
 
             f.write(f"**Target Size**: {strategy['target_size']:,} chars\n\n")
 
-            if 'method' in strategy:
+            if "method" in strategy:
                 f.write(f"**Method**: {strategy['method']}\n\n")
 
             f.write("**Pros**:\n")
-            for pro in strategy['pros']:
+            for pro in strategy["pros"]:
                 f.write(f"- ✓ {pro}\n")
             f.write("\n**Cons**:\n")
-            for con in strategy['cons']:
+            for con in strategy["cons"]:
                 f.write(f"- ✗ {con}\n")
             f.write(f"\n**Use Case**: {strategy['use_case']}\n\n")
 
@@ -412,7 +421,7 @@ def generate_markdown_report(
         f.write("## 🎯 Key Insights\n\n")
 
         # Insight 1: Sentence consistency
-        cv = sentence_stats['stdev_length'] / sentence_stats['mean_length']
+        cv = sentence_stats["stdev_length"] / sentence_stats["mean_length"]
         f.write(f"1. **Sentence Length Consistency**: CV = {cv:.2f}\n")
         if cv < 0.5:
             f.write("   - Low variation - sentences are relatively uniform in length\n")
@@ -423,8 +432,8 @@ def generate_markdown_report(
         f.write("\n")
 
         # Insight 2: Chunking impact
-        very_long_pct = sentence_stats['distribution']['very_long']['percentage']
-        extreme_pct = sentence_stats['distribution']['extreme']['percentage']
+        very_long_pct = sentence_stats["distribution"]["very_long"]["percentage"]
+        extreme_pct = sentence_stats["distribution"]["extreme"]["percentage"]
         problematic_pct = very_long_pct + extreme_pct
         f.write(f"2. **Problematic Sentences**: {problematic_pct:.1f}% exceed 400 chars\n")
         if problematic_pct < 2:
@@ -437,10 +446,10 @@ def generate_markdown_report(
 
         # Insight 3: Optimal grouping
         target_size = 500
-        sentences_per_chunk = target_size / sentence_stats['median_length']
+        sentences_per_chunk = target_size / sentence_stats["median_length"]
         f.write(f"3. **Optimal Grouping**: For {target_size}-char chunks\n")
         f.write(f"   - Aim for ~{sentences_per_chunk:.1f} sentences per chunk\n")
-        f.write(f"   - This preserves semantic coherence while maintaining consistent size\n")
+        f.write("   - This preserves semantic coherence while maintaining consistent size\n")
         f.write("\n")
 
         f.write("---\n")
@@ -460,14 +469,9 @@ def main():
         "--output",
         type=str,
         default="sentence_analysis_report.md",
-        help="Output markdown report path"
+        help="Output markdown report path",
     )
-    parser.add_argument(
-        "--sample",
-        type=int,
-        default=None,
-        help="Analyze only first N entries"
-    )
+    parser.add_argument("--sample", type=int, default=None, help="Analyze only first N entries")
 
     args = parser.parse_args()
 
@@ -481,7 +485,7 @@ def main():
     entries = parse_entries(input_path)
 
     if args.sample:
-        entries = entries[:args.sample]
+        entries = entries[: args.sample]
         console.print(f"[dim]Using first {args.sample} entries for analysis[/dim]")
 
     console.print(f"[green]✓[/green] Loaded {len(entries):,} entries\n")

@@ -25,7 +25,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "diary-kg"
-version = "0.1.0"
+version = "0.9.0"
 description = "A knowledge graph builder and semantic search engine for diaries and journals"
 authors = ["Eric G. Suchanek, PhD <suchanek@mac.com>"]
 license = "Elastic-2.0"
@@ -71,7 +71,8 @@ trame-vtk = { version = ">=2.0.0", optional = true }
 spacy = "^3.8.11"
 doc-kg = { git = "https://github.com/Flux-Frontiers/doc_kg.git" }
 code-kg = { git = "https://github.com/Flux-Frontiers/code_kg.git" }
-ftree-kg = { git = "https://github.com/Flux-Frontiers/ftree_kg.git" }
+#ftree-kg = { git = "https://github.com/Flux-Frontiers/ftree_kg.git" }
+proteuspy = "^0.99.35"
 
 
 [tool.poetry.extras]

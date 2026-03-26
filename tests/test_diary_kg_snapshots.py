@@ -7,8 +7,6 @@ DiarySnapshot, DiarySnapshotManifest, and DiarySnapshotManager.
 
 from __future__ import annotations
 
-import json
-from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -17,15 +15,15 @@ import pytest
 from diary_kg.snapshots import (
     DiarySnapshot,
     DiarySnapshotDelta,
-    DiarySnapshotManifest,
     DiarySnapshotManager,
+    DiarySnapshotManifest,
     DiarySnapshotMetrics,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _metrics(
     chunk_count: int = 10,
@@ -73,6 +71,7 @@ def _make_mgr(tmp_path: Path) -> DiarySnapshotManager:
 # ---------------------------------------------------------------------------
 # Dataclasses
 # ---------------------------------------------------------------------------
+
 
 class TestDiarySnapshotMetrics:
     def test_required_fields(self):
@@ -157,6 +156,7 @@ class TestDiarySnapshotManifest:
 # DiarySnapshotManager — save / load
 # ---------------------------------------------------------------------------
 
+
 class TestSaveLoadSnapshot:
     def test_save_creates_json_file(self, tmp_path):
         mgr = _make_mgr(tmp_path)
@@ -208,6 +208,7 @@ class TestSaveLoadSnapshot:
 # ---------------------------------------------------------------------------
 # DiarySnapshotManager — list / diff / baseline / previous
 # ---------------------------------------------------------------------------
+
 
 class TestListSnapshots:
     def _populate(self, mgr: DiarySnapshotManager) -> list[str]:
@@ -334,6 +335,7 @@ class TestDiffSnapshots:
 # DiarySnapshotManager — capture
 # ---------------------------------------------------------------------------
 
+
 class TestCapture:
     def test_capture_returns_snapshot(self, tmp_path):
         mgr = _make_mgr(tmp_path)
@@ -365,8 +367,9 @@ class TestCapture:
 
     def test_capture_sets_vs_previous_when_prior_exists(self, tmp_path):
         mgr = _make_mgr(tmp_path)
-        first = _snapshot(tree_hash="first", chunk_count=5,
-                          timestamp=datetime(2024, 1, 1, tzinfo=UTC).isoformat())
+        first = _snapshot(
+            tree_hash="first", chunk_count=5, timestamp=datetime(2024, 1, 1, tzinfo=UTC).isoformat()
+        )
         mgr.save_snapshot(first)
 
         info = {

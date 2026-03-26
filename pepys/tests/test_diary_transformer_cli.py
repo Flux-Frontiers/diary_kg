@@ -10,18 +10,16 @@ with real tmp_path fixtures.
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from diary_transformer.cli import cli
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _runner() -> CliRunner:
     return CliRunner(mix_stderr=False)
@@ -38,6 +36,7 @@ def _mock_dt(ingest_return: int = 5) -> MagicMock:
 # ---------------------------------------------------------------------------
 # --help  (no mocking needed)
 # ---------------------------------------------------------------------------
+
 
 class TestCliHelp:
     def test_root_help(self):
@@ -67,6 +66,7 @@ class TestCliHelp:
 # ---------------------------------------------------------------------------
 # transform command
 # ---------------------------------------------------------------------------
+
 
 class TestTransformCommand:
     def test_missing_input_exits_nonzero(self, tmp_path):
@@ -101,9 +101,7 @@ class TestTransformCommand:
         out = str(tmp_path / "out.txt")
         mock_dt = _mock_dt()
         with patch("diary_transformer.cli._make_transformer", return_value=mock_dt):
-            result = _runner().invoke(cli, [
-                "transform", str(inp), out, "--batch-size", "50"
-            ])
+            result = _runner().invoke(cli, ["transform", str(inp), out, "--batch-size", "50"])
         assert result.exit_code == 0
         _, kwargs = mock_dt.transform_file.call_args
         assert kwargs.get("batch_size") == 50
@@ -114,9 +112,7 @@ class TestTransformCommand:
         out = str(tmp_path / "out.txt")
         mock_dt = _mock_dt()
         with patch("diary_transformer.cli._make_transformer", return_value=mock_dt):
-            result = _runner().invoke(cli, [
-                "transform", str(inp), out, "--seed", "42"
-            ])
+            result = _runner().invoke(cli, ["transform", str(inp), out, "--seed", "42"])
         assert result.exit_code == 0
         _, kwargs = mock_dt.transform_file.call_args
         assert kwargs.get("seed") == 42
@@ -125,6 +121,7 @@ class TestTransformCommand:
 # ---------------------------------------------------------------------------
 # ingest command
 # ---------------------------------------------------------------------------
+
 
 class TestIngestCommand:
     def test_missing_input_exits_nonzero(self, tmp_path):
@@ -164,9 +161,9 @@ class TestIngestCommand:
         corpus = str(tmp_path / "corpus")
         mock_dt = _mock_dt()
         with patch("diary_transformer.cli._make_transformer", return_value=mock_dt):
-            result = _runner().invoke(cli, [
-                "ingest", str(inp), corpus, "--source-file", "my_diary.txt"
-            ])
+            result = _runner().invoke(
+                cli, ["ingest", str(inp), corpus, "--source-file", "my_diary.txt"]
+            )
         assert result.exit_code == 0
         _, kwargs = mock_dt.ingest_to_corpus.call_args
         assert kwargs.get("source_file") == "my_diary.txt"
@@ -186,6 +183,7 @@ class TestIngestCommand:
 # build command
 # ---------------------------------------------------------------------------
 
+
 class TestBuildCommand:
     def test_missing_corpus_dir_exits_nonzero(self, tmp_path):
         result = _runner().invoke(cli, ["build", str(tmp_path / "nonexistent")])
@@ -204,7 +202,7 @@ class TestBuildCommand:
         corpus.mkdir()
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
-            result = _runner().invoke(cli, ["build", str(corpus)])
+            _runner().invoke(cli, ["build", str(corpus)])
         mock_run.assert_called_once()
         cmd = mock_run.call_args[0][0]
         assert "dockg" in cmd
@@ -215,6 +213,6 @@ class TestBuildCommand:
         corpus.mkdir()
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
-            result = _runner().invoke(cli, ["build", str(corpus), "--wipe"])
+            _runner().invoke(cli, ["build", str(corpus), "--wipe"])
         cmd = mock_run.call_args[0][0]
         assert "--wipe" in cmd

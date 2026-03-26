@@ -16,7 +16,7 @@ import multiprocessing as mp
 import pickle
 import random
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -24,12 +24,12 @@ from tqdm import tqdm
 
 from .models import DiaryEntry
 
-
 # ---------------------------------------------------------------------------
 # Module-level worker (must be top-level for pickle / multiprocessing)
 # ---------------------------------------------------------------------------
 
-def _extract_entry_features_worker(entry_data: Tuple[int, str]) -> Dict:
+
+def _extract_entry_features_worker(entry_data: tuple[int, str]) -> dict:
     """Extract spaCy features from a single entry (runs in a worker process).
 
     Each worker process loads its own spaCy model (cached as a function
@@ -42,8 +42,9 @@ def _extract_entry_features_worker(entry_data: Tuple[int, str]) -> Dict:
 
     if not hasattr(_extract_entry_features_worker, "nlp"):
         try:
-            import spacy
-            _extract_entry_features_worker.nlp = spacy.load("en_core_web_sm")
+            import spacy  # pylint: disable=import-outside-toplevel
+
+            _extract_entry_features_worker.nlp = spacy.load("en_core_web_sm")  # type: ignore[attr-defined]
         except OSError:
             return {
                 "index": idx,
@@ -55,7 +56,7 @@ def _extract_entry_features_worker(entry_data: Tuple[int, str]) -> Dict:
                 "proper_nouns": 0,
             }
 
-    nlp = _extract_entry_features_worker.nlp
+    nlp = _extract_entry_features_worker.nlp  # type: ignore[attr-defined]
     doc = nlp(content)
     return {
         "index": idx,
@@ -71,6 +72,7 @@ def _extract_entry_features_worker(entry_data: Tuple[int, str]) -> Dict:
 # ---------------------------------------------------------------------------
 # Cache helpers
 # ---------------------------------------------------------------------------
+
 
 def _cache_path(input_file_path: str) -> str:
     """Return the path to the diversity-feature cache file."""
@@ -94,7 +96,8 @@ def _cache_valid(cache_path: str, input_file_path: str) -> bool:
 # Feature extraction (sequential + parallel)
 # ---------------------------------------------------------------------------
 
-def _extract_sequential(entries: List[DiaryEntry], nlp: Any) -> List[Dict]:
+
+def _extract_sequential(entries: list[DiaryEntry], nlp: Any) -> list[dict]:
     features = []
     with tqdm(total=len(entries), desc="Analyzing", unit="entry") as pbar:
         for entry in entries:
@@ -113,9 +116,9 @@ def _extract_sequential(entries: List[DiaryEntry], nlp: Any) -> List[Dict]:
     return features
 
 
-def _extract_parallel(entries: List[DiaryEntry], num_workers: int) -> List[Dict]:
+def _extract_parallel(entries: list[DiaryEntry], num_workers: int) -> list[dict]:
     entry_data = [(i, e.content) for i, e in enumerate(entries)]
-    results: List[Dict] = []
+    results: list[dict] = []
     with mp.Pool(processes=num_workers) as pool:
         with tqdm(total=len(entries), desc="Analyzing", unit="entry") as pbar:
             for feat in pool.imap_unordered(
@@ -131,11 +134,12 @@ def _extract_parallel(entries: List[DiaryEntry], num_workers: int) -> List[Dict]
 # Public: compute / load / select
 # ---------------------------------------------------------------------------
 
+
 def compute_diversity_features(
-    entries: List[DiaryEntry],
+    entries: list[DiaryEntry],
     nlp: Any,
     num_workers: int,
-    input_file_path: Optional[str] = None,
+    input_file_path: str | None = None,
 ) -> pd.DataFrame:
     """Compute normalised diversity features and cache them to disk.
 
@@ -175,10 +179,10 @@ def compute_diversity_features(
 
 
 def load_or_compute_diversity_features(
-    entries: List[DiaryEntry],
+    entries: list[DiaryEntry],
     nlp: Any,
     num_workers: int,
-    input_file_path: Optional[str] = None,
+    input_file_path: str | None = None,
 ) -> pd.DataFrame:
     """Return diversity features, loading from cache when valid.
 
@@ -206,13 +210,13 @@ def load_or_compute_diversity_features(
 
 
 def select_diverse_sample(
-    entries: List[DiaryEntry],
+    entries: list[DiaryEntry],
     target_count: int,
     nlp: Any,
     num_workers: int,
-    input_file_path: Optional[str] = None,
-    seed: Optional[int] = None,
-) -> List[DiaryEntry]:
+    input_file_path: str | None = None,
+    seed: int | None = None,
+) -> list[DiaryEntry]:
     """Select a diverse subset of entries via k-means clustering.
 
     Clusters entries in normalised feature space and picks the centroid-nearest
@@ -226,7 +230,7 @@ def select_diverse_sample(
     :param seed: RNG seed for reproducibility.
     :return: Selected entries (length ≤ target_count).
     """
-    from sklearn.cluster import KMeans
+    from sklearn.cluster import KMeans  # pylint: disable=import-outside-toplevel
 
     print(f"Selecting {target_count} diverse entries from {len(entries)} total")
 
@@ -243,7 +247,7 @@ def select_diverse_sample(
     clusters = kmeans.fit_predict(df_norm.fillna(0))
 
     print("Selecting representative entries...")
-    selected: List[DiaryEntry] = []
+    selected: list[DiaryEntry] = []
     for i in range(k):
         cluster_idx = np.where(clusters == i)[0]
         if len(cluster_idx) == 0:

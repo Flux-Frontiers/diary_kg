@@ -35,15 +35,24 @@ _chunk_size_option = click.option(
     "--chunk-size", "-c", default=512, show_default=True, help="Max characters per chunk."
 )
 _sentences_option = click.option(
-    "--sentences-per-chunk", default=4, show_default=True, help="Sentences per chunk (sentence_group / hybrid)."
+    "--sentences-per-chunk",
+    default=4,
+    show_default=True,
+    help="Sentences per chunk (sentence_group / hybrid).",
 )
 _batch_option = click.option(
-    "--batch-size", "-b", default=20, show_default=True,
+    "--batch-size",
+    "-b",
+    default=20,
+    show_default=True,
     help="Diverse entries to sample per run (0 = all).",
 )
 _seed_option = click.option("--seed", default=None, type=int, help="RNG seed for reproducibility.")
 _max_chunks_option = click.option(
-    "--max-chunks-per-entry", "-m", default=3, show_default=True,
+    "--max-chunks-per-entry",
+    "-m",
+    default=3,
+    show_default=True,
     help="Max chunks emitted per diary entry.",
 )
 _workers_option = click.option(
@@ -70,6 +79,7 @@ def _make_transformer(chunking_strategy, chunk_size, sentences_per_chunk, worker
 # CLI group
 # ---------------------------------------------------------------------------
 
+
 @click.group()
 def cli():
     """Diary Transformer — convert diary entries into semantic memory chunks."""
@@ -78,6 +88,7 @@ def cli():
 # ---------------------------------------------------------------------------
 # transform command (original workflow)
 # ---------------------------------------------------------------------------
+
 
 @cli.command("transform")
 @click.argument("input_path", metavar="INPUT", type=click.Path(exists=True, dir_okay=False))
@@ -90,19 +101,33 @@ def cli():
 @_max_chunks_option
 @_workers_option
 @_topics_option
-@click.option("--resume", "--incremental", "resume", is_flag=True, help="Resume from existing state.")
-@click.option("--state-file", default=None, help="State file path (default: <output-dir>/.diary_state.json).")
+@click.option(
+    "--resume", "--incremental", "resume", is_flag=True, help="Resume from existing state."
+)
+@click.option(
+    "--state-file", default=None, help="State file path (default: <output-dir>/.diary_state.json)."
+)
 @click.option("--clear", is_flag=True, help="Clear all caches before running.")
 @click.option(
-    "--restart", is_flag=True,
+    "--restart",
+    is_flag=True,
     help="Clear injection state + chunk cache (preserve diversity cache).",
 )
 def transform(
-    input_path, output_path,
-    chunking_strategy, chunk_size, sentences_per_chunk,
-    batch_size, seed, max_chunks_per_entry,
-    workers, topics_file,
-    resume, state_file, clear, restart,
+    input_path,
+    output_path,
+    chunking_strategy,
+    chunk_size,
+    sentences_per_chunk,
+    batch_size,
+    seed,
+    max_chunks_per_entry,
+    workers,
+    topics_file,
+    resume,
+    state_file,
+    clear,
+    restart,
 ):
     """Transform diary entries into pipe-delimited semantic chunk output.
 
@@ -122,6 +147,7 @@ def transform(
 
     if clear:
         import shutil  # pylint: disable=import-outside-toplevel
+
         cache_dir = in_path.parent / ".diary_cache"
         if cache_dir.exists():
             shutil.rmtree(cache_dir)
@@ -145,17 +171,25 @@ def transform(
     console.print(f"[bold]Diary Transform[/bold]  {in_path} → {out_path}")
 
     try:
-        dt = _make_transformer(chunking_strategy, chunk_size, sentences_per_chunk, workers, topics_file)
+        dt = _make_transformer(
+            chunking_strategy, chunk_size, sentences_per_chunk, workers, topics_file
+        )
         if resume:
             dt.transform_file_incremental(
-                str(in_path), str(out_path), str(sf),
-                batch_size=batch_size, seed=seed,
-                max_chunks_per_entry=max_chunks_per_entry, resume_mode=True,
+                str(in_path),
+                str(out_path),
+                str(sf),
+                batch_size=batch_size,
+                seed=seed,
+                max_chunks_per_entry=max_chunks_per_entry,
+                resume_mode=True,
             )
         else:
             dt.transform_file(
-                str(in_path), str(out_path),
-                batch_size=batch_size, seed=seed,
+                str(in_path),
+                str(out_path),
+                batch_size=batch_size,
+                seed=seed,
                 max_chunks_per_entry=max_chunks_per_entry,
             )
         console.print(f"\n[green]Done![/green] Output: {out_path}")
@@ -164,6 +198,7 @@ def transform(
         sys.exit(1)
     except Exception as exc:  # pylint: disable=broad-exception-caught
         import traceback  # pylint: disable=import-outside-toplevel
+
         console.print(f"\n[red]Error:[/red] {exc}")
         traceback.print_exc()
         sys.exit(1)
@@ -172,6 +207,7 @@ def transform(
 # ---------------------------------------------------------------------------
 # ingest command — write DocKG-compatible .md corpus
 # ---------------------------------------------------------------------------
+
 
 @cli.command("ingest")
 @click.argument("input_path", metavar="INPUT", type=click.Path(exists=True, dir_okay=False))
@@ -185,16 +221,26 @@ def transform(
 @_workers_option
 @_topics_option
 @click.option(
-    "--source-file", default=None,
+    "--source-file",
+    default=None,
     help="Provenance label written into frontmatter (default: basename of INPUT).",
 )
-@click.option("--wipe", is_flag=True, help="Delete existing .md files in CORPUS_DIR before writing.")
+@click.option(
+    "--wipe", is_flag=True, help="Delete existing .md files in CORPUS_DIR before writing."
+)
 def ingest(
-    input_path, corpus_dir,
-    chunking_strategy, chunk_size, sentences_per_chunk,
-    batch_size, seed, max_chunks_per_entry,
-    workers, topics_file,
-    source_file, wipe,
+    input_path,
+    corpus_dir,
+    chunking_strategy,
+    chunk_size,
+    sentences_per_chunk,
+    batch_size,
+    seed,
+    max_chunks_per_entry,
+    workers,
+    topics_file,
+    source_file,
+    wipe,
 ):
     """Ingest a diary file into a DocKG-compatible Markdown corpus.
 
@@ -223,22 +269,25 @@ def ingest(
     console.print(f"[bold]Diary Ingest[/bold]  {input_path} → {corpus}")
 
     try:
-        dt = _make_transformer(chunking_strategy, chunk_size, sentences_per_chunk, workers, topics_file)
+        dt = _make_transformer(
+            chunking_strategy, chunk_size, sentences_per_chunk, workers, topics_file
+        )
         n = dt.ingest_to_corpus(
-            str(input_path), str(corpus),
-            batch_size=batch_size, seed=seed,
+            str(input_path),
+            str(corpus),
+            batch_size=batch_size,
+            seed=seed,
             max_chunks_per_entry=max_chunks_per_entry,
             source_file=source_file,
         )
         console.print(f"\n[green]Done![/green] Wrote {n} chunk files to [bold]{corpus}[/bold]")
-        console.print(
-            f"\nNext step: [bold]diary-transformer build {corpus}[/bold]"
-        )
+        console.print(f"\nNext step: [bold]diary-transformer build {corpus}[/bold]")
     except KeyboardInterrupt:
         console.print("\n[yellow]Cancelled[/yellow]")
         sys.exit(1)
     except Exception as exc:  # pylint: disable=broad-exception-caught
         import traceback  # pylint: disable=import-outside-toplevel
+
         console.print(f"\n[red]Error:[/red] {exc}")
         traceback.print_exc()
         sys.exit(1)
@@ -248,15 +297,22 @@ def ingest(
 # build command — run dockg build + optionally register in kgrag
 # ---------------------------------------------------------------------------
 
+
 @cli.command("build")
 @click.argument("corpus_dir", metavar="CORPUS_DIR", type=click.Path(exists=True, file_okay=False))
 @click.option("--wipe", is_flag=True, help="Pass --wipe to dockg build (rebuild from scratch).")
 @click.option(
-    "--register", "kg_name", default=None, metavar="NAME",
+    "--register",
+    "kg_name",
+    default=None,
+    metavar="NAME",
     help="Register the built KG in the KGRAG registry under this name.",
 )
 @click.option(
-    "--registry", default=None, metavar="PATH", envvar="KGRAG_REGISTRY",
+    "--registry",
+    default=None,
+    metavar="PATH",
+    envvar="KGRAG_REGISTRY",
     help="Path to KGRAG registry SQLite (default: KGRAG_REGISTRY env var).",
 )
 def build(corpus_dir, wipe, kg_name, registry):
@@ -287,7 +343,7 @@ def build(corpus_dir, wipe, kg_name, registry):
     console.print(f"  Running: {' '.join(cmd)}")
 
     try:
-        result = subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True)
     except FileNotFoundError:
         console.print(
             "[red]Error:[/red] [bold]dockg[/bold] not found on PATH. "
@@ -332,7 +388,9 @@ def build(corpus_dir, wipe, kg_name, registry):
             with KGRegistry(db_path=reg_path) as reg:
                 reg.register(entry)
 
-            console.print(f"\n[green]✓ Registered[/green] [bold]{kg_name}[/bold] (diary) in KGRAG registry")
+            console.print(
+                f"\n[green]✓ Registered[/green] [bold]{kg_name}[/bold] (diary) in KGRAG registry"
+            )
             if reg_path:
                 console.print(f"  Registry: {reg_path}")
         except ImportError:
@@ -352,6 +410,7 @@ def build(corpus_dir, wipe, kg_name, registry):
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     """Console-script entry point."""

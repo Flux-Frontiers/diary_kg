@@ -9,7 +9,6 @@ All tests mock ``diary_kg.kg.DiaryKG`` so no real DocKG or LanceDB is needed.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,10 +16,10 @@ import pytest
 from diary_kg.module import DiaryKGAdapter
 from diary_kg.primitives import CrossHit, CrossSnippet, KGEntry, KGKind
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _entry(is_built: bool = True, source_file: str = "pepys.txt") -> KGEntry:
     """Build a minimal KGEntry for a diary KG."""
@@ -53,6 +52,7 @@ def _mock_kg(
 # is_available
 # ---------------------------------------------------------------------------
 
+
 class TestIsAvailable:
     def test_returns_true_when_built(self):
         entry = _entry(is_built=True)
@@ -77,6 +77,7 @@ class TestIsAvailable:
 # ---------------------------------------------------------------------------
 # _load
 # ---------------------------------------------------------------------------
+
 
 class TestLoad:
     def test_load_sets_kg(self):
@@ -117,15 +118,24 @@ class TestLoad:
 # query
 # ---------------------------------------------------------------------------
 
+
 class TestQuery:
     def test_returns_cross_hit_list(self):
         entry = _entry()
         adapter = DiaryKGAdapter(entry)
-        mock_kg = _mock_kg(query_result=[
-            {"node_id": "n1", "score": 0.9, "summary": "Went to the office.",
-             "source_file": "pepys.txt", "timestamp": "1660-01-02T09:00",
-             "category": "work", "context": "Office"},
-        ])
+        mock_kg = _mock_kg(
+            query_result=[
+                {
+                    "node_id": "n1",
+                    "score": 0.9,
+                    "summary": "Went to the office.",
+                    "source_file": "pepys.txt",
+                    "timestamp": "1660-01-02T09:00",
+                    "category": "work",
+                    "context": "Office",
+                },
+            ]
+        )
         adapter._kg = mock_kg
         results = adapter.query("office work")
         assert len(results) == 1
@@ -145,10 +155,17 @@ class TestQuery:
     def test_query_uses_timestamp_as_name(self):
         entry = _entry()
         adapter = DiaryKGAdapter(entry)
-        adapter._kg = _mock_kg(query_result=[
-            {"node_id": "n1", "score": 0.5, "summary": "text",
-             "source_file": "pepys.txt", "timestamp": "1660-01-02T09:00"},
-        ])
+        adapter._kg = _mock_kg(
+            query_result=[
+                {
+                    "node_id": "n1",
+                    "score": 0.5,
+                    "summary": "text",
+                    "source_file": "pepys.txt",
+                    "timestamp": "1660-01-02T09:00",
+                },
+            ]
+        )
         results = adapter.query("q")
         assert results[0].name == "1660-01-02T09:00"
 
@@ -165,14 +182,22 @@ class TestQuery:
 # pack
 # ---------------------------------------------------------------------------
 
+
 class TestPack:
     def test_returns_cross_snippet_list(self):
         entry = _entry()
         adapter = DiaryKGAdapter(entry)
-        adapter._kg = _mock_kg(pack_result=[
-            {"node_id": "n1", "score": 0.8, "content": "So home and to bed.",
-             "source_file": "pepys.txt", "timestamp": "1660-01-01T00:00"},
-        ])
+        adapter._kg = _mock_kg(
+            pack_result=[
+                {
+                    "node_id": "n1",
+                    "score": 0.8,
+                    "content": "So home and to bed.",
+                    "source_file": "pepys.txt",
+                    "timestamp": "1660-01-01T00:00",
+                },
+            ]
+        )
         snippets = adapter.pack("home bed")
         assert len(snippets) == 1
         s = snippets[0]
@@ -200,6 +225,7 @@ class TestPack:
 # stats / info / analyze
 # ---------------------------------------------------------------------------
 
+
 class TestStatsInfoAnalyze:
     def test_stats_delegates_to_kg(self):
         entry = _entry()
@@ -212,11 +238,13 @@ class TestStatsInfoAnalyze:
     def test_info_delegates_to_kg(self):
         entry = _entry()
         adapter = DiaryKGAdapter(entry)
-        adapter._kg = _mock_kg(info_result={
-            "chunk_count": 15,
-            "entry_count": 8,
-            "source_file": "pepys.txt",
-        })
+        adapter._kg = _mock_kg(
+            info_result={
+                "chunk_count": 15,
+                "entry_count": 8,
+                "source_file": "pepys.txt",
+            }
+        )
         result = adapter.info()
         assert result["chunk_count"] == 15
         assert result["entry_count"] == 8

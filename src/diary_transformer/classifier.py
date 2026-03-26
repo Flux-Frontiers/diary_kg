@@ -15,17 +15,16 @@ entity and keyword matching.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
-
 
 # ---------------------------------------------------------------------------
 # Unsupervised category discovery
 # ---------------------------------------------------------------------------
 
-_TERM_MAPPINGS: Dict[str, str] = {
+_TERM_MAPPINGS: dict[str, str] = {
     "work": "work",
     "office": "work",
     "business": "work",
@@ -41,7 +40,7 @@ _TERM_MAPPINGS: Dict[str, str] = {
 }
 
 
-def _generate_category_name(top_terms: List[str]) -> str:
+def _generate_category_name(top_terms: list[str]) -> str:
     for term in top_terms:
         mapped = _TERM_MAPPINGS.get(term.lower())
         if mapped:
@@ -50,8 +49,8 @@ def _generate_category_name(top_terms: List[str]) -> str:
 
 
 def discover_semantic_categories(
-    chunks: List[str], n_categories: int = 10, seed: Optional[int] = None
-) -> List[str]:
+    chunks: list[str], n_categories: int = 10, seed: int | None = None
+) -> list[str]:
     """Discover topic categories from a corpus via TF-IDF k-means.
 
     :param chunks: All text chunks to cluster.
@@ -86,7 +85,8 @@ def discover_semantic_categories(
 # Chunk classification
 # ---------------------------------------------------------------------------
 
-def classify_chunk(chunk: str, categories: List[str]) -> str:
+
+def classify_chunk(chunk: str, categories: list[str]) -> str:
     """Assign a chunk to one of the discovered unsupervised categories.
 
     Uses simple keyword heuristics; falls back to the first category.
@@ -112,9 +112,9 @@ def classify_chunk(chunk: str, categories: List[str]) -> str:
 
 def classify_chunk_hybrid(
     chunk: str,
-    categories: List[str],
-    topic_classifier: Optional[Any] = None,
-) -> Tuple[str, Dict[str, float]]:
+    categories: list[str],
+    topic_classifier: Any | None = None,
+) -> tuple[str, dict[str, float]]:
     """Classify using supervised classification with unsupervised fallback.
 
     If *topic_classifier* is provided and its top prediction exceeds 0.3
@@ -133,7 +133,7 @@ def classify_chunk_hybrid(
                 best_cat, best_score = max(scores.items(), key=lambda x: x[1])
                 if best_score > 0.3:
                     return best_cat, scores
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             print(f"Warning: Supervised classification failed: {exc}")
 
     cat = classify_chunk(chunk, categories)
@@ -144,7 +144,7 @@ def classify_chunk_hybrid(
 # Context classification
 # ---------------------------------------------------------------------------
 
-_CONTEXT_KEYWORDS: Dict[str, str] = {
+_CONTEXT_KEYWORDS: dict[str, str] = {
     "work": "Work",
     "office": "Office",
     "home": "Home",

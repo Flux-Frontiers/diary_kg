@@ -1,0 +1,48 @@
+{
+  "model": "all-mpnet-base-v2",
+  "corpus_size": 8413,
+  "n_entries_parsed": 8413,
+  "date_range": [
+    "1660-01-01T08:00:00",
+    "1669-08-02T07:00:00"
+  ],
+  "full_dim": 768,
+  "twonn_id": 14.26,
+  "participation_ratio": 22.81,
+  "pca_id_90pct": 108,
+  "pca_id_95pct": 144,
+  "pca_id_99pct": 186,
+  "mrl_retrieval": [
+    {
+      "dim": 64,
+      "mrr": 0.8557692307692307,
+      "var_explained": 1.0,
+      "pca_id_90": 37
+    },
+    {
+      "dim": 128,
+      "mrr": 0.8653846153846154,
+      "var_explained": 1.0,
+      "pca_id_90": 63
+    },
+    {
+      "dim": 256,
+      "mrr": 0.9038461538461539,
+      "var_explained": 0.9892933368682861,
+      "pca_id_90": 90
+    },
+    {
+      "dim": 512,
+      "mrr": 0.9615384615384616,
+      "var_explained": 0.9576354622840881,
+      "pca_id_90": 104
+    },
+    {
+      "dim": 768,
+      "mrr": 0.9615384615384616,
+      "var_explained": 0.9421148896217346,
+      "pca_id_90": 108
+    }
+  ],
+  "flight": {}
+}

@@ -1,0 +1,418 @@
+{
+  "format": "1.0",
+  "last_update": "2026-03-26T22:20:02.921619+00:00",
+  "snapshots": [
+    {
+      "key": "96c893b6780b85a39a69f194b98cafeb4eba61f4",
+      "branch": "feat/waverider",
+      "timestamp": "2026-03-26T21:57:35.900665+00:00",
+      "version": "0.9.0",
+      "file": "96c893b6780b85a39a69f194b98cafeb4eba61f4.json",
+      "metrics": {
+        "total_nodes": 3831,
+        "total_edges": 28594,
+        "meaningful_nodes": 3821,
+        "coverage_score": 0.958138081849422,
+        "node_counts": {
+          "chunk": 1067,
+          "document": 10,
+          "entity": 973,
+          "keyword": 786,
+          "section": 608,
+          "topic": 387
+        },
+        "edge_counts": {
+          "CONTAINS": 1675,
+          "CO_OCCURS_WITH": 14486,
+          "HAS_KEYWORD": 4161,
+          "HAS_TOPIC": 1074,
+          "MENTIONS_ENTITY": 5184,
+          "NEXT": 451,
+          "SIMILAR_TO": 1563
+        },
+        "issues_count": 0,
+        "complexity_median": 18.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": null
+      }
+    },
+    {
+      "key": "a884e4e64f4389a1ad4d07b8a71900a47e1fbbf5",
+      "branch": "feat/waverider",
+      "timestamp": "2026-03-26T22:04:35.468917+00:00",
+      "version": "0.9.0",
+      "file": "a884e4e64f4389a1ad4d07b8a71900a47e1fbbf5.json",
+      "metrics": {
+        "total_nodes": 3831,
+        "total_edges": 28594,
+        "meaningful_nodes": 3821,
+        "coverage_score": 0.958138081849422,
+        "node_counts": {
+          "chunk": 1067,
+          "document": 10,
+          "entity": 973,
+          "keyword": 786,
+          "section": 608,
+          "topic": 387
+        },
+        "edge_counts": {
+          "CONTAINS": 1675,
+          "CO_OCCURS_WITH": 14486,
+          "HAS_KEYWORD": 4161,
+          "HAS_TOPIC": 1074,
+          "MENTIONS_ENTITY": 5184,
+          "NEXT": 451,
+          "SIMILAR_TO": 1563
+        },
+        "issues_count": 0,
+        "complexity_median": 18.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 0,
+          "edges": 0,
+          "coverage_delta": 0.0,
+          "issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "096eb21583a11e07305caa832038049e6e0b9115",
+      "branch": "feat/waverider",
+      "timestamp": "2026-03-26T22:06:21.511608+00:00",
+      "version": "0.9.0",
+      "file": "096eb21583a11e07305caa832038049e6e0b9115.json",
+      "metrics": {
+        "total_nodes": 3831,
+        "total_edges": 28594,
+        "meaningful_nodes": 3821,
+        "coverage_score": 0.958138081849422,
+        "node_counts": {
+          "chunk": 1067,
+          "document": 10,
+          "entity": 973,
+          "keyword": 786,
+          "section": 608,
+          "topic": 387
+        },
+        "edge_counts": {
+          "CONTAINS": 1675,
+          "CO_OCCURS_WITH": 14486,
+          "HAS_KEYWORD": 4161,
+          "HAS_TOPIC": 1074,
+          "MENTIONS_ENTITY": 5184,
+          "NEXT": 451,
+          "SIMILAR_TO": 1563
+        },
+        "issues_count": 0,
+        "complexity_median": 18.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 0,
+          "edges": 0,
+          "coverage_delta": 0.0,
+          "issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "8a9c862c408307468268a7b500bb0718983eb6a7",
+      "branch": "feat/waverider",
+      "timestamp": "2026-03-26T22:08:43.205924+00:00",
+      "version": "0.9.0",
+      "file": "8a9c862c408307468268a7b500bb0718983eb6a7.json",
+      "metrics": {
+        "db_path": ".dockg/graph.sqlite",
+        "total_nodes": 3831,
+        "total_edges": 29787,
+        "node_counts": {
+          "chunk": 1067,
+          "document": 10,
+          "entity": 973,
+          "keyword": 786,
+          "section": 608,
+          "topic": 387
+        },
+        "edge_counts": {
+          "CONTAINS": 1675,
+          "CO_OCCURS_WITH": 14486,
+          "HAS_KEYWORD": 4161,
+          "HAS_TOPIC": 1074,
+          "MENTIONS_ENTITY": 5184,
+          "NEXT": 451,
+          "SIMILAR_TO": 2756
+        },
+        "meaningful_nodes": 3821,
+        "coverage_score": 0.958138081849422,
+        "issues_count": 0,
+        "complexity_median": 18.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 0,
+          "edges": 1193,
+          "coverage_delta": 0.0,
+          "issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "cd800bcd8f8ef7f290939026e2c86e01525ccce9",
+      "branch": "feat/waverider",
+      "timestamp": "2026-03-26T22:11:41.490429+00:00",
+      "version": "0.9.0",
+      "file": "cd800bcd8f8ef7f290939026e2c86e01525ccce9.json",
+      "metrics": {
+        "db_path": ".dockg/graph.sqlite",
+        "total_nodes": 3831,
+        "total_edges": 29787,
+        "node_counts": {
+          "chunk": 1067,
+          "document": 10,
+          "entity": 973,
+          "keyword": 786,
+          "section": 608,
+          "topic": 387
+        },
+        "edge_counts": {
+          "CONTAINS": 1675,
+          "CO_OCCURS_WITH": 14486,
+          "HAS_KEYWORD": 4161,
+          "HAS_TOPIC": 1074,
+          "MENTIONS_ENTITY": 5184,
+          "NEXT": 451,
+          "SIMILAR_TO": 2756
+        },
+        "meaningful_nodes": 3821,
+        "coverage_score": 0.958138081849422,
+        "issues_count": 0,
+        "complexity_median": 18.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 0,
+          "edges": 1193,
+          "coverage_delta": 0.0,
+          "issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "1f38777f65fb67a43bdde14c127916262dc1e209",
+      "branch": "feat/waverider",
+      "timestamp": "2026-03-26T22:12:27.863725+00:00",
+      "version": "0.9.0",
+      "file": "1f38777f65fb67a43bdde14c127916262dc1e209.json",
+      "metrics": {
+        "db_path": ".dockg/graph.sqlite",
+        "total_nodes": 3831,
+        "total_edges": 29787,
+        "node_counts": {
+          "chunk": 1067,
+          "document": 10,
+          "entity": 973,
+          "keyword": 786,
+          "section": 608,
+          "topic": 387
+        },
+        "edge_counts": {
+          "CONTAINS": 1675,
+          "CO_OCCURS_WITH": 14486,
+          "HAS_KEYWORD": 4161,
+          "HAS_TOPIC": 1074,
+          "MENTIONS_ENTITY": 5184,
+          "NEXT": 451,
+          "SIMILAR_TO": 2756
+        },
+        "meaningful_nodes": 3821,
+        "coverage_score": 0.958138081849422,
+        "issues_count": 0,
+        "complexity_median": 18.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 0,
+          "edges": 1193,
+          "coverage_delta": 0.0,
+          "issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "b241624a0da84055c712ca18029089d3f47f5cf2",
+      "branch": "feat/waverider",
+      "timestamp": "2026-03-26T22:14:55.919661+00:00",
+      "version": "0.9.0",
+      "file": "b241624a0da84055c712ca18029089d3f47f5cf2.json",
+      "metrics": {
+        "db_path": ".dockg/graph.sqlite",
+        "total_nodes": 3831,
+        "total_edges": 29787,
+        "node_counts": {
+          "chunk": 1067,
+          "document": 10,
+          "entity": 973,
+          "keyword": 786,
+          "section": 608,
+          "topic": 387
+        },
+        "edge_counts": {
+          "CONTAINS": 1675,
+          "CO_OCCURS_WITH": 14486,
+          "HAS_KEYWORD": 4161,
+          "HAS_TOPIC": 1074,
+          "MENTIONS_ENTITY": 5184,
+          "NEXT": 451,
+          "SIMILAR_TO": 2756
+        },
+        "meaningful_nodes": 3821,
+        "coverage_score": 0.958138081849422,
+        "issues_count": 0,
+        "complexity_median": 18.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 0,
+          "edges": 1193,
+          "coverage_delta": 0.0,
+          "issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "437bb2d7ff0c67e6aff8891ee0fe1cc27fef4b69",
+      "branch": "feat/waverider",
+      "timestamp": "2026-03-26T22:15:33.706318+00:00",
+      "version": "0.9.0",
+      "file": "437bb2d7ff0c67e6aff8891ee0fe1cc27fef4b69.json",
+      "metrics": {
+        "db_path": ".dockg/graph.sqlite",
+        "total_nodes": 3831,
+        "total_edges": 29787,
+        "node_counts": {
+          "chunk": 1067,
+          "document": 10,
+          "entity": 973,
+          "keyword": 786,
+          "section": 608,
+          "topic": 387
+        },
+        "edge_counts": {
+          "CONTAINS": 1675,
+          "CO_OCCURS_WITH": 14486,
+          "HAS_KEYWORD": 4161,
+          "HAS_TOPIC": 1074,
+          "MENTIONS_ENTITY": 5184,
+          "NEXT": 451,
+          "SIMILAR_TO": 2756
+        },
+        "meaningful_nodes": 3821,
+        "coverage_score": 0.958138081849422,
+        "issues_count": 0,
+        "complexity_median": 18.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 0,
+          "edges": 1193,
+          "coverage_delta": 0.0,
+          "issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "87a0925e685cf6ae4aace3424462a7166d0170ba",
+      "branch": "feat/waverider",
+      "timestamp": "2026-03-26T22:16:27.412467+00:00",
+      "version": "0.9.0",
+      "file": "87a0925e685cf6ae4aace3424462a7166d0170ba.json",
+      "metrics": {
+        "db_path": ".dockg/graph.sqlite",
+        "total_nodes": 3831,
+        "total_edges": 29787,
+        "node_counts": {
+          "chunk": 1067,
+          "document": 10,
+          "entity": 973,
+          "keyword": 786,
+          "section": 608,
+          "topic": 387
+        },
+        "edge_counts": {
+          "CONTAINS": 1675,
+          "CO_OCCURS_WITH": 14486,
+          "HAS_KEYWORD": 4161,
+          "HAS_TOPIC": 1074,
+          "MENTIONS_ENTITY": 5184,
+          "NEXT": 451,
+          "SIMILAR_TO": 2756
+        },
+        "meaningful_nodes": 3821,
+        "coverage_score": 0.958138081849422,
+        "issues_count": 0,
+        "complexity_median": 18.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 0,
+          "edges": 1193,
+          "coverage_delta": 0.0,
+          "issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "e1200ab846685f11b315d21216fd4b28eb9e5dcd",
+      "branch": "feat/waverider",
+      "timestamp": "2026-03-26T22:20:02.921134+00:00",
+      "version": "0.9.0",
+      "file": "e1200ab846685f11b315d21216fd4b28eb9e5dcd.json",
+      "metrics": {
+        "db_path": ".dockg/graph.sqlite",
+        "total_nodes": 3831,
+        "total_edges": 29787,
+        "node_counts": {
+          "chunk": 1067,
+          "document": 10,
+          "entity": 973,
+          "keyword": 786,
+          "section": 608,
+          "topic": 387
+        },
+        "edge_counts": {
+          "CONTAINS": 1675,
+          "CO_OCCURS_WITH": 14486,
+          "HAS_KEYWORD": 4161,
+          "HAS_TOPIC": 1074,
+          "MENTIONS_ENTITY": 5184,
+          "NEXT": 451,
+          "SIMILAR_TO": 2756
+        },
+        "meaningful_nodes": 3821,
+        "coverage_score": 0.958138081849422,
+        "issues_count": 0,
+        "complexity_median": 18.0
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 0,
+          "edges": 1193,
+          "coverage_delta": 0.0,
+          "issues_delta": 0
+        }
+      }
+    }
+  ]
+}

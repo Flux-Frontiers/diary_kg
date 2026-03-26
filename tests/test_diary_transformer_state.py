@@ -8,7 +8,6 @@ and StateManager.
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 
 import pytest
 
@@ -20,10 +19,10 @@ from diary_transformer.state import (
     save_chunks_to_cache,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_entries(n: int = 3) -> list[DiaryEntry]:
     entries = []
@@ -48,6 +47,7 @@ def _segment_fn(content: str, timestamp=None) -> list[str]:
 # ---------------------------------------------------------------------------
 # Chunk cache round-trip
 # ---------------------------------------------------------------------------
+
 
 class TestChunkCache:
     def test_save_and_load_roundtrip(self, tmp_path):
@@ -100,6 +100,7 @@ class TestChunkCache:
 # filter_uninjected
 # ---------------------------------------------------------------------------
 
+
 class TestFilterUninjected:
     def test_empty_injected_returns_all(self):
         entries = _make_entries(5)
@@ -128,6 +129,7 @@ class TestFilterUninjected:
 # ---------------------------------------------------------------------------
 # StateManager
 # ---------------------------------------------------------------------------
+
 
 class TestStateManager:
     def test_initial_state_is_empty(self, tmp_path):

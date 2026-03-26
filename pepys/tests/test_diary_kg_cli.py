@@ -10,18 +10,16 @@ tested.
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from diary_kg.cli import cli
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _runner() -> CliRunner:
     return CliRunner(mix_stderr=False)
@@ -53,6 +51,7 @@ def _mock_kg(
 # ---------------------------------------------------------------------------
 # Root group --help
 # ---------------------------------------------------------------------------
+
 
 class TestCliHelp:
     def test_help_exits_zero(self):
@@ -101,6 +100,7 @@ class TestCliHelp:
 # status
 # ---------------------------------------------------------------------------
 
+
 class TestStatusCommand:
     def test_status_shows_not_built(self, tmp_path):
         mock_kg = _mock_kg(is_built=False, snapshot_list_result=[])
@@ -118,6 +118,7 @@ class TestStatusCommand:
 # ---------------------------------------------------------------------------
 # analyze
 # ---------------------------------------------------------------------------
+
 
 class TestAnalyzeCommand:
     def test_analyze_not_built_exits_nonzero(self, tmp_path):
@@ -148,6 +149,7 @@ class TestAnalyzeCommand:
 # query
 # ---------------------------------------------------------------------------
 
+
 class TestQueryCommand:
     def test_query_on_unbuilt_exits_nonzero(self, tmp_path):
         mock_kg = _mock_kg(is_built=False)
@@ -159,14 +161,21 @@ class TestQueryCommand:
     def test_query_json_output(self, tmp_path):
         mock_kg = _mock_kg()
         mock_kg.query.return_value = [
-            {"node_id": "n1", "score": 0.9, "summary": "text",
-             "source_file": "pepys.txt", "timestamp": "1660-01-01T00:00",
-             "category": "work", "context": "Office"},
+            {
+                "node_id": "n1",
+                "score": 0.9,
+                "summary": "text",
+                "source_file": "pepys.txt",
+                "timestamp": "1660-01-01T00:00",
+                "category": "work",
+                "context": "Office",
+            },
         ]
         with patch("diary_kg.cli._kg", return_value=mock_kg):
             result = _runner().invoke(cli, ["query", "office", str(tmp_path), "--json"])
         assert result.exit_code == 0
         import json
+
         data = json.loads(result.output)
         assert len(data) == 1
         assert data[0]["node_id"] == "n1"
@@ -183,6 +192,7 @@ class TestQueryCommand:
 # pack
 # ---------------------------------------------------------------------------
 
+
 class TestPackCommand:
     def test_pack_on_unbuilt_exits_nonzero(self, tmp_path):
         mock_kg = _mock_kg(is_built=False)
@@ -194,27 +204,36 @@ class TestPackCommand:
     def test_pack_json_output(self, tmp_path):
         mock_kg = _mock_kg()
         mock_kg.pack.return_value = [
-            {"node_id": "n1", "score": 0.8, "content": "So home.",
-             "source_file": "pepys.txt", "timestamp": "1660-01-01T00:00"},
+            {
+                "node_id": "n1",
+                "score": 0.8,
+                "content": "So home.",
+                "source_file": "pepys.txt",
+                "timestamp": "1660-01-01T00:00",
+            },
         ]
         with patch("diary_kg.cli._kg", return_value=mock_kg):
             result = _runner().invoke(cli, ["pack", "home", str(tmp_path), "--json"])
         assert result.exit_code == 0
         import json
+
         data = json.loads(result.output)
         assert data[0]["content"] == "So home."
 
     def test_pack_writes_file(self, tmp_path):
         mock_kg = _mock_kg()
         mock_kg.pack.return_value = [
-            {"node_id": "n1", "score": 0.8, "content": "So home.",
-             "source_file": "pepys.txt", "timestamp": None},
+            {
+                "node_id": "n1",
+                "score": 0.8,
+                "content": "So home.",
+                "source_file": "pepys.txt",
+                "timestamp": None,
+            },
         ]
         out = tmp_path / "context.md"
         with patch("diary_kg.cli._kg", return_value=mock_kg):
-            result = _runner().invoke(cli, [
-                "pack", "home", str(tmp_path), "--output", str(out)
-            ])
+            result = _runner().invoke(cli, ["pack", "home", str(tmp_path), "--output", str(out)])
         assert result.exit_code == 0
         assert out.exists()
 
@@ -222,6 +241,7 @@ class TestPackCommand:
 # ---------------------------------------------------------------------------
 # snapshot list
 # ---------------------------------------------------------------------------
+
 
 class TestSnapshotListCommand:
     def test_empty_shows_no_snapshots_message(self, tmp_path):
@@ -237,22 +257,37 @@ class TestSnapshotListCommand:
             result = _runner().invoke(cli, ["snapshot", "list", str(tmp_path), "--json"])
         assert result.exit_code == 0
         import json
+
         assert json.loads(result.output) == []
 
     def test_json_output_with_snapshots(self, tmp_path):
         snaps = [
-            {"key": "abc123", "branch": "main", "timestamp": "2024-01-01T00:00:00",
-             "version": "0.1.0", "label": None,
-             "metrics": {"chunk_count": 5, "entry_count": 3, "node_count": 10,
-                         "edge_count": 5, "topic_counts": {}, "context_counts": {},
-                         "temporal_span": {}, "chunking_strategy": "", "chunk_size": 512},
-             "deltas": {"vs_previous": None, "vs_baseline": None}},
+            {
+                "key": "abc123",
+                "branch": "main",
+                "timestamp": "2024-01-01T00:00:00",
+                "version": "0.1.0",
+                "label": None,
+                "metrics": {
+                    "chunk_count": 5,
+                    "entry_count": 3,
+                    "node_count": 10,
+                    "edge_count": 5,
+                    "topic_counts": {},
+                    "context_counts": {},
+                    "temporal_span": {},
+                    "chunking_strategy": "",
+                    "chunk_size": 512,
+                },
+                "deltas": {"vs_previous": None, "vs_baseline": None},
+            },
         ]
         mock_kg = _mock_kg(snapshot_list_result=snaps)
         with patch("diary_kg.cli._kg", return_value=mock_kg):
             result = _runner().invoke(cli, ["snapshot", "list", str(tmp_path), "--json"])
         assert result.exit_code == 0
         import json
+
         data = json.loads(result.output)
         assert data[0]["key"] == "abc123"
 
@@ -260,6 +295,7 @@ class TestSnapshotListCommand:
 # ---------------------------------------------------------------------------
 # snapshot show
 # ---------------------------------------------------------------------------
+
 
 class TestSnapshotShowCommand:
     def test_missing_key_exits_nonzero(self, tmp_path):
@@ -277,20 +313,27 @@ class TestSnapshotShowCommand:
             "version": "0.1.0",
             "label": None,
             "source_file": "pepys.txt",
-            "metrics": {"chunk_count": 5, "entry_count": 3, "node_count": 10,
-                        "edge_count": 5, "topic_counts": {}, "context_counts": {},
-                        "temporal_span": {}, "chunking_strategy": "", "chunk_size": 512},
+            "metrics": {
+                "chunk_count": 5,
+                "entry_count": 3,
+                "node_count": 10,
+                "edge_count": 5,
+                "topic_counts": {},
+                "context_counts": {},
+                "temporal_span": {},
+                "chunking_strategy": "",
+                "chunk_size": 512,
+            },
             "vs_previous": None,
             "vs_baseline": None,
         }
         mock_kg = _mock_kg()
         mock_kg.snapshot_show.return_value = snap
         with patch("diary_kg.cli._kg", return_value=mock_kg):
-            result = _runner().invoke(
-                cli, ["snapshot", "show", "abc123", str(tmp_path), "--json"]
-            )
+            result = _runner().invoke(cli, ["snapshot", "show", "abc123", str(tmp_path), "--json"])
         assert result.exit_code == 0
         import json
+
         data = json.loads(result.output)
         assert data["key"] == "abc123"
 
@@ -298,6 +341,7 @@ class TestSnapshotShowCommand:
 # ---------------------------------------------------------------------------
 # snapshot diff
 # ---------------------------------------------------------------------------
+
 
 class TestSnapshotDiffCommand:
     def test_missing_keys_outputs_diff_with_error(self, tmp_path):
@@ -322,6 +366,7 @@ class TestSnapshotDiffCommand:
             )
         assert result.exit_code == 0
         import json
+
         data = json.loads(result.output)
         assert data["delta"]["chunks"] == 5
 
@@ -329,6 +374,7 @@ class TestSnapshotDiffCommand:
 # ---------------------------------------------------------------------------
 # snapshot save
 # ---------------------------------------------------------------------------
+
 
 class TestSnapshotSaveCommand:
     def test_not_built_exits_nonzero(self, tmp_path):
@@ -350,8 +396,6 @@ class TestSnapshotSaveCommand:
         mock_kg = _mock_kg()
         mock_kg.snapshot_save.return_value = snap
         with patch("diary_kg.cli._kg", return_value=mock_kg):
-            result = _runner().invoke(
-                cli, ["snapshot", "save", str(tmp_path), "--label", "first"]
-            )
+            result = _runner().invoke(cli, ["snapshot", "save", str(tmp_path), "--label", "first"])
         assert result.exit_code == 0
         assert "deadbeef1234" in result.output
