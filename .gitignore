@@ -235,3 +235,6 @@ __marimo__/
 # MCP server config — machine-specific, never commit
 .mcp.json
 
+
+# Large benchmark embedding files
+benchmarks/*.json
