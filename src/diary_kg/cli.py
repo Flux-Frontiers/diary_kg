@@ -51,6 +51,7 @@ class DiaryKGRef:
 
 
 @click.group()
+@click.version_option(package_name="diary-kg")
 def cli():
     """DiaryKG — knowledge graph for diaries and journals."""
 
