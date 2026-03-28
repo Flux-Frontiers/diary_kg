@@ -282,6 +282,10 @@ class DiaryKG:
         n_edges = self._inject_topic_edges()
         print(f"Injected {n_edges} classifier HAS_TOPIC edges.")
 
+        # Step 4 — enrich SQLite nodes with diary frontmatter metadata
+        n_enriched = self._enrich_metadata()
+        print(f"Enriched {n_enriched} chunk nodes with diary metadata.")
+
         # Persist config
         self._write_config(
             {
@@ -385,6 +389,56 @@ class DiaryKG:
 
         return edges_written
 
+    def _enrich_metadata(self) -> int:
+        """Enrichment pass: store diary frontmatter fields into the SQLite nodes table.
+
+        Adds columns ``timestamp``, ``category``, ``context``, and
+        ``diary_source_file`` to the DocKG ``nodes`` table (idempotent), then
+        populates them from each corpus chunk's ``.md`` frontmatter.
+
+        :return: Number of chunk rows updated.
+        """
+        import sqlite3  # pylint: disable=import-outside-toplevel
+
+        if not self._db_path.exists() or not self._corpus_dir.exists():
+            return 0
+
+        md_files = sorted(self._corpus_dir.glob("*.md"))
+        if not md_files:
+            return 0
+
+        n_updated = 0
+        with sqlite3.connect(str(self._db_path)) as con:
+            for col in ("timestamp", "category", "context", "diary_source_file"):
+                try:
+                    con.execute(f"ALTER TABLE nodes ADD COLUMN {col} TEXT")
+                except sqlite3.OperationalError:
+                    pass  # column already exists
+            con.commit()
+
+            for md_path in md_files:
+                fm = _parse_frontmatter(md_path.read_text(encoding="utf-8"))
+                if not fm:
+                    continue
+                con.execute(
+                    """
+                    UPDATE nodes
+                       SET timestamp=?, category=?, context=?, diary_source_file=?
+                     WHERE kind='chunk' AND file_path=?
+                    """,
+                    (
+                        fm.get("timestamp"),
+                        fm.get("category"),
+                        fm.get("context"),
+                        fm.get("source_file"),
+                        md_path.name,
+                    ),
+                )
+                n_updated += con.execute("SELECT changes()").fetchone()[0]
+            con.commit()
+
+        return n_updated
+
     # ------------------------------------------------------------------
     # Query / Pack
     # ------------------------------------------------------------------
@@ -392,29 +446,51 @@ class DiaryKG:
     def query(self, q: str, k: int = 8) -> list[dict[str, Any]]:
         """Semantic search over the diary corpus.
 
+        Pure vector search over chunk nodes, with scores and diary metadata
+        sourced from the enriched SQLite ``nodes`` table.
+
         :param q: Natural-language query string.
         :param k: Number of results to return.
         :return: List of result dicts with keys: ``score``, ``summary``,
             ``source_file``, ``timestamp``, ``category``, ``context``,
             ``node_id``.
         """
+        import sqlite3  # pylint: disable=import-outside-toplevel
+
         dockg = self._load_dockg()
-        result = dockg.query(q, k=k)
         sf = self.source_file
+
+        # Pure semantic search — oversample then filter to chunk nodes only
+        seed_hits = dockg.index.search(q, k=k * 15)
+        chunk_hits = [h for h in seed_hits if h.kind == "chunk"][:k]
+        if not chunk_hits:
+            return []
+
         hits = []
-        for node in result.nodes[:k]:
-            relevance = node.get("relevance") or {}
-            hits.append(
-                {
-                    "node_id": node.get("id", ""),
-                    "score": relevance.get("score", 0.0),
-                    "summary": node.get("text") or node.get("title", ""),
-                    "source_file": self._source_from_node(node, sf),
-                    "timestamp": self._timestamp_from_node(node),
-                    "category": (node.get("metadata") or {}).get("category", ""),
-                    "context": (node.get("metadata") or {}).get("context", ""),
-                }
-            )
+        with sqlite3.connect(str(self._db_path)) as con:
+            for hit in chunk_hits:
+                score = max(0.0, 1.0 - (hit.distance**2) / 2.0)
+                row = con.execute(
+                    """
+                    SELECT text, timestamp, category, context, diary_source_file
+                      FROM nodes WHERE id=?
+                    """,
+                    (hit.id,),
+                ).fetchone()
+                if not row:
+                    continue
+                text, timestamp, category, context, diary_sf = row
+                hits.append(
+                    {
+                        "node_id": hit.id,
+                        "score": score,
+                        "summary": (text or "")[:120],
+                        "source_file": diary_sf or sf or hit.file_path or "",
+                        "timestamp": timestamp or "",
+                        "category": category or "",
+                        "context": context or "",
+                    }
+                )
         return hits
 
     def pack(self, q: str, k: int = 8) -> list[dict[str, Any]]:
@@ -425,21 +501,39 @@ class DiaryKG:
         :return: List of snippet dicts with keys: ``content``, ``source_file``,
             ``timestamp``, ``score``, ``node_id``.
         """
+        import sqlite3  # pylint: disable=import-outside-toplevel
+
         dockg = self._load_dockg()
-        pack_result = dockg.pack(q, k=k)
         sf = self.source_file
+
+        seed_hits = dockg.index.search(q, k=k * 15)
+        chunk_hits = [h for h in seed_hits if h.kind == "chunk"][:k]
+        if not chunk_hits:
+            return []
+
         snippets = []
-        for node in pack_result.nodes:
-            relevance = node.get("relevance") or {}
-            snippets.append(
-                {
-                    "node_id": node.get("id", ""),
-                    "score": relevance.get("score", 0.0),
-                    "content": node.get("text") or "",
-                    "source_file": self._source_from_node(node, sf),
-                    "timestamp": self._timestamp_from_node(node),
-                }
-            )
+        with sqlite3.connect(str(self._db_path)) as con:
+            for hit in chunk_hits:
+                score = max(0.0, 1.0 - hit.distance)
+                row = con.execute(
+                    """
+                    SELECT text, timestamp, diary_source_file
+                      FROM nodes WHERE id=?
+                    """,
+                    (hit.id,),
+                ).fetchone()
+                if not row:
+                    continue
+                text, timestamp, diary_sf = row
+                snippets.append(
+                    {
+                        "node_id": hit.id,
+                        "score": score,
+                        "content": text or "",
+                        "source_file": diary_sf or sf or hit.file_path or "",
+                        "timestamp": timestamp or "",
+                    }
+                )
         return snippets
 
     # ------------------------------------------------------------------

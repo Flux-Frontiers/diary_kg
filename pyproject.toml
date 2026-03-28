@@ -25,7 +25,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "diary-kg"
-version = "0.91.0"
+version = "0.91.1"
 description = "A knowledge graph builder and semantic search engine for diaries and journals"
 authors = ["Eric G. Suchanek, PhD <suchanek@mac.com>"]
 license = "Elastic-2.0"
