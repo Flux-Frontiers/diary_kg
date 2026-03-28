@@ -113,6 +113,11 @@ def cli():
     is_flag=True,
     help="Clear injection state + chunk cache (preserve diversity cache).",
 )
+@click.option(
+    "--summary-file",
+    default=None,
+    help="Path for the Markdown run summary (default: <output-stem>_run_summary.md).",
+)
 def transform(
     input_path,
     output_path,
@@ -128,6 +133,7 @@ def transform(
     state_file,
     clear,
     restart,
+    summary_file,
 ):
     """Transform diary entries into pipe-delimited semantic chunk output.
 
@@ -183,6 +189,7 @@ def transform(
                 seed=seed,
                 max_chunks_per_entry=max_chunks_per_entry,
                 resume_mode=True,
+                summary_file=summary_file,
             )
         else:
             dt.transform_file(
@@ -191,6 +198,7 @@ def transform(
                 batch_size=batch_size,
                 seed=seed,
                 max_chunks_per_entry=max_chunks_per_entry,
+                summary_file=summary_file,
             )
         console.print(f"\n[green]Done![/green] Output: {out_path}")
     except KeyboardInterrupt:
@@ -405,6 +413,144 @@ def build(corpus_dir, wipe, kg_name, registry):
             f"\nTo register in KGRAG: "
             f"[bold]diary-transformer build {corpus_dir} --register <name>[/bold]"
         )
+
+
+# ---------------------------------------------------------------------------
+# embed command — multi-process embedding cache builder
+# ---------------------------------------------------------------------------
+
+
+@cli.command("embed")
+@click.argument("diary_path", metavar="DIARY", type=click.Path(exists=True, dir_okay=False))
+@click.option("--output", "-o", default=None, help="Output JSON cache path.")
+@click.option(
+    "--n", default=0, show_default=True, help="Temporally sampled subset size (0 = full corpus)."
+)
+@click.option(
+    "--model",
+    default="sentence-transformers/all-mpnet-base-v2",
+    show_default=True,
+    help="HuggingFace model id.",
+)
+@click.option("--workers", "-w", default=4, show_default=True, help="Parallel embedding workers.")
+@click.option(
+    "--batch-size", "-b", default=32, show_default=True, help="Encoding batch size per worker."
+)
+@click.option(
+    "--max-chars", default=0, show_default=True, help="Truncate entries to N chars (0 = no limit)."
+)
+@click.option("--force", is_flag=True, help="Overwrite existing output file.")
+@click.option(
+    "--summary-file",
+    default=None,
+    help="Path for the Markdown run summary (default: <output-stem>_run_summary.md).",
+)
+def embed(diary_path, output, n, model, workers, batch_size, max_chars, force, summary_file):
+    """Build a multi-process embedding cache from a diary file.
+
+    Parses DIARY, optionally subsamples with temporal diversity, embeds every
+    entry in parallel, and saves a JSON cache ready for manifold analysis and
+    WaveRider missions.
+
+    \b
+    DIARY   Pipe-delimited diary source file.
+
+    Examples:
+
+    \b
+        diary-transformer embed pepys/pepys_enriched_full.txt
+        diary-transformer embed pepys/pepys_enriched_full.txt --n 1000 --output cache.json
+        diary-transformer embed pepys/pepys_enriched_full.txt --workers 8 --force
+    """
+    import multiprocessing as _mp  # pylint: disable=import-outside-toplevel
+    import time  # pylint: disable=import-outside-toplevel
+    from datetime import datetime as _dt  # pylint: disable=import-outside-toplevel
+
+    from .diary_embedder import (  # pylint: disable=import-outside-toplevel
+        embed_multiprocess,
+        parse_diary,
+        save_cache,
+        temporally_sample,
+        write_run_summary,
+    )
+
+    diary = Path(diary_path)
+    out_path = Path(output) if output else diary.parent / (diary.stem + "_mpnet_embeddings.json")
+
+    if out_path.exists() and not force:
+        console.print(
+            f"[yellow]Output already exists: {out_path}\nPass --force to overwrite.[/yellow]"
+        )
+        sys.exit(0)
+    if out_path.exists() and force:
+        out_path.unlink()
+        console.print(f"[yellow]Cleared existing cache: {out_path}[/yellow]")
+
+    console.rule("[bold blue]Diary · Multi-Process Embedder")
+
+    console.print(f"\n[bold]Step 1:[/bold] Parsing {diary} …")
+    texts, timestamps = parse_diary(str(diary))
+    n_parsed = len(texts)
+    console.print(
+        f"  Parsed {n_parsed} entries  ({timestamps[0].date()} → {timestamps[-1].date()})"
+    )
+
+    if max_chars:
+        n_long = sum(1 for t in texts if len(t) > max_chars)
+        if n_long:
+            console.print(f"  Truncating {n_long} entries to {max_chars} chars")
+        texts = [t[:max_chars] for t in texts]
+
+    if n and n < len(texts):
+        texts, timestamps = temporally_sample(texts, timestamps, n)
+        console.print(
+            f"  Temporally sampled {len(texts)} entries  "
+            f"({timestamps[0].date()} → {timestamps[-1].date()})"
+        )
+
+    n_workers = workers or 4
+    console.print(
+        f"\n[bold]Step 2:[/bold] Embedding {len(texts)} entries  "
+        f"model={model}  workers={n_workers}  batch={batch_size} …"
+    )
+    t0 = time.time()
+    try:
+        _mp.set_start_method("spawn", force=True)
+        E = embed_multiprocess(texts, model=model, n_workers=n_workers, batch_size=batch_size)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        console.print(f"[red]Embedding failed: {exc}[/red]")
+        sys.exit(1)
+
+    elapsed = time.time() - t0
+    console.print(
+        f"  Done: {E.shape[0]} × {E.shape[1]} float32  "
+        f"in {elapsed:.1f}s  ({elapsed / max(len(texts), 1):.3f}s/entry)"
+    )
+
+    console.print("\n[bold]Step 3:[/bold] Saving cache …")
+    save_cache(str(out_path), E, texts, timestamps)
+
+    write_run_summary(
+        str(out_path),
+        run_params={
+            "timestamp": _dt.now().isoformat(),
+            "diary_file": str(diary),
+            "model": model,
+            "workers": n_workers,
+            "batch_size": batch_size,
+            "n_sample": n or "all",
+            "max_chars": max_chars or "none",
+        },
+        stats={
+            "entries_parsed": n_parsed,
+            "entries_embedded": E.shape[0],
+            "time_range_start": timestamps[0].date(),
+            "time_range_end": timestamps[-1].date(),
+            "embedding_shape": (E.shape[0], E.shape[1]),
+            "runtime_s": elapsed,
+        },
+        summary_file=summary_file,
+    )
 
 
 # ---------------------------------------------------------------------------

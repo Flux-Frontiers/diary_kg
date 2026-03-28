@@ -8,6 +8,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `benchmarks/pepys_ch5_flight.py`: WaveRider Chapter 5 experiment — destination-relative
+  temporal encoding; appends `abs(fyear_i − fyear_dest)` as the temporal axis so the
+  destination has coordinate 0 and the KNN graph acts as a gravitational attractor;
+  full hop log with running Kendall τ and mission data appendix
+- `benchmarks/pepys_temporal_flight_results.png`,
+  `benchmarks/pepys_temporal_flight_negated.png`: 8-panel (2×4) temporal flight result
+  figures for standard and τ-negated runs
+- `benchmarks/pepys_mpnet_embeddings_run_summary.md`: run summary for full-corpus
+  mpnet embedding (7,282 entries × 768 dims, 33.6 s on Apple Silicon)
+- `docs/PIPELINE_TECHNICAL_DISCLOSURE.md`: technical disclosure document covering the
+  full offline semantic pre-computation pipeline — DiaryTransformer enrichment,
+  multi-process embedding, KG build, manifold analysis, and temporal flight primitives;
+  validated metrics on the full 9-year Pepys corpus
+- `analysis/diary_kg_analysis_20260327.md`: CodeKG architectural analysis snapshot
+  (8,484 nodes, 9,705 edges, 33.7 % docstring coverage, SIR ranking)
+- `pepys/pepys_only_topics.yaml`: topics-only YAML derived from the full Pepys corpus
+  classification run
+- `pepys/pepys_enriched_full_run_summary.md`: run summary for the full enriched-corpus
+  ingest pass
+- `diary-embedder` CLI entry point: `diary_transformer.diary_embedder:main` — installs
+  as `diary-embedder` command; `benchmarks/pepys_embedder.py` reduced to a thin shim
+  that delegates here
+
+### Changed
+- `pyproject.toml`: version bumped 0.9.0 → 0.91.0; added `diary-embedder` entry point
+- `benchmarks/pepys_embedder.py`: replaced 352-line standalone implementation with a
+  27-line shim; all logic lives in `diary_transformer.diary_embedder`
+- `benchmarks/pepys_mpnet_explorer.py`: replaced `DiaryTransformer`-based ingestion
+  with raw `parse_diary` / `temporally_sample` from `diary_transformer.diary_embedder`
+  (consistent format with embedder cache); added `flight_obs` parameter to `make_figure`
+  so panels 3 & 4 render observer height and curvature when a flight is available;
+  added NaN/Inf guard before L2-normalisation; changed default diary to
+  `pepys_enriched_full.txt`; added proteusPy repo-root path injection; changed
+  terminology from "chunks" to "sentences"
+- `benchmarks/pepys_temporal_flight.py`: added fourth flight mode `temporal_backward`
+  (reversed KNN walk for τ-reversal symmetry test); figure expanded from 6-panel (2×3)
+  to 8-panel (2×4); added `--negate-time` flag; added τ-reversal symmetry console
+  output; fixed `turtleND.py` path to `proteusPy/proteusPy/turtleND.py`; default
+  cache changed to `pepys_mpnet_embeddings.json`
+- `.diarykg/config.json`: updated source to `pepys/pepys_enriched_full.txt`; chunk
+  count updated to 6,647 (full 9-year Pepys corpus)
+- `.gitignore`: added `.diarykg/corpus/`, `pepys/*.pkl`, `pepys/.diary_cache`
+
+### Removed
+- `benchmarks/pepys_mpnet_results.json`, `benchmarks/pepys_mpnet_results.png`: stale
+  results from previous smaller-corpus run; regenerated as temporal flight figures
+
+### Added
+
 - `benchmarks/pepys_mpnet_explorer.py`: manifold exploration script using
   diary_kg's native `all-mpnet-base-v2` embeddings — intrinsic dimensionality
   (PCA elbow, Participation Ratio, TwoNN), MRR@k at 64–768 dims, and

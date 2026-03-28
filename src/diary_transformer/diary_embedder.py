@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-# pepys_embedder.py
+# diary_embedder.py
 # Copyright (c) 2026 Eric G. Suchanek, PhD, Flux-Frontiers
 # https://github.com/Flux-Frontiers
-# License: BSD
-# Last revised: 2026-03-24 -egs-
+# License: Elastic 2.0
+# Last revised: 2026-03-27 -egs-
 """
-pepys_embedder.py
+diary_embedder.py
 -----------------
-Standalone multi-process ingestion pipeline: parse a pipe-delimited diary
-file, optionally subsample with temporal diversity, embed every entry via
-sentence-transformers (nomic-ai/nomic-embed-text-v1), and save the result
-as a JSON cache consumable by pepys_manifold_explorer.py.
+Multi-process ingestion pipeline: parse a pipe-delimited diary file,
+optionally subsample with temporal diversity, embed every entry via
+sentence-transformers (all-mpnet-base-v2), and save the result as a
+JSON cache consumable by pepys_manifold_explorer.py and WaveRider missions.
 
 The expensive embedding step is parallelised across CPU cores using
-sentence-transformers' built-in multi-process pool — each worker loads
-its own copy of the model and encodes a shard independently.
+multiprocessing.Pool — each worker loads its own copy of the model and
+encodes a shard independently.
 
 Pipeline
 --------
@@ -25,25 +25,29 @@ Pipeline
 4. Concatenate shards → float32 (N × 768) matrix.
 5. Write JSON cache:  {"embeddings": [...], "texts": [...], "timestamps": [...]}.
 
-Usage
------
-  # full corpus (all 3355 entries)
-  python benchmarks/pepys_embedder.py --init
+Usage (CLI entry point)
+-----------------------
+  # full corpus (all entries)
+  diary-embedder
 
   # temporally sampled subset
-  python benchmarks/pepys_embedder.py --init --n 1000
+  diary-embedder --n 1000
 
   # custom paths / model
-  python benchmarks/pepys_embedder.py --init \\
+  diary-embedder \\
       --diary path/to/pepys_enriched_full.txt \\
       --output path/to/my_cache.json \\
-      --model nomic-ai/nomic-embed-text-v1 \\
+      --model sentence-transformers/all-mpnet-base-v2 \\
       --workers 8 \\
       --batch-size 128
 
+Public API (importable)
+-----------------------
+  from diary_transformer import parse_diary, temporally_sample, embed_multiprocess, save_cache
+
 Requirements
 ------------
-  sentence-transformers >= 5.0, numpy, tqdm, rich
+  sentence-transformers >= 5.0, numpy, rich
   No external services — model loaded directly from HuggingFace.
 """
 
@@ -56,6 +60,8 @@ import os
 import sys
 import time
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
 import numpy as np
@@ -64,12 +70,103 @@ from sentence_transformers import SentenceTransformer
 
 console = Console()
 
+try:
+    _EMBEDDER_VERSION = _pkg_version("diary-kg")
+except PackageNotFoundError:
+    _EMBEDDER_VERSION = "unknown"
+
 # ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
-DEFAULT_MODEL = "nomic-ai/nomic-embed-text-v1"
-DEFAULT_DIARY = str(Path(__file__).parent / "pepys" / "pepys_enriched_full.txt")
-DEFAULT_OUTPUT = str(Path(__file__).parent / "pepys_embeddings.json")
+DEFAULT_MODEL = "sentence-transformers/all-mpnet-base-v2"
+# Project root is three levels up from src/diary_transformer/diary_embedder.py
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+DEFAULT_DIARY = str(_PROJECT_ROOT / "pepys" / "pepys_enriched_full.txt")
+DEFAULT_OUTPUT = str(_PROJECT_ROOT / "pepys_mpnet_embeddings.json")
+
+
+# ---------------------------------------------------------------------------
+# Run summary
+# ---------------------------------------------------------------------------
+def write_run_summary(
+    output_path: str,
+    run_params: dict,
+    stats: dict,
+    summary_file: str | None = None,
+) -> str:
+    """Write a Markdown provenance summary alongside the embedding cache.
+
+    The summary is written to ``<output_stem>_run_summary.md`` in the same
+    directory as *output_path* unless *summary_file* is given.
+
+    :param output_path: Path to the JSON embedding cache.
+    :param run_params: Run parameters dict (timestamp, diary_file, model, etc.).
+    :param stats: Metrics dict with keys ``entries_parsed``, ``entries_embedded``,
+        ``time_range_start``, ``time_range_end``, ``embedding_shape``, ``runtime_s``.
+    :param summary_file: Override output path for the summary.
+    :return: Path to the written summary file.
+    """
+    out = Path(output_path)
+    summary_path = Path(summary_file) if summary_file else out.parent / f"{out.stem}_run_summary.md"
+
+    cmd = " ".join(sys.argv)
+    ts = run_params.get("timestamp", datetime.now().isoformat())
+    dt = datetime.fromisoformat(ts)
+
+    lines = [
+        "# Diary Embedder — Run Summary",
+        "",
+        "| Field | Value |",
+        "|---|---|",
+        f"| Date | {dt.strftime('%Y-%m-%d')} |",
+        f"| Time | {dt.strftime('%H:%M:%S')} |",
+        f"| Version | {_EMBEDDER_VERSION} |",
+        "",
+        "## Invocation",
+        "",
+        "```",
+        cmd,
+        "```",
+        "",
+        "## Inputs & Outputs",
+        "",
+        "| Parameter | Value |",
+        "|---|---|",
+        f"| Diary file | `{run_params.get('diary_file', '—')}` |",
+        f"| Output cache | `{output_path}` |",
+        "",
+        "## Run Parameters",
+        "",
+        "| Parameter | Value |",
+        "|---|---|",
+    ]
+    skip = {"timestamp", "diary_file"}
+    for key, val in run_params.items():
+        if key in skip:
+            continue
+        label = key.replace("_", " ").title()
+        lines.append(f"| {label} | `{val}` |")
+
+    shape = stats.get("embedding_shape", "—")
+    lines += [
+        "",
+        "## Pipeline Statistics",
+        "",
+        "| Metric | Value |",
+        "|---|---|",
+        f"| Entries parsed | {stats.get('entries_parsed', '—')} |",
+        f"| Entries embedded | {stats.get('entries_embedded', '—')} |",
+        f"| Time range | {stats.get('time_range_start', '—')} → {stats.get('time_range_end', '—')} |",
+        f"| Embedding shape | {shape[0]} × {shape[1]} float32 |"
+        if isinstance(shape, tuple)
+        else f"| Embedding shape | {shape} |",
+        f"| Runtime | {stats.get('runtime_s', 0):.1f}s |",
+        "",
+    ]
+
+    summary_path.write_text("\n".join(lines), encoding="utf-8")
+    console.print(f"[bold green]✓[/bold green] Run summary → {summary_path}")
+    return str(summary_path)
 
 
 # ---------------------------------------------------------------------------
@@ -146,9 +243,8 @@ def _embed_shard(args: tuple) -> np.ndarray:
     """
     texts_shard, model_id, batch_size, worker_id = args
     embedder = SentenceTransformer(model_id, trust_remote_code=True)
-    prefixed = [f"search_document: {t}" for t in texts_shard]
     vecs = embedder.encode(
-        prefixed,
+        texts_shard,
         batch_size=batch_size,
         convert_to_numpy=True,
         show_progress_bar=(worker_id == 0),  # only first worker shows bar
@@ -163,7 +259,7 @@ def embed_multiprocess(
     texts: list[str],
     model: str = DEFAULT_MODEL,
     n_workers: int | None = None,
-    batch_size: int = 64,
+    batch_size: int = 32,
 ) -> np.ndarray:
     """Embed texts in parallel using multiprocessing.Pool.
 
@@ -171,7 +267,7 @@ def embed_multiprocess(
     shard via multiprocessing.Pool, each loading the model independently.
     Results are concatenated in original order.
 
-    :param texts: List of strings to embed (task prefix applied internally).
+    :param texts: List of strings to embed.
     :param model: HuggingFace model id.
     :param n_workers: Number of parallel workers (default: os.cpu_count()).
     :param batch_size: Encoding batch size per worker.
@@ -198,7 +294,7 @@ def embed_multiprocess(
 
 
 # ---------------------------------------------------------------------------
-# Cache I/O  (same JSON format as pepys_manifold_explorer.py)
+# Cache I/O
 # ---------------------------------------------------------------------------
 def save_cache(
     path: str,
@@ -228,7 +324,7 @@ def save_cache(
 # ---------------------------------------------------------------------------
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Pepys diary multi-process embedder — builds JSON cache for manifold analysis"
+        description="Diary multi-process embedder — builds JSON cache for manifold analysis"
     )
     p.add_argument(
         "--diary",
@@ -254,14 +350,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--workers",
         type=int,
-        default=0,
-        help="Number of parallel embedding workers (0 = os.cpu_count())",
+        default=4,
+        help="Number of parallel embedding workers (default: 4)",
     )
     p.add_argument(
         "--batch-size",
         type=int,
-        default=64,
-        help="Encoding batch size per worker (default: 64)",
+        default=32,
+        help="Encoding batch size per worker (default: 32)",
     )
     p.add_argument(
         "--max-chars",
@@ -274,12 +370,17 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Overwrite existing output file without prompting",
     )
+    p.add_argument(
+        "--summary-file",
+        default=None,
+        help="Path for the Markdown run summary (default: <output-stem>_run_summary.md)",
+    )
     return p.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    console.rule("[bold blue]Pepys Diary · Multi-Process Embedder")
+    console.rule("[bold blue]Diary · Multi-Process Embedder")
 
     diary_path = Path(args.diary)
     if not diary_path.exists():
@@ -300,8 +401,9 @@ def main() -> None:
     # Step 1: Parse
     console.print(f"\n[bold]Step 1:[/bold] Parsing {diary_path} …")
     texts, timestamps = parse_diary(str(diary_path))
+    n_parsed = len(texts)
     console.print(
-        f"  Parsed {len(texts)} total entries  ({timestamps[0].date()} → {timestamps[-1].date()})"
+        f"  Parsed {n_parsed} total entries  ({timestamps[0].date()} → {timestamps[-1].date()})"
     )
 
     # Step 2: Truncate
@@ -320,7 +422,7 @@ def main() -> None:
         )
 
     # Step 4: Embed
-    n_workers = args.workers or os.cpu_count() or 1
+    n_workers = args.workers or 4
     console.print(
         f"\n[bold]Step 2:[/bold] Embedding {len(texts)} entries  "
         f"model={args.model}  workers={n_workers}  batch={args.batch_size} …"
@@ -346,6 +448,29 @@ def main() -> None:
     # Step 5: Save
     console.print("\n[bold]Step 3:[/bold] Saving cache …")
     save_cache(str(output_path), E, texts, timestamps)
+
+    # Step 6: Run summary
+    write_run_summary(
+        str(output_path),
+        run_params={
+            "timestamp": datetime.now().isoformat(),
+            "diary_file": str(diary_path),
+            "model": args.model,
+            "workers": n_workers,
+            "batch_size": args.batch_size,
+            "n_sample": args.n or "all",
+            "max_chars": args.max_chars or "none",
+        },
+        stats={
+            "entries_parsed": n_parsed,
+            "entries_embedded": E.shape[0],
+            "time_range_start": timestamps[0].date(),
+            "time_range_end": timestamps[-1].date(),
+            "embedding_shape": (E.shape[0], E.shape[1]),
+            "runtime_s": elapsed,
+        },
+        summary_file=args.summary_file,
+    )
 
 
 if __name__ == "__main__":

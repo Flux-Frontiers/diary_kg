@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from datetime import datetime
 
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeRemainingColumn
+
 from .models import DiaryEntry
 
 
@@ -50,29 +52,35 @@ def parse_diary_file(file_path: str) -> list[DiaryEntry]:
     total = len(lines)
     print(f"Processing {total} lines...")
 
-    for i, line in enumerate(lines):
-        if i > 0 and i % 500 == 0:
-            print(f"  Parsed {i}/{total} lines ({i * 100 // total}%)")
-
-        parts = line.split(" | ", 3)
-        if len(parts) < 4:
-            continue
-
-        try:
-            timestamp = datetime.fromisoformat(parts[0].replace("T", " "))
-            content = parts[3].strip()
-            if is_meaningless_fragment(content):
+    progress = Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeRemainingColumn(),
+    )
+    with progress:
+        task = progress.add_task("Parsing", total=total)
+        for line in lines:
+            progress.advance(task)
+            parts = line.split(" | ", 3)
+            if len(parts) < 4:
                 continue
-            entries.append(
-                DiaryEntry(
-                    timestamp=timestamp,
-                    original_type=parts[1],
-                    category=parts[2],
-                    content=content,
+
+            try:
+                timestamp = datetime.fromisoformat(parts[0].replace("T", " "))
+                content = parts[3].strip()
+                if is_meaningless_fragment(content):
+                    continue
+                entries.append(
+                    DiaryEntry(
+                        timestamp=timestamp,
+                        original_type=parts[1],
+                        category=parts[2],
+                        content=content,
+                    )
                 )
-            )
-        except ValueError as exc:
-            print(f"Warning: Failed to parse line: {line[:100]}... Error: {exc}")
+            except ValueError as exc:
+                print(f"Warning: Failed to parse line: {line[:100]}... Error: {exc}")
 
     print(f"Parsed {len(entries)} diary entries")
     return entries

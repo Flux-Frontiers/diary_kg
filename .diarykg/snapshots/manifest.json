@@ -1,0 +1,81 @@
+{
+  "format": "1.0",
+  "last_update": "2026-03-27T01:21:25.752085+00:00",
+  "snapshots": [
+    {
+      "key": "2544eccf3106abd60f85eb8352747b8493c8d78a",
+      "branch": "main",
+      "timestamp": "2026-03-27T01:21:25.751385+00:00",
+      "version": "0.1.0",
+      "label": null,
+      "file": "2544eccf3106abd60f85eb8352747b8493c8d78a.json",
+      "metrics": {
+        "chunk_count": 6647,
+        "entry_count": 6450,
+        "node_count": 29402,
+        "edge_count": 355250,
+        "topic_counts": {
+          "pepys_domestic": 2297,
+          "pepys_court": 1793,
+          "work": 884,
+          "pepys_social": 294,
+          "pepys_locations": 276,
+          "did": 242,
+          "pepys_religious": 119,
+          "social": 118,
+          "pepys_naval": 117,
+          "pepys_financial": 110,
+          "domestic": 91,
+          "pepys_health": 36,
+          "family": 34,
+          "personal_info": 33,
+          "hobbies": 27,
+          "preferences": 27,
+          "weather": 25,
+          "pepys_weather": 20,
+          "food": 18,
+          "finance": 17,
+          "friends": 15,
+          "skills": 13,
+          "feelings": 8,
+          "learning": 6,
+          "journal": 6,
+          "goals": 6,
+          "self_harm_risk": 5,
+          "academic": 4,
+          "health": 2,
+          "pets": 2,
+          "automotive": 1,
+          "enemies": 1
+        },
+        "context_counts": {
+          "Office": 2227,
+          "General": 1908,
+          "Home": 1215,
+          "Work": 362,
+          "Social": 305,
+          "Finance": 229,
+          "Reflection": 179,
+          "Emotion": 140,
+          "Health": 54,
+          "Family": 28
+        },
+        "temporal_span": {
+          "start": "1660-01-01T08:00",
+          "end": "1669-08-02T07:00"
+        },
+        "chunking_strategy": "sentence_group",
+        "chunk_size": 512
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "chunks": 0,
+          "entries": 0,
+          "nodes": 2,
+          "edges": -8
+        }
+      }
+    }
+  ]
+}

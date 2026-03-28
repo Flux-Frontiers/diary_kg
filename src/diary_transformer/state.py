@@ -17,7 +17,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
+
 from .models import DiaryEntry
+
+_console = Console()
 
 # ---------------------------------------------------------------------------
 # Chunk cache I/O
@@ -37,7 +49,6 @@ def save_chunks_to_cache(
         ``(content, timestamp=None) -> List[str]``.
     """
     pkl_path = cache_path.replace(".json", ".pkl")
-    print(f"Caching {len(entries)} chunked entries to {pkl_path}")
 
     cache_data: dict[str, Any] = {
         "version": "1.0",
@@ -45,21 +56,33 @@ def save_chunks_to_cache(
         "total_entries": len(entries),
         "entries": [],
     }
-    for idx, entry in enumerate(entries):
-        cache_data["entries"].append(
-            {
-                "index": idx,
-                "timestamp": entry.timestamp.isoformat(),
-                "original_type": entry.original_type,
-                "category": entry.category,
-                "content": entry.content,
-                "chunks": segment_fn(entry.content, timestamp=entry.timestamp),
-            }
-        )
+
+    _progress_columns = (
+        SpinnerColumn(),
+        BarColumn(),
+        TextColumn("{task.description} {task.completed}/{task.total}"),
+        TimeElapsedColumn(),
+        TextColumn("eta"),
+        TimeRemainingColumn(),
+    )
+    with Progress(*_progress_columns, console=_console) as progress:
+        task = progress.add_task("Chunking", total=len(entries))
+        for idx, entry in enumerate(entries):
+            cache_data["entries"].append(
+                {
+                    "index": idx,
+                    "timestamp": entry.timestamp.isoformat(),
+                    "original_type": entry.original_type,
+                    "category": entry.category,
+                    "content": entry.content,
+                    "chunks": segment_fn(entry.content, timestamp=entry.timestamp),
+                }
+            )
+            progress.advance(task)
 
     with open(pkl_path, "wb") as f:
         pickle.dump(cache_data, f, protocol=pickle.HIGHEST_PROTOCOL)
-    print(f"✓ Cached {len(entries)} entries with chunks")
+    _console.print(f"[green]✓[/green] Cached {len(entries)} entries with chunks")
 
 
 def load_chunks_from_cache(cache_path: str) -> list[DiaryEntry]:

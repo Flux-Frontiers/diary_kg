@@ -182,9 +182,9 @@ cython_debug/
 .abstra/
 
 # Visual Studio Code
-#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
+#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
 #  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#  and can be added to the global gitignore or merged into this file. However, if you prefer, 
+#  and can be added to the global gitignore or merged into this file. However, if you prefer,
 #  you could uncomment the following to ignore the entire vscode folder
 # .vscode/
 
@@ -224,13 +224,14 @@ __marimo__/
 .dockg/graph.sqlite*
 .dockg/models
 
-# DiaryKG 
+# DiaryKG
 # DocKG generated artifacts — same pattern as CodeKG; snapshots will be tracked once added
 .diarykg/lancedb/
 .diarykg/lancedb-*
 .diarykg/graph.sqlite
 .diarykg/graph.sqlite*
 .diarykg/models
+.diarykg/corpus/
 
 # MCP server config — machine-specific, never commit
 .mcp.json
@@ -238,3 +239,5 @@ __marimo__/
 
 # Large benchmark embedding files
 benchmarks/*.json
+pepys/*.pkl
+pepys/.diary_cache

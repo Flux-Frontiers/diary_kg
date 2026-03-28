@@ -91,9 +91,7 @@ class TestClassifyChunkHybrid:
         mock_tc = MagicMock()
         mock_tc.classify.return_value = {"health": 0.2, "work": 0.1}
         categories = ["work", "social", "domestic"]
-        cat, scores = classify_chunk_hybrid(
-            "At home with the family", categories, mock_tc
-        )
+        cat, scores = classify_chunk_hybrid("At home with the family", categories, mock_tc)
         # Should fall back to unsupervised — domestic keyword matches
         assert cat == "domestic"
 
