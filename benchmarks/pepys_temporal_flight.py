@@ -282,22 +282,53 @@ class TemporalFlyer:
                 break
         return list(self._path)
 
-    def temporal_flight(self, origin: int, max_steps: int = 100, forward: bool = True) -> list[int]:
+    def temporal_flight(
+        self,
+        origin: int,
+        max_steps: int = 100,
+        forward: bool = True,
+        beta_tau: float = 0.0,
+    ) -> list[int]:
         """Fly from *origin* along the pure temporal axis.
 
         :param forward: True = advance in time, False = go backward.
+        :param beta_tau: Temporal momentum decay (0 = no momentum, 0.9 = strong).
+            Accumulates a signed bias over the trajectory history analogous to
+            Adam's first-moment estimator.  Prevents the global arrow of time
+            from reversing even when local KNN steps drift backward.
         """
         self.fly_to(origin)
         self.turtle.orient_in_time(self.time_axis)
         if not forward:
             self.turtle.rotate(180, 0, self.time_axis)
 
+        base_heading = self.turtle.heading.copy()
+        tau_t = 0.0
         visited: set[int] = {origin}
-        for _ in range(max_steps):
-            nxt = self.fly_step(excluded=visited)
+
+        for step in range(max_steps):
+            prev = self._current
+
+            if beta_tau > 0.0 and step > 0:
+                tau_corrected = tau_t / (1 - beta_tau**step)
+                heading = base_heading.copy()
+                # tau_corrected > 0: trajectory going forward — no correction needed
+                # tau_corrected < 0: drifting backward — strengthen forward temporal pull
+                heading[self.time_axis] += tau_corrected
+                n = np.linalg.norm(heading)
+                if n > 1e-10:
+                    heading /= n
+                nxt = self.fly_step(direction=heading, excluded=visited)
+            else:
+                nxt = self.fly_step(excluded=visited)
+
             if nxt is None:
                 break
+
+            delta_t = self.fyears[nxt] - self.fyears[prev]
+            tau_t = beta_tau * tau_t + (1 - beta_tau) * delta_t
             visited.add(nxt)
+
         return list(self._path)
 
     def mixed_flight(
@@ -306,10 +337,12 @@ class TemporalFlyer:
         dest: int,
         time_blend: float = 0.5,
         max_steps: int = 100,
+        beta_tau: float = 0.0,
     ) -> list[int]:
         """Fly with a blend of semantic and temporal heading.
 
         :param time_blend: 0 = pure semantic, 1 = pure temporal, 0.5 = equal mix.
+        :param beta_tau: Temporal momentum decay (see temporal_flight).
         """
         self.fly_to(origin)
         target = self.E_aug[dest].astype(np.float64)
@@ -319,19 +352,34 @@ class TemporalFlyer:
         sign = 1.0 if self.fyears[dest] >= self.fyears[origin] else -1.0
         e_t[self.time_axis] = sign
 
+        tau_t = 0.0
         visited: set[int] = {origin}
-        for _ in range(max_steps):
+
+        for step in range(max_steps):
+            prev = self._current
             semantic_dir = target - self.E_aug[self._current]
             sn = np.linalg.norm(semantic_dir)
             if sn > 1e-10:
                 semantic_dir /= sn
             blended = (1 - time_blend) * semantic_dir + time_blend * e_t
+
+            if beta_tau > 0.0 and step > 0:
+                tau_corrected = tau_t / (1 - beta_tau**step)
+                blended[self.time_axis] += tau_corrected
+                bn = np.linalg.norm(blended)
+                if bn > 1e-10:
+                    blended /= bn
+
             nxt = self.fly_step(direction=blended, excluded=visited)
             if nxt is None:
                 break
+
+            delta_t = self.fyears[nxt] - self.fyears[prev]
+            tau_t = beta_tau * tau_t + (1 - beta_tau) * delta_t
             visited.add(nxt)
             if nxt == dest:
                 break
+
         return list(self._path)
 
 
@@ -581,6 +629,18 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Negate the temporal coordinate before augmenting (reverses the time axis sign)",
     )
+    p.add_argument(
+        "--beta-tau",
+        type=float,
+        default=0.0,
+        help=(
+            "Temporal momentum decay for temporal and mixed flights. "
+            "0 = no momentum (default). "
+            "Sweep: [0.5, 0.7, 0.9, 0.95]. "
+            "Analogous to Adam β₁ — accumulates directional history to prevent "
+            "the global arrow of time from reversing."
+        ),
+    )
     return p.parse_args()
 
 
@@ -669,13 +729,19 @@ def main() -> None:
 
     # 4b: Temporal flight (forward from origin)
     console.print("  [green]Temporal flight …[/green]")
-    paths["temporal"] = flyer.temporal_flight(i_orig, max_steps=args.max_steps, forward=True)
+    paths["temporal"] = flyer.temporal_flight(
+        i_orig, max_steps=args.max_steps, forward=True, beta_tau=args.beta_tau
+    )
     coherence["temporal"] = temporal_coherence(paths["temporal"], flyer.fyears)
 
     # 4c: Mixed flight
     console.print("  [red]Mixed flight …[/red]")
     paths["mixed"] = flyer.mixed_flight(
-        i_orig, i_dest, time_blend=args.time_blend, max_steps=args.max_steps
+        i_orig,
+        i_dest,
+        time_blend=args.time_blend,
+        max_steps=args.max_steps,
+        beta_tau=args.beta_tau,
     )
     coherence["mixed"] = temporal_coherence(paths["mixed"], flyer.fyears)
 
@@ -757,6 +823,7 @@ def main() -> None:
         "augmented_dim": int(E_aug.shape[1]),
         "alpha": args.alpha,
         "negate_time": args.negate_time,
+        "beta_tau": args.beta_tau,
         "time_blend": args.time_blend,
         "k_graph": args.k,
         "max_steps": args.max_steps,

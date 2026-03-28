@@ -54,10 +54,13 @@ import numpy as np
 from rich.console import Console
 from rich.table import Table
 
-_tnd_path = str(Path(__file__).resolve().parent.parent / "proteusPy" / "turtleND.py")
+_tnd_path = str(
+    Path(__file__).resolve().parent.parent.parent / "proteusPy" / "proteusPy" / "turtleND.py"
+)
 _spec = _ilu.spec_from_file_location("turtleND", _tnd_path)
+assert _spec is not None and _spec.loader is not None, f"Cannot load turtleND from {_tnd_path}"
 _tnd_mod = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(_tnd_mod)
+_spec.loader.exec_module(_tnd_mod)  # type: ignore[union-attr]
 TurtleND = _tnd_mod.TurtleND
 
 console = Console()
@@ -99,23 +102,33 @@ def augment_dest_relative(
 
     temporal_coord = abs(fyear_i - fyear_dest)
 
-    Normalised so that the mean L2 norm contribution of the temporal axis
-    equals alpha times that of a typical semantic axis.
+    Destination lands at 0.  ALL other entries — past *and* future — have
+    positive coordinates proportional to their temporal distance from it.
+    The greedy direction vector from any node always points toward smaller
+    temporal values (toward zero), penalising entries that are temporally
+    far from the destination in either direction.  This prevents both
+    undershooting *and* overshooting.
 
-    :param embeddings: (N, D) float array.
+    Alpha controls the strength of the temporal pull relative to a single
+    semantic axis.  At alpha=1 the temporal axis contributes 1/768 of the
+    total signal — negligible.  At alpha≈sqrt(768)≈27.7 it matches the
+    full semantic contribution.  alpha=10–20 gives useful temporal gravity
+    without destroying semantic content.
+
+    :param embeddings: (N, D) float array (should be L2-normalised).
     :param fyears: (N,) fractional years.
     :param dest_fyear: fractional year of the destination entry.
     :param alpha: temporal weight relative to a single semantic axis.
     :return: (N, D+1) augmented array.
     """
-    t_raw = np.abs(fyears - dest_fyear)  # destination has coord 0
+    t_raw = np.abs(fyears - dest_fyear)  # destination = 0, symmetric gravitational basin
 
-    # Scale to match embedding axis magnitude
+    # Scale to match embedding axis magnitude × alpha
     emb_norms = np.linalg.norm(embeddings, axis=1)
     mean_norm = emb_norms.mean()
     scale = alpha * (mean_norm / math.sqrt(embeddings.shape[1]))
 
-    # Normalise t_raw to unit range then apply scale
+    # Normalise to [0, 1] then apply scale
     t_max = t_raw.max()
     t_scaled = (t_raw / t_max) * scale if t_max > 1e-12 else t_raw * scale
 
@@ -254,9 +267,25 @@ def parse_args() -> argparse.Namespace:
         default=0,
         help="Which entry on dest date to use (0-indexed)",
     )
-    p.add_argument("--alpha", type=float, default=1.0)
+    p.add_argument(
+        "--alpha",
+        type=float,
+        default=10.0,
+        help="Temporal weight (alpha=1 ≈ 1 semantic axis; alpha≈27.7 ≈ full semantic weight; default: 10)",
+    )
     p.add_argument("--k", type=int, default=10)
     p.add_argument("--max-steps", type=int, default=150)
+    p.add_argument(
+        "--pca-dim",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Project embeddings to N dims via PCA before augmenting the temporal axis. "
+            "Recalibrate alpha: at pca_dim=D, alpha≈5*sqrt(D) matches full semantic weight. "
+            "Default: None (no reduction; use full 768D)."
+        ),
+    )
     p.add_argument("--out", default=DEFAULT_OUT)
     return p.parse_args()
 
@@ -284,6 +313,22 @@ def main() -> None:
     norms = np.linalg.norm(E, axis=1, keepdims=True)
     E = E / np.clip(norms, 1e-8, None)
 
+    # ------------------------------------------------------------------
+    # Optional PCA dimensionality reduction
+    # ------------------------------------------------------------------
+    pca_var_explained = None
+    if args.pca_dim is not None:
+        from sklearn.decomposition import PCA
+
+        target = min(args.pca_dim, D)
+        console.print(f"\n[bold]PCA reduction:[/bold] {D}D → {target}D …")
+        t0 = time.time()
+        pca = PCA(n_components=target, random_state=42)
+        E = pca.fit_transform(E).astype(np.float32)
+        pca_var_explained = float(pca.explained_variance_ratio_.sum())
+        D = E.shape[1]
+        console.print(f"  Variance explained: {pca_var_explained:.4f}  ({time.time() - t0:.1f}s)")
+
     fyears = np.array([fractional_year(t) for t in timestamps])
 
     # ------------------------------------------------------------------
@@ -310,7 +355,7 @@ def main() -> None:
     console.print(f"\n[bold]Dest:  [/bold] [{dest_idx}] {timestamps[dest_idx].date()}")
     console.print(f"  {texts[dest_idx][:100]}")
 
-    dest_fyear = fyears[dest_idx]
+    dest_fyear = float(fyears[dest_idx])
     span_days = int((fyears[dest_idx] - fyears[origin_idx]) * 365.25)
     console.print(f"\n  Temporal span: {span_days} days")
 
@@ -323,8 +368,8 @@ def main() -> None:
     t_col = E_aug[:, -1]
     console.print(
         f"  Temporal axis: origin={t_col[origin_idx]:.4f}, "
-        f"dest={t_col[dest_idx]:.4f}, "
-        f"max={t_col.max():.4f}"
+        f"dest={t_col[dest_idx]:.4f} (=0), "
+        f"max={t_col.max():.4f}  (α={args.alpha})"
     )
 
     # ------------------------------------------------------------------
@@ -377,7 +422,7 @@ def main() -> None:
     appendix.add_column("Value")
     rows = [
         ("Corpus", f"Pepys mpnet, {N} entries, {D}D"),
-        ("Encoding", "Destination-relative: abs(fyear_i − fyear_dest)"),
+        ("Encoding", "Destination-relative: abs(fyear_i − fyear_dest), symmetric basin"),
         (
             "Origin",
             f"[{origin_idx}] {timestamps[origin_idx].date()} — {texts[origin_idx][:70]}",
@@ -407,9 +452,11 @@ def main() -> None:
         "corpus": str(corpus_path),
         "N": N,
         "D": D,
+        "pca_dim": args.pca_dim,
+        "pca_var_explained": pca_var_explained,
         "alpha": args.alpha,
         "k": args.k,
-        "encoding": "destination_relative",
+        "encoding": "destination_relative_abs",
         "origin_idx": origin_idx,
         "dest_idx": dest_idx,
         "origin_date": timestamps[origin_idx].isoformat(),
@@ -423,12 +470,12 @@ def main() -> None:
     }
 
     class _NpEncoder(json.JSONEncoder):
-        def default(self, obj):
-            if isinstance(obj, np.integer):
-                return int(obj)
-            if isinstance(obj, np.floating):
-                return float(obj)
-            return super().default(obj)
+        def default(self, o):
+            if isinstance(o, np.integer):
+                return int(o)
+            if isinstance(o, np.floating):
+                return float(o)
+            return super().default(o)
 
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(results, fh, indent=2, cls=_NpEncoder)
