@@ -234,6 +234,9 @@ def select_diverse_sample(
 
     print(f"Selecting {target_count} diverse entries from {len(entries)} total")
 
+    if not entries:
+        return []
+
     run_seed = seed if seed is not None else random.randint(0, 2**32 - 1)
     label = "fixed" if seed is not None else "generated"
     print(f"Using random seed: {run_seed} ({label})")
@@ -242,7 +245,7 @@ def select_diverse_sample(
     df_norm = load_or_compute_diversity_features(entries, nlp, num_workers, input_file_path)
 
     print("Clustering entries for diversity...")
-    k = min(target_count, len(entries))
+    k = max(1, min(target_count, len(entries)))
     kmeans = KMeans(n_clusters=k, random_state=run_seed)
     clusters = kmeans.fit_predict(df_norm.fillna(0))
 

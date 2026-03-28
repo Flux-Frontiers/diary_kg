@@ -3,7 +3,7 @@
 # Copyright (c) 2026 Eric G. Suchanek, PhD, Flux-Frontiers
 # https://github.com/Flux-Frontiers
 # License: Elastic 2.0
-# Last revised: 2026-03-26 -egs-
+# Last revised: 2026-03-26 19:17:39 -egs-
 """
 pepys_temporal_flight.py
 -------------------------
@@ -74,7 +74,9 @@ import numpy as np
 from rich.console import Console
 from rich.table import Table
 
-_tnd_path = str(Path(__file__).resolve().parent.parent / "proteusPy" / "turtleND.py")
+_tnd_path = str(
+    Path(__file__).resolve().parent.parent.parent / "proteusPy" / "proteusPy" / "turtleND.py"
+)
 _spec = _ilu.spec_from_file_location("turtleND", _tnd_path)
 _tnd_mod = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_tnd_mod)
@@ -85,7 +87,7 @@ console = Console()
 # ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
-DEFAULT_CACHE = str(Path(__file__).parent / "pepys_small_embeddings.json")
+DEFAULT_CACHE = str(Path(__file__).parent / "pepys_mpnet_embeddings.json")
 DEFAULT_OUT_JSON = str(Path(__file__).parent / "pepys_temporal_flight_results.json")
 DEFAULT_OUT_PNG = str(Path(__file__).parent / "pepys_temporal_flight_results.png")
 
@@ -175,17 +177,20 @@ class TemporalFlyer:
         texts: list[str],
         k: int = 10,
         alpha: float = 1.0,
+        negate_time: bool = False,
     ):
         from sklearn.neighbors import NearestNeighbors
 
         self.texts = texts
         self.timestamps = timestamps
         self.alpha = alpha
+        self.negate_time = negate_time
 
         # Fractional years & augmented embeddings
         self.fyears = timestamps_to_fractional_years(timestamps)
+        fyears_for_aug = -self.fyears if negate_time else self.fyears
         self.E_orig = embeddings.copy()
-        self.E_aug = augment_with_time(embeddings, self.fyears, alpha=alpha)
+        self.E_aug = augment_with_time(embeddings, fyears_for_aug, alpha=alpha)
         self.N, self.D = self.E_aug.shape  # D = original_dim + 1
         self.time_axis = self.D - 1
 
@@ -402,7 +407,7 @@ def make_figure(
     out_path: str,
     dpi: int = 150,
 ) -> None:
-    """6-panel figure: 3 flight-path scatters + 3 temporal profiles."""
+    """8-panel figure: 4 flight-path scatters + 4 temporal profiles."""
 
     dark = {
         "figure.facecolor": "#0d1117",
@@ -419,7 +424,8 @@ def make_figure(
 
     from sklearn.decomposition import PCA
 
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+    plot_modes = ["semantic", "temporal", "temporal_backward", "mixed"]
+    fig, axes = plt.subplots(2, 4, figsize=(24, 10))
     fig.suptitle(
         "Pepys Diary · Temporal Flight Experiment",
         fontsize=15,
@@ -431,14 +437,20 @@ def make_figure(
     pca = PCA(n_components=2)
     coords = pca.fit_transform(flyer.E_aug)
 
-    colors = {"semantic": "#58a6ff", "temporal": "#3fb950", "mixed": "#f78166"}
+    colors = {
+        "semantic": "#58a6ff",
+        "temporal": "#3fb950",
+        "temporal_backward": "#f0a500",
+        "mixed": "#f78166",
+    }
     mode_labels = {
         "semantic": "Semantic Flight",
-        "temporal": "Temporal Flight",
+        "temporal": "Temporal Flight (→)",
+        "temporal_backward": "Temporal Backward (←)",
         "mixed": "Mixed Flight (50/50)",
     }
 
-    for col, mode in enumerate(["semantic", "temporal", "mixed"]):
+    for col, mode in enumerate(plot_modes):
         path = paths[mode]
         coh = coherence[mode]
         color = colors[mode]
@@ -563,6 +575,12 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_OUT_PNG,
         help="Path for figure PNG",
     )
+    p.add_argument(
+        "--negate-time",
+        action="store_true",
+        default=False,
+        help="Negate the temporal coordinate before augmenting (reverses the time axis sign)",
+    )
     return p.parse_args()
 
 
@@ -598,9 +616,13 @@ def main() -> None:
     # ------------------------------------------------------------------
     # Step 2: Build temporally-augmented space
     # ------------------------------------------------------------------
-    console.print(f"\n[bold]Step 2:[/bold] Augmenting with temporal axis (α={args.alpha}) …")
+    console.print(
+        f"\n[bold]Step 2:[/bold] Augmenting with temporal axis (α={args.alpha}"
+        f"{', time axis negated' if args.negate_time else ''}) …"
+    )
     fyears = timestamps_to_fractional_years(timestamps)
-    E_aug = augment_with_time(E, fyears, alpha=args.alpha)
+    fyears_for_aug = -fyears if args.negate_time else fyears
+    E_aug = augment_with_time(E, fyears_for_aug, alpha=args.alpha)
     console.print(
         f"  Augmented: {E_aug.shape[0]} × {E_aug.shape[1]} dims "
         f"(+1 temporal axis at index {E_aug.shape[1] - 1})"
@@ -617,7 +639,14 @@ def main() -> None:
     # ------------------------------------------------------------------
     console.print(f"\n[bold]Step 3:[/bold] Building KNN graph (k={args.k}) …")
     t0 = time.time()
-    flyer = TemporalFlyer(E, timestamps, texts, k=args.k, alpha=args.alpha)
+    flyer = TemporalFlyer(
+        E,
+        timestamps,
+        texts,
+        k=args.k,
+        alpha=args.alpha,
+        negate_time=args.negate_time,
+    )
     elapsed = time.time() - t0
     console.print(f"  Built in {elapsed:.1f}s")
 
@@ -650,9 +679,17 @@ def main() -> None:
     )
     coherence["mixed"] = temporal_coherence(paths["mixed"], flyer.fyears)
 
+    # 4d: Temporal backward — reversed tau test
+    console.print("  [yellow]Temporal backward (τ-reversal test) …[/yellow]")
+    paths["temporal_backward"] = flyer.temporal_flight(
+        i_orig, max_steps=args.max_steps, forward=False
+    )
+    coherence["temporal_backward"] = temporal_coherence(paths["temporal_backward"], flyer.fyears)
+
     # ------------------------------------------------------------------
     # Step 5: Results table
     # ------------------------------------------------------------------
+    all_modes = ["semantic", "temporal", "temporal_backward", "mixed"]
     console.print()
     table = Table(title="Temporal Coherence by Flight Mode", show_header=True)
     table.add_column("Mode", style="cyan")
@@ -662,10 +699,10 @@ def main() -> None:
     table.add_column("Mean Δt (yr)", justify="right")
     table.add_column("Span (yr)", justify="right")
 
-    for mode in ["semantic", "temporal", "mixed"]:
+    for mode in all_modes:
         c = coherence[mode]
         table.add_row(
-            mode.capitalize(),
+            mode.replace("_", " ").capitalize(),
             str(len(paths[mode])),
             f"{c['monotonicity']:.1%}",
             f"{c['kendall_tau']:.3f}",
@@ -673,6 +710,16 @@ def main() -> None:
             f"{c['total_span_years']:.1f}",
         )
     console.print(table)
+
+    # τ-reversal symmetry check
+    tau_fwd = coherence["temporal"]["kendall_tau"]
+    tau_bwd = coherence["temporal_backward"]["kendall_tau"]
+    tau_sum = tau_fwd + tau_bwd
+    console.print(
+        f"\n[bold]τ-reversal symmetry:[/bold]  "
+        f"τ(forward)={tau_fwd:+.3f}  τ(backward)={tau_bwd:+.3f}  "
+        f"sum={tau_sum:+.3f}  (ideal: 0.000)"
+    )
 
     # ------------------------------------------------------------------
     # Step 6: TurtleND primitive demo
@@ -700,11 +747,16 @@ def main() -> None:
     # ------------------------------------------------------------------
     # Step 7: Save results
     # ------------------------------------------------------------------
+    tau_symmetry = round(
+        coherence["temporal"]["kendall_tau"] + coherence["temporal_backward"]["kendall_tau"],
+        4,
+    )
     results = {
         "corpus_size": N,
         "original_dim": orig_dim,
         "augmented_dim": int(E_aug.shape[1]),
         "alpha": args.alpha,
+        "negate_time": args.negate_time,
         "time_blend": args.time_blend,
         "k_graph": args.k,
         "max_steps": args.max_steps,
@@ -712,9 +764,10 @@ def main() -> None:
         "dest_idx": i_dest,
         "origin_date": timestamps[i_orig].isoformat(),
         "dest_date": timestamps[i_dest].isoformat(),
+        "tau_reversal_symmetry": tau_symmetry,
         "flights": {},
     }
-    for mode in ["semantic", "temporal", "mixed"]:
+    for mode in ["semantic", "temporal", "temporal_backward", "mixed"]:
         results["flights"][mode] = {
             "path_length": len(paths[mode]),
             "coherence": coherence[mode],
@@ -740,7 +793,7 @@ def main() -> None:
     # ------------------------------------------------------------------
     console.print("\n[bold]Generating figure …[/bold]")
     try:
-        make_figure(flyer, paths, coherence, args.out_png)
+        make_figure(flyer, paths, coherence, args.out_png)  # now 8-panel (4 modes)
     except Exception as exc:
         console.print(f"[yellow]Figure generation failed: {exc}[/yellow]")
         import traceback

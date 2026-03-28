@@ -7,8 +7,7 @@
 """
 pepys_mpnet_explorer.py
 -----------------------
-Chart the all-mpnet-base-v2 manifold of the Pepys diary corpus using
-diary_kg's native DiaryTransformer ingestion stack.
+Chart the all-mpnet-base-v2 manifold of the Pepys diary corpus.
 
 Produces results directly comparable to pepys_manifold_explorer_reference.py
 (nomic-embed-text), enabling cross-model manifold comparison.
@@ -17,13 +16,14 @@ Key difference from nomic pipeline
 -----------------------------------
 - Model: ``all-mpnet-base-v2``  (768-D, different geometry)
 - No task prefix — mpnet does NOT use ``search_document:`` prefixes
-- Input texts built by DiaryTransformer: ``semantic_category | content``
-  (one chunk per sentence-group, ~1-3 chunks per diary entry)
+- Input texts use raw source fields: ``TYPE | CATEGORY | content``
+  (same format and cache as ``pepys_embedder.py``)
 
 Pipeline
 --------
-1. Parse pepys_clean.txt via DiaryTransformer (parse → enrich → chunk).
-2. Embed every chunk via ``all-mpnet-base-v2`` (multi-process, no prefix).
+1. Parse pepys_clean.txt via ``diary_embedder.parse_diary`` (raw fields,
+   no DiaryTransformer classification).  Embeddings cached to JSON.
+2. Embed every entry via ``all-mpnet-base-v2`` (multi-process, no prefix).
    Embeddings cached to JSON for instant re-runs.
 3. Intrinsic dimensionality:
      - PCA explained-variance elbow (90 / 95 / 99 %)
@@ -72,6 +72,14 @@ warnings.filterwarnings("ignore", category=RuntimeWarning, module="sklearn")
 # ---------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+# ---------------------------------------------------------------------------
+# Add proteusPy repo root so manifold_model / manifold_observer are importable
+# when proteusPy is not installed as a package in this environment
+# ---------------------------------------------------------------------------
+_proteuspy_root = Path(__file__).resolve().parent.parent.parent / "proteusPy"
+if _proteuspy_root.exists() and str(_proteuspy_root) not in sys.path:
+    sys.path.insert(0, str(_proteuspy_root))
+
 console = Console()
 
 # ---------------------------------------------------------------------------
@@ -81,7 +89,7 @@ EMBED_MODEL = "all-mpnet-base-v2"
 MRL_DIMS = [64, 128, 256, 512, 768]
 K_RETRIEVAL = 10
 
-DEFAULT_DIARY = str(Path(__file__).parent.parent / "pepys" / "pepys_clean.txt")
+DEFAULT_DIARY = str(Path(__file__).parent.parent / "pepys" / "pepys_enriched_full.txt")
 DEFAULT_CACHE = str(Path(__file__).parent / "pepys_mpnet_embeddings.json")
 DEFAULT_OUT_JSON = str(Path(__file__).parent / "pepys_mpnet_results.json")
 DEFAULT_OUT_PNG = str(Path(__file__).parent / "pepys_mpnet_results.png")
@@ -114,51 +122,33 @@ PEPYS_QUERIES = [
 
 
 # ---------------------------------------------------------------------------
-# DiaryTransformer ingestion → texts + timestamps
+# Raw-parse ingestion → texts + timestamps (same path as pepys_embedder.py)
 # ---------------------------------------------------------------------------
-def ingest_diary(
-    diary_path: str, max_chunks_per_entry: int = 3
-) -> tuple[list[str], list[datetime]]:
-    """Parse and enrich a pipe-delimited diary via DiaryTransformer.
+def ingest_diary(diary_path: str, n: int = 0) -> tuple[list[str], list[datetime]]:
+    """Parse a pipe-delimited diary using raw source fields.
 
-    Produces one text string per chunk: ``semantic_category | content``.
-    Each diary entry becomes 1–3 chunks at sentence boundaries.
+    Uses the same parse approach as ``pepys_embedder.py``: ``TYPE`` and
+    ``CATEGORY`` fields from the source line are prepended directly —
+    no DiaryTransformer classification, no k-means ``semantic_category`` label.
+    Caches produced here are identical in format and content to those
+    produced by ``pepys_embedder.py``.
 
     :param diary_path: Path to the pipe-delimited diary source file.
-    :param max_chunks_per_entry: Max chunks per entry (0/999 = unlimited).
+    :param n: Temporal sample size (0 = full corpus).
     :return: Tuple of (embed strings, datetime objects).
     """
-    from diary_transformer.parser import parse_diary_file
-    from diary_transformer.transformer import DiaryTransformer
+    from diary_transformer.diary_embedder import parse_diary, temporally_sample
 
     console.print(f"  Parsing {diary_path} …")
-    entries = parse_diary_file(diary_path)
-    n_entries = len(entries)
-    console.print(f"  Parsed {n_entries} diary entries.")
+    texts, timestamps = parse_diary(diary_path)
+    console.print(f"  Parsed {len(texts)} diary entries.")
 
-    dt = DiaryTransformer(chunking_strategy="sentence_group", sentences_per_chunk=4)
-    chunks = dt.transform_entries(entries, max_chunks_per_entry=max_chunks_per_entry)
-
-    texts: list[str] = []
-    timestamps: list[datetime] = []
-    for c in chunks:
-        label = (c.semantic_category or "").strip()
-        content = (c.content or "").strip()
-        if not content:
-            continue
-        texts.append(f"{label} | {content}" if label else content)
-        # timestamp is an ISO string in EntryChunk
-        try:
-            ts = (
-                datetime.fromisoformat(c.timestamp) if isinstance(c.timestamp, str) else c.timestamp
-            )
-        except (ValueError, TypeError):
-            continue
-        timestamps.append(ts)
+    if n and n < len(texts):
+        texts, timestamps = temporally_sample(texts, timestamps, n)
+        console.print(f"  Temporally sampled {len(texts)} entries for embedding.")
 
     console.print(
-        f"  Produced {len(texts)} chunks from {n_entries} entries  "
-        f"({timestamps[0].date()} → {timestamps[-1].date()})"
+        f"  Corpus: {len(texts)} entries  ({timestamps[0].date()} → {timestamps[-1].date()})"
     )
     return texts, timestamps
 
@@ -380,6 +370,7 @@ def make_figure(
     E_full: np.ndarray,
     timestamps: list[datetime],
     results: dict,
+    flight_obs: dict | None,
     out_path: str,
     dpi: int = 150,
 ) -> None:
@@ -389,13 +380,14 @@ def make_figure(
     ------
     1 (top-left)    PCA-2D scatter coloured by year.
     2 (top-right)   MRL MRR@10 bar chart across truncation dims.
-    3 (bottom-left) Placeholder — ManifoldWalker not run (proteusPy optional).
-    4 (bottom-right) Placeholder — ManifoldObserver not run.
+    3 (bottom-left) Observer height along the manifold flight path (if available).
+    4 (bottom-right) Manifold curvature along the flight path (if available).
 
     :param E_full: Full 768-D embedding matrix, L2-normalised.
     :param timestamps: Aligned timestamps.
     :param results: Dict from main() containing metrics.
     :param out_path: PNG output path.
+    :param flight_obs: Output of ManifoldObserver.observe_path(), or None.
     :param dpi: Figure DPI.
     """
     dark = {
@@ -479,30 +471,43 @@ def make_figure(
         )
         ax.set_title("MRL MRR@10", color="#c9d1d9", fontsize=11)
 
-    # --- Panels 3 & 4: walker not run (proteusPy optional in diary_kg env) ---
-    for ax, title, note in [
-        (
-            axes[1, 0],
-            "Flight path: observer height",
-            "ManifoldWalker not run\n(proteusPy optional in diary_kg env)",
-        ),
-        (
-            axes[1, 1],
-            "Flight path: manifold curvature",
-            "ManifoldObserver not run\n(proteusPy optional in diary_kg env)",
-        ),
-    ]:
-        ax.text(
-            0.5,
-            0.5,
-            note,
-            ha="center",
-            va="center",
-            color="#8b949e",
-            transform=ax.transAxes,
-            fontsize=9,
-        )
-        ax.set_title(title, color="#c9d1d9", fontsize=11)
+    # --- Panels 3 & 4: flight observer (height / curvature) ---
+    for col_idx, (key, label, color) in enumerate(
+        [
+            ("heights", "Observer height h (reconstruction error)", "#58a6ff"),
+            ("curvatures", "Curvature κ (principal angle, deg)", "#f78166"),
+        ]
+    ):
+        ax = axes[1, col_idx]
+        if flight_obs and key in flight_obs and len(flight_obs[key]) > 0:
+            vals = np.array(flight_obs[key], dtype=float)
+            hops = np.arange(len(vals))
+            ax.plot(hops, vals, color=color, lw=1.5, alpha=0.9)
+            ax.fill_between(hops, vals, alpha=0.2, color=color)
+            if key == "curvatures":
+                hc = flight_obs.get("high_curvature_hops", [])
+                for h in hc:
+                    if h < len(vals):
+                        ax.axvline(h, color="#f0e68c", lw=0.8, alpha=0.5)
+            ax.set_xlabel("Hop", fontsize=9)
+            ax.set_ylabel(label, fontsize=9)
+            ax.grid(True, alpha=0.3)
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "No flight data\n(run without --no-walker)",
+                ha="center",
+                va="center",
+                color="#8b949e",
+                transform=ax.transAxes,
+                fontsize=9,
+            )
+        title_map = {
+            "heights": "Flight path: observer height",
+            "curvatures": "Flight path: manifold curvature",
+        }
+        ax.set_title(title_map[key], color="#c9d1d9", fontsize=11)
 
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     fig.savefig(out_path, dpi=dpi, bbox_inches="tight")
@@ -527,13 +532,7 @@ def parse_args() -> argparse.Namespace:
         "--n",
         type=int,
         default=0,
-        help="Temporally-sampled subset of cached embeddings (0 = all)",
-    )
-    p.add_argument(
-        "--max-chunks",
-        type=int,
-        default=3,
-        help="Max chunks per diary entry (0 = unlimited, default: 3)",
+        help="Temporal sample size: applied during cache build AND post-load analysis (0 = all)",
     )
     p.add_argument(
         "--workers",
@@ -590,16 +589,14 @@ def main() -> None:  # noqa: C901
             console.print(f"[red]Diary file not found: {diary_path}[/red]")
             sys.exit(1)
 
-        texts, timestamps = ingest_diary(
-            str(diary_path), max_chunks_per_entry=args.max_chunks or 999
-        )
+        texts, timestamps = ingest_diary(str(diary_path), n=args.n)
         n_entries_parsed = len(texts)
 
         import os
 
         n_workers = args.workers or os.cpu_count() or 1
         console.print(
-            f"  Embedding {len(texts)} chunks  model={EMBED_MODEL}  "
+            f"  Embedding {len(texts)} sentences  model={EMBED_MODEL}  "
             f"workers={n_workers}  batch={args.batch_size} …"
         )
         t0 = time.time()
@@ -629,8 +626,19 @@ def main() -> None:  # noqa: C901
         )
 
     N, full_dim = E.shape
-    console.print(f"  Corpus: {N} chunks × {full_dim} dims  (dtype={E.dtype})")
+    console.print(f"  Corpus: {N} sentences × {full_dim} dims  (dtype={E.dtype})")
     console.print(f"  Date range: {min(timestamps).date()} → {max(timestamps).date()}")
+
+    # Drop any rows with NaN/Inf before normalisation — degenerate vectors
+    # poison every subsequent matmul (PCA basis, manifold walk, sims).
+    valid = np.isfinite(E).all(axis=1)
+    n_bad = int((~valid).sum())
+    if n_bad:
+        console.print(f"[yellow]  Dropping {n_bad} degenerate embeddings (NaN/Inf)[/yellow]")
+        E = E[valid]
+        texts = [t for t, v in zip(texts, valid.tolist()) if v]
+        timestamps = [ts for ts, v in zip(timestamps, valid.tolist()) if v]
+        N = len(texts)
 
     # L2-normalise
     norms = np.linalg.norm(E, axis=1, keepdims=True)
@@ -654,7 +662,7 @@ def main() -> None:  # noqa: C901
     dim_table = Table(title="Intrinsic Dimensionality Estimates", show_header=True)
     dim_table.add_column("Estimator", style="cyan")
     dim_table.add_column("Value", justify="right", style="green")
-    dim_table.add_row("Corpus size (chunks)", str(N))
+    dim_table.add_row("Corpus size (sentences)", str(N))
     dim_table.add_row("Full embedding dim", str(full_dim))
     dim_table.add_row("PCA dims for 90% variance", str(d90))
     dim_table.add_row("PCA dims for 95% variance", str(d95))
@@ -675,7 +683,7 @@ def main() -> None:  # noqa: C901
         rel_lists = [r for _, r in retrieval_pairs]
         console.print(
             f"  {len(query_texts)} queries; avg "
-            f"{np.mean([len(r) for r in rel_lists]):.0f} relevant chunks/query"
+            f"{np.mean([len(r) for r in rel_lists]):.0f} relevant sentences/query"
         )
         try:
             Q_full = embed_single(query_texts, model=EMBED_MODEL)
@@ -738,7 +746,7 @@ def main() -> None:  # noqa: C901
 
             labels = np.array([ts.year for ts in timestamps])
 
-            console.print(f"  Fitting ManifoldModel (k={args.k}, τ={args.tau}) on {N} chunks …")
+            console.print(f"  Fitting ManifoldModel (k={args.k}, τ={args.tau}) on {N} sentences …")
             mm = ManifoldModel(
                 k_graph=args.k,
                 variance_threshold=args.tau,
@@ -746,11 +754,12 @@ def main() -> None:  # noqa: C901
             )
             mm.fit(E, labels)
 
-            console.print("  Finding most-distant pair …")
+            # Sample up to 500 points to find the most-distant pair cheaply
+            console.print("  Finding most-distant pair (sample=500) …")
             rng = np.random.default_rng(42)
             n_sample = min(N, 500)
             sample_idx = rng.choice(N, size=n_sample, replace=False)
-            E_s = E[sample_idx]
+            E_s = E[sample_idx].astype(np.float64)
             sims = E_s @ E_s.T
             np.fill_diagonal(sims, 1.0)
             i_loc, j_loc = np.unravel_index(np.argmin(sims), sims.shape)
@@ -759,9 +768,12 @@ def main() -> None:  # noqa: C901
 
             ts_orig = timestamps[i_orig]
             dist_cos = float(1 - sims[i_loc, j_loc])
-            console.print(f'  Origin : entry {i_orig}  ({ts_orig.date()})  "{texts[i_orig][:60]}…"')
             console.print(
-                f'  Dest   : entry {i_dest}  ({timestamps[i_dest].date()})  "{texts[i_dest][:60]}…"'
+                f'  Origin : sentence {i_orig}  ({ts_orig.date()})  "{texts[i_orig][:70]}…"'
+            )
+            console.print(
+                f"  Dest   : sentence {i_dest}  ({timestamps[i_dest].date()})  "
+                f'"{texts[i_dest][:70]}…"'
             )
             console.print(f"  Cosine distance: {dist_cos:.4f}")
 
@@ -772,10 +784,9 @@ def main() -> None:  # noqa: C901
 
             obs = ManifoldObserver(mm)
             flight_obs = obs.observe_path(path)
-            assert flight_obs is not None
-            mean_h = float(np.mean(flight_obs["heights"])) if flight_obs.get("heights") else 0.0
+            mean_h = float(np.mean(flight_obs["heights"])) if len(flight_obs["heights"]) else 0.0
             mean_c = (
-                float(np.mean(flight_obs["curvatures"])) if flight_obs.get("curvatures") else 0.0
+                float(np.mean(flight_obs["curvatures"])) if len(flight_obs["curvatures"]) else 0.0
             )
             console.print(f"  Observer: mean height={mean_h:.4f}  mean curvature={mean_c:.4f}°")
 
@@ -787,8 +798,8 @@ def main() -> None:  # noqa: C901
                 "cosine_distance": round(dist_cos, 4),
                 "path_length": len(path),
                 "arrived": arrived,
-                "mean_height": mean_h,
-                "mean_curvature": mean_c,
+                "mean_height": round(mean_h, 4),
+                "mean_curvature": round(mean_c, 4),
             }
 
         except Exception as exc:
@@ -813,7 +824,7 @@ def main() -> None:  # noqa: C901
         f"""
   Model               : {EMBED_MODEL}
   N entries parsed    : {n_entries_parsed}
-  N chunks embedded   : {N}
+  N sentences embedded: {N}
   Full embedding dim  : {full_dim}
   TwoNN ID estimate   : {twonn:.1f}
   Participation Ratio : {pr:.1f}
@@ -864,7 +875,7 @@ def main() -> None:  # noqa: C901
     # -----------------------------------------------------------------------
     console.print("\n[bold]Generating figure …[/bold]")
     try:
-        make_figure(E, timestamps, results, args.out_png)
+        make_figure(E, timestamps, results, flight_obs, args.out_png)
     except Exception as exc:
         console.print(f"[yellow]Figure generation failed: {exc}[/yellow]")
 

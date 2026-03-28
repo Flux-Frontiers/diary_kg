@@ -1,30 +1,13 @@
-feat(benchmarks,transformer,lint): mpnet manifold explorer, Rich UI, ruff cleanup
+feat(embedder,benchmarks,corpus): v0.91.0 — diary-embedder entry point, full Pepys corpus, ch5 temporal flight
 
-Add mpnet manifold exploration suite in benchmarks/ using diary_kg's native
-all-mpnet-base-v2 stack (intrinsic dimensionality, MRR@k, ManifoldWalker cosine
-flights) against a nomic-embed-text-v1 reference manifold.  Replace DiaryTransformer
-print() calls with Rich console + progress bars.  Full ruff pass resolves 253 lint
-issues across the codebase.
-
-Benchmarks & corpora:
-- benchmarks/: pepys_mpnet_explorer.py, pepys_manifold_explorer_reference.py,
-  pepys_embedder.py, pepys_temporal_flight.py, results JSON/PNG, MISSION_BRIEFING.md
-- pepys/: diverse_1000.txt, diverse_chunked.txt, pepys_enriched_full.txt corpus files
-
-Docs:
-- docs/personal_agent_pipeline_article.md (+ _internal.md)
-- docs/COMPLETE_TECHNICAL_ARTICLE.md moved from pepys/
-
-DiaryTransformer:
-- transformer.py: Rich Console + Progress bars replace all bare print() calls
-- pyproject.toml: add proteuspy ^0.99.35 dependency
-
-Ruff fixes (253 total, 236 auto + 17 manual):
-- Deprecated typing generics → builtins (Dict→dict, List→list, Optional→X|None)
-- Import ordering (isort), unused imports, unused variables, f-string cleanup
-- KGKind now inherits from StrEnum (UP042)
-- module/base.py: TYPE_CHECKING guard for Embedder/SemanticIndex from doc_kg.index
-- kg.py: TYPE_CHECKING for DiarySnapshotManager; removed dead node_count/edge_count
-- Tests: restored result capture in test_dockg_not_found_exits_nonzero
+Promote diary_embedder to a first-class package module with a `diary-embedder` CLI
+entry point; reduce benchmarks/pepys_embedder.py to a thin shim.  Rebuild the full
+9-year Pepys corpus in DiaryKG (6,647 chunks, 29,402 nodes, 355,250 edges) and update
+the diarykg snapshot.  Refactor pepys_mpnet_explorer.py to use raw parse_diary ingestion
+(consistent format with the embedder cache), render observer flight plots, and guard
+against NaN/Inf embeddings.  Extend pepys_temporal_flight.py with a fourth
+temporal_backward mode, τ-reversal symmetry check, and 8-panel figure.  Add
+pepys_ch5_flight.py (WaveRider Chapter 5: destination-relative temporal encoding).
+Add technical disclosure doc, CodeKG analysis snapshot, and ruff format pass.
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>

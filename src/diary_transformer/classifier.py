@@ -17,8 +17,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from rich.console import Console
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
+
+_console = Console()
 
 # ---------------------------------------------------------------------------
 # Unsupervised category discovery
@@ -58,18 +61,23 @@ def discover_semantic_categories(
     :param seed: RNG seed for reproducible clustering.
     :return: List of human-readable category name strings.
     """
-    print(f"Discovering {n_categories} semantic categories from {len(chunks)} chunks")
+    _console.print(
+        f"  Discovering [bold]{n_categories}[/bold] semantic categories "
+        f"from [bold]{len(chunks)}[/bold] chunks …"
+    )
 
     n = min(n_categories, max(1, len(chunks) // 2))
     min_df = max(1, min(2, len(chunks) // 10))
 
-    vectorizer = TfidfVectorizer(
-        max_features=1000, stop_words="english", ngram_range=(1, 2), min_df=min_df
-    )
-    tfidf = vectorizer.fit_transform(chunks)
+    with _console.status("[dim]TF-IDF vectorising …[/dim]", spinner="dots"):
+        vectorizer = TfidfVectorizer(
+            max_features=1000, stop_words="english", ngram_range=(1, 2), min_df=min_df
+        )
+        tfidf = vectorizer.fit_transform(chunks)
 
-    kmeans = KMeans(n_clusters=n, random_state=seed)
-    kmeans.fit(tfidf)
+    with _console.status(f"[dim]K-means clustering (k={n}) …[/dim]", spinner="dots"):
+        kmeans = KMeans(n_clusters=n, random_state=seed)
+        kmeans.fit(tfidf)
 
     feature_names = vectorizer.get_feature_names_out()
     categories = []
@@ -77,7 +85,7 @@ def discover_semantic_categories(
         top_idx = kmeans.cluster_centers_[i].argsort()[-5:][::-1]
         categories.append(_generate_category_name([feature_names[j] for j in top_idx]))
 
-    print(f"Discovered categories: {categories}")
+    _console.print(f"  Categories: [dim]{', '.join(categories)}[/dim]")
     return categories
 
 

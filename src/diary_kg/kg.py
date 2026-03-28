@@ -215,6 +215,13 @@ class DiaryKG:
                     shutil.rmtree(target)
             if self._db_path.exists():
                 self._db_path.unlink()
+            # Also wipe the DiaryTransformer chunk cache adjacent to the source file
+            stem = src_path.stem
+            for ext in ("_chunks.json", "_chunks.pkl"):
+                cache_file = src_path.parent / f"{stem}{ext}"
+                if cache_file.exists():
+                    cache_file.unlink()
+                    print(f"Wiped chunk cache: {cache_file}")
             self._dockg = None
             print("Wiped existing corpus + databases.")
 

@@ -34,9 +34,7 @@ _kg: DiaryKG | None = None  # pylint: disable=invalid-name
 def _get_kg() -> DiaryKG:
     """Return the global DiaryKG instance, raising if not initialised."""
     if _kg is None:
-        raise RuntimeError(
-            "DiaryKG not initialised. Run via 'diarykg-mcp --repo /path/to/project'"
-        )
+        raise RuntimeError("DiaryKG not initialised. Run via 'diarykg-mcp --repo /path/to/project'")
     return _kg
 
 

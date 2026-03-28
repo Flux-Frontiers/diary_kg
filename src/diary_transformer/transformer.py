@@ -16,6 +16,8 @@ from __future__ import annotations
 import multiprocessing as mp
 import sys
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +43,89 @@ from .state import (
 )
 
 console = Console()
+
+try:
+    _TRANSFORMER_VERSION = _pkg_version("diary-kg")
+except PackageNotFoundError:
+    _TRANSFORMER_VERSION = "unknown"
+
+
+def write_run_summary(
+    output_path: str, run_params: dict, stats: dict, summary_file: str | None = None
+) -> str:
+    """Write a Markdown provenance summary alongside the output file.
+
+    The summary is written to ``<output_stem>_run_summary.md`` in the same
+    directory as *output_path*.
+
+    :param output_path: Path to the primary output file.
+    :param run_params: Run parameters dict (timestamp, input_file, etc.).
+    :param stats: Counts dict with keys ``entries_parsed``, ``entries_selected``,
+        ``entries_generated``, ``time_range_start``, ``time_range_end``.
+    :return: Path to the written summary file.
+    """
+    out = Path(output_path)
+    summary_path = Path(summary_file) if summary_file else out.parent / f"{out.stem}_run_summary.md"
+
+    cmd = " ".join(sys.argv)
+    ts = run_params.get("timestamp", datetime.now().isoformat())
+    dt = datetime.fromisoformat(ts)
+    date_str = dt.strftime("%Y-%m-%d")
+    time_str = dt.strftime("%H:%M:%S")
+
+    lines = [
+        "# Diary Transformer — Run Summary",
+        "",
+        "| Field | Value |",
+        "|---|---|",
+        f"| Date | {date_str} |",
+        f"| Time | {time_str} |",
+        f"| Version | {_TRANSFORMER_VERSION} |",
+        "",
+        "## Invocation",
+        "",
+        "```",
+        cmd,
+        "```",
+        "",
+        "## Inputs & Outputs",
+        "",
+        "| Parameter | Value |",
+        "|---|---|",
+        f"| Input file | `{run_params.get('input_file', '—')}` |",
+        f"| Output file | `{output_path}` |",
+        "",
+        "## Run Parameters",
+        "",
+        "| Parameter | Value |",
+        "|---|---|",
+    ]
+    skip = {"timestamp", "input_file"}
+    for key, val in run_params.items():
+        if key in skip:
+            continue
+        label = key.replace("_", " ").title()
+        lines.append(f"| {label} | `{val}` |")
+
+    time_range_start = stats.get("time_range_start", "—")
+    time_range_end = stats.get("time_range_end", "—")
+    lines += [
+        "",
+        "## Pipeline Statistics",
+        "",
+        "| Metric | Value |",
+        "|---|---|",
+        f"| Entries parsed | {stats.get('entries_parsed', '—')} |",
+        f"| Entries selected | {stats.get('entries_selected', '—')} |",
+        f"| Entries generated | {stats.get('entries_generated', '—')} |",
+        f"| Time range | {time_range_start} → {time_range_end} |",
+        f"| Runtime | {stats.get('runtime_s', 0):.1f}s |",
+        "",
+    ]
+
+    summary_path.write_text("\n".join(lines), encoding="utf-8")
+    console.print(f"[bold green]✓[/bold green] Run summary → {summary_path}")
+    return str(summary_path)
 
 
 class DiaryTransformer:
@@ -270,6 +355,7 @@ class DiaryTransformer:
         batch_size: int = 20,
         seed: int | None = None,
         max_chunks_per_entry: int = 3,
+        summary_file: str | None = None,
     ) -> None:
         """One-shot transformation: parse, sample, transform, save.
 
@@ -278,19 +364,24 @@ class DiaryTransformer:
         :param batch_size: Number of diverse entries to process.
         :param seed: RNG seed.
         :param max_chunks_per_entry: Max chunks per diary entry.
+        :param summary_file: Override path for the Markdown run summary.
         """
         console.print(
             f"Starting transformation: [dim]{input_path}[/dim] -> [dim]{output_path}[/dim]"
         )
+        _t0 = datetime.now()
         entries = self._load_or_build_cache(input_path)
-        selected = select_diverse_sample(
-            entries,
-            batch_size,
-            self.nlp,
-            self.num_workers,
-            input_file_path=self._current_input_path,
-            seed=seed,
-        )
+        if batch_size and len(entries) > batch_size:
+            selected = select_diverse_sample(
+                entries,
+                batch_size,
+                self.nlp,
+                self.num_workers,
+                input_file_path=self._current_input_path,
+                seed=seed,
+            )
+        else:
+            selected = entries
         memory_entries = self.transform_entries(
             selected, seed=seed, max_chunks_per_entry=max_chunks_per_entry
         )
@@ -301,9 +392,27 @@ class DiaryTransformer:
             "batch_size": batch_size,
             "chunk_size": self.max_chunk_length,
             "max_chunks_per_entry": max_chunks_per_entry,
+            "chunking_strategy": self.chunking_strategy,
             "seed": seed,
         }
         self.save_entries(memory_entries, output_path, run_params)
+        write_run_summary(
+            output_path,
+            run_params,
+            {
+                "entries_parsed": len(entries),
+                "entries_selected": len(selected),
+                "entries_generated": len(memory_entries),
+                "time_range_start": memory_entries[0].timestamp.strftime("%Y-%m-%d")
+                if memory_entries
+                else "—",
+                "time_range_end": memory_entries[-1].timestamp.strftime("%Y-%m-%d")
+                if memory_entries
+                else "—",
+                "runtime_s": (datetime.now() - _t0).total_seconds(),
+            },
+            summary_file=summary_file,
+        )
         console.print(
             f"[bold green]Transformation complete![/bold green] Generated [bold]{len(memory_entries)}[/bold] entries"
         )
@@ -463,6 +572,7 @@ class DiaryTransformer:
         seed: int | None = None,
         max_chunks_per_entry: int = 3,
         resume_mode: bool = False,
+        summary_file: str | None = None,
     ) -> None:
         """Incremental transformation with resumable state.
 
@@ -478,6 +588,7 @@ class DiaryTransformer:
             f"Starting transformation: [dim]{input_path}[/dim] -> [dim]{output_path}[/dim]"
         )
         console.print(f"Resume mode: [bold]{resume_mode}[/bold]")
+        _t0 = datetime.now()
 
         state = StateManager(state_file)
         if resume_mode:
@@ -524,11 +635,29 @@ class DiaryTransformer:
             "batch_size": len(selected),
             "chunk_size": self.max_chunk_length,
             "max_chunks_per_entry": max_chunks_per_entry,
+            "chunking_strategy": self.chunking_strategy,
             "seed": seed,
             "mode": "resume" if resume_mode else "incremental",
         }
         self.save_entries(memory_entries, output_path, run_params)
         state.save(output_path, run_params)
+        write_run_summary(
+            output_path,
+            run_params,
+            {
+                "entries_parsed": len(entries),
+                "entries_selected": len(selected),
+                "entries_generated": len(memory_entries),
+                "time_range_start": memory_entries[0].timestamp.strftime("%Y-%m-%d")
+                if memory_entries
+                else "—",
+                "time_range_end": memory_entries[-1].timestamp.strftime("%Y-%m-%d")
+                if memory_entries
+                else "—",
+                "runtime_s": (datetime.now() - _t0).total_seconds(),
+            },
+            summary_file=summary_file,
+        )
 
         console.print("\n[bold green]Incremental transformation complete![/bold green]")
         console.print(f"  - [bold]{len(memory_entries)}[/bold] new entries")

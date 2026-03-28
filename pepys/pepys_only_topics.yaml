@@ -1,0 +1,339 @@
+# Pepys-specific 17th-century topic categories.
+# Used with: diary-transformer transform --topics-file pepys/pepys_only_topics.yaml
+# These are the ONLY categories used for pepys_enriched_full.txt enrichment.
+# Modern/general categories (weather, self_harm_risk, academic, etc.) are
+# intentionally excluded — they mis-classify 17th-century text.
+
+categories:
+  pepys_naval:
+    - navy
+    - fleet
+    - ship
+    - ships
+    - admiral
+    - admiralty
+    - sea
+    - seamen
+    - sailors
+    - captain
+    - victualling
+    - naval
+    - deptford
+    - chatham
+    - portsmouth
+    - dock
+    - dockyard
+    - vessel
+    - frigate
+    - warship
+    - sail
+    - sailing
+    - voyage
+    - hemp
+    - tar
+    - rope
+    - timber
+    - commissioner
+  pepys_court:
+    - king
+    - queen
+    - duke
+    - duchess
+    - lord
+    - lady
+    - prince
+    - princess
+    - court
+    - whitehall
+    - palace
+    - royal
+    - nobility
+    - earl
+    - courtier
+    - chancellor
+    - treasurer
+    - secretary
+    - council
+    - privy
+    - parliament
+    - commons
+    - favour
+    - honour
+    - knighthood
+  pepys_domestic:
+    - wife
+    - home
+    - house
+    - household
+    - servant
+    - maid
+    - chamber
+    - parlour
+    - kitchen
+    - bed
+    - candle
+    - fire
+    - coal
+    - garden
+    - neighbours
+    - marriage
+    - wedding
+    - funeral
+    - infant
+    - baby
+  pepys_social:
+    - supper
+    - feast
+    - company
+    - guest
+    - visit
+    - discourse
+    - conversation
+    - merry
+    - pleasant
+    - entertainment
+    - theatre
+    - playhouse
+    - tavern
+    - alehouse
+    - coffeehouse
+    - gossip
+    - wit
+    - jest
+    - pleasure
+    - delight
+  pepys_religious:
+    - church
+    - chapel
+    - parish
+    - minister
+    - priest
+    - vicar
+    - bishop
+    - archbishop
+    - sermon
+    - prayer
+    - prayers
+    - psalm
+    - hymn
+    - bible
+    - god
+    - christ
+    - holy
+    - heaven
+    - soul
+    - sin
+    - faith
+    - sabbath
+    - sunday
+    - communion
+    - catholic
+    - protestant
+    - puritan
+    - quaker
+  pepys_financial:
+    - pound
+    - pounds
+    - shilling
+    - shillings
+    - pence
+    - penny
+    - crown
+    - guinea
+    - debt
+    - credit
+    - loan
+    - pay
+    - paid
+    - cost
+    - expense
+    - spend
+    - spent
+    - purchase
+    - bought
+    - sold
+    - profit
+    - loss
+    - account
+    - accounts
+    - salary
+    - wage
+    - fee
+    - inheritance
+    - legacy
+    - will
+    - usury
+  pepys_health:
+    - sick
+    - illness
+    - disease
+    - pain
+    - ache
+    - hurt
+    - wound
+    - physician
+    - surgeon
+    - apothecary
+    - physic
+    - medicine
+    - remedy
+    - cure
+    - blood
+    - bleeding
+    - fever
+    - ague
+    - plague
+    - pox
+    - stone
+    - bladder
+    - toothache
+    - recover
+    - recovery
+  pepys_locations:
+    - london
+    - westminster
+    - whitehall
+    - thames
+    - river
+    - strand
+    - fleet street
+    - cheapside
+    - exchange
+    - guildhall
+    - covent garden
+    - southwark
+    - greenwich
+    - woolwich
+    - deptford
+    - chatham
+    - portsmouth
+    - dover
+    - calais
+    - paris
+    - holland
+    - france
+    - spain
+    - portugal
+    - italy
+  pepys_weather:
+    - weather
+    - rain
+    - wind
+    - storm
+    - thunder
+    - lightning
+    - snow
+    - frost
+    - ice
+    - cold
+    - warm
+    - sun
+    - sunny
+    - fair
+    - foul
+    - cloudy
+    - mist
+    - fog
+    - hail
+    - flood
+    - drought
+    - season
+    - spring
+    - summer
+    - autumn
+    - winter
+    - harvest
+
+phrases:
+  pepys_naval:
+    - office day
+    - navy business
+    - naval affairs
+    - admiralty office
+    - victualling office
+    - commissioner of the navy
+    - duke of york
+    - sir william penn
+    - sir william batten
+    - navy board
+    - chatham yard
+    - deptford yard
+  pepys_court:
+    - his majesty
+    - her majesty
+    - the king
+    - the queen
+    - my lord
+    - my lady
+    - duke of
+    - earl of
+    - lord chancellor
+    - privy council
+    - parliament house
+    - house of lords
+    - house of commons
+  pepys_domestic:
+    - my wife
+    - at home
+    - to bed
+    - this morning
+    - this evening
+    - wife and i
+    - my brother
+    - my father
+    - my mother
+  pepys_social:
+    - to dinner
+    - good company
+    - very merry
+    - fine discourse
+    - pleasant talk
+    - old acquaintance
+    - coffee house
+    - playhouse tonight
+  pepys_religious:
+    - to church
+    - lords day
+    - sunday morning
+    - divine service
+    - good sermon
+    - st olave
+    - st pauls cathedral
+    - bishop of
+  pepys_financial:
+    - money matters
+    - cost me
+    - paid for
+    - worth of
+    - pounds sterling
+    - account books
+    - great expense
+    - good bargain
+  pepys_health:
+    - not well
+    - much pain
+    - very sick
+    - ill of
+    - stone pain
+    - taking physic
+    - much better
+    - good health
+  pepys_locations:
+    - westminster hall
+    - whitehall palace
+    - tower of london
+    - london bridge
+    - fleet street
+    - the exchange
+    - covent garden
+    - hampton court
+    - by water to
+    - by coach to
+  pepys_weather:
+    - fair weather
+    - foul weather
+    - cold morning
+    - rainy day
+    - great storm
+    - hard frost
+    - thick fog
