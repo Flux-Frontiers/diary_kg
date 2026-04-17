@@ -256,3 +256,5 @@ benchmarks/*.json
 pepys/*.pkl
 pepys/.diary_cache
 pepys/pepys_enriched_full_mpnet_embeddings.json
+
+.agentkg/

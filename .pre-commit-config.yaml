@@ -38,7 +38,7 @@ repos:
     rev: v1.5.0
     hooks:
       - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline', '--exclude-files', '\.diarykg/.*', '--exclude-files', '\.codekg/.*', '--exclude-files', '\.dockg/.*', '--exclude-files', 'benchmarks/.*\.json$', '--exclude-files', 'pepys/.*\.(txt|json)$']
+        args: ['--baseline', '.secrets.baseline', '--exclude-files', '\.diarykg/.*', '--exclude-files', '\.codekg/.*', '--exclude-files', '\.dockg/.*', '--exclude-files', '\.filetreekg/.*', '--exclude-files', '\.pycodekg/.*', '--exclude-files', 'benchmarks/.*\.json$', '--exclude-files', 'pepys/.*\.(txt|json)$']
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.10

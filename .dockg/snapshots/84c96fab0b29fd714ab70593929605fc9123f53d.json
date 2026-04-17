@@ -1,0 +1,122 @@
+{
+  "key": "84c96fab0b29fd714ab70593929605fc9123f53d",
+  "branch": "main",
+  "timestamp": "2026-04-17T17:24:05.543919+00:00",
+  "version": "0.91.1",
+  "metrics": {
+    "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+    "total_nodes": 4483,
+    "total_edges": 34117,
+    "node_counts": {
+      "chunk": 1221,
+      "document": 16,
+      "entity": 1111,
+      "keyword": 937,
+      "section": 705,
+      "topic": 493
+    },
+    "edge_counts": {
+      "CONTAINS": 1926,
+      "CO_OCCURS_WITH": 17884,
+      "HAS_KEYWORD": 4762,
+      "HAS_TOPIC": 1227,
+      "MENTIONS_ENTITY": 5914,
+      "NEXT": 504,
+      "SIMILAR_TO": 1900
+    },
+    "meaningful_nodes": 4467,
+    "coverage_score": 0.9585039585039584,
+    "issues_count": 0,
+    "complexity_median": 22.0
+  },
+  "hotspots": [
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0021",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "2.1 System Overview",
+      "references": 0,
+      "semantic_links": 25,
+      "total_links": 26
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0029",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "Day markers: \"1st\", \"2nd\", \"10th\", \"25th\"",
+      "references": 0,
+      "semantic_links": 24,
+      "total_links": 25
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0177",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "Real-World Examples",
+      "references": 0,
+      "semantic_links": 24,
+      "total_links": 25
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0034",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "Day markers: \"1st\", \"2nd\", \"10th\", \"25th\"",
+      "references": 0,
+      "semantic_links": 23,
+      "total_links": 24
+    },
+    {
+      "id": "chunk:docs/personal_agent_pipeline_article.md:0117",
+      "file_path": "docs/personal_agent_pipeline_article.md",
+      "label": "9.4 What This Unlocks",
+      "references": 0,
+      "semantic_links": 22,
+      "total_links": 23
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0035",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "Day markers: \"1st\", \"2nd\", \"10th\", \"25th\"",
+      "references": 0,
+      "semantic_links": 22,
+      "total_links": 22
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0121",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "9.1 Part of a Larger System",
+      "references": 0,
+      "semantic_links": 21,
+      "total_links": 22
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE_internal.md:0159",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE_internal.md",
+      "label": "Real-World Examples",
+      "references": 0,
+      "semantic_links": 21,
+      "total_links": 22
+    },
+    {
+      "id": "chunk:docs/personal_agent_pipeline_article.md:0159",
+      "file_path": "docs/personal_agent_pipeline_article.md",
+      "label": "Real-World Examples",
+      "references": 0,
+      "semantic_links": 21,
+      "total_links": 22
+    },
+    {
+      "id": "chunk:docs/personal_agent_pipeline_article.md:0169",
+      "file_path": "docs/personal_agent_pipeline_article.md",
+      "label": "What This Enables",
+      "references": 0,
+      "semantic_links": 21,
+      "total_links": 22
+    }
+  ],
+  "issues": [],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 652,
+    "edges": 5523,
+    "coverage_delta": 0.0003658766545364678,
+    "issues_delta": 0
+  }
+}

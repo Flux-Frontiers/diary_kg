@@ -234,7 +234,16 @@ def transform(
     help="Provenance label written into frontmatter (default: basename of INPUT).",
 )
 @click.option(
-    "--update", is_flag=True, default=False, help="Incremental update — keep existing .md files in CORPUS_DIR instead of wiping."
+    "--update",
+    is_flag=True,
+    default=False,
+    help="Incremental update — keep existing .md files in CORPUS_DIR instead of wiping.",
+)
+@click.option(
+    "--wipe",
+    is_flag=True,
+    default=False,
+    help="Explicitly wipe existing .md files in CORPUS_DIR before ingesting.",
 )
 def ingest(
     input_path,
@@ -249,6 +258,7 @@ def ingest(
     topics_file,
     source_file,
     update,
+    wipe,
 ):
     """Ingest a diary file into a DocKG-compatible Markdown corpus.
 
@@ -267,7 +277,7 @@ def ingest(
         diary-transformer ingest pepys.txt pepys_corpus/ --batch-size 0
         diary-transformer ingest pepys.txt pepys_corpus/ --source-file pepys_diary.txt
     """
-    wipe = not update
+    wipe = wipe or (not update)
     corpus = Path(corpus_dir)
 
     if wipe and corpus.exists():
@@ -307,43 +317,10 @@ def ingest(
 # ---------------------------------------------------------------------------
 
 
-@cli.command("build")
-@click.argument("corpus_dir", metavar="CORPUS_DIR", type=click.Path(exists=True, file_okay=False))
-@click.option("--update", is_flag=True, default=False, help="Incremental update — pass --update to dockg build instead of wiping.")
-@click.option(
-    "--register",
-    "kg_name",
-    default=None,
-    metavar="NAME",
-    help="Register the built KG in the KGRAG registry under this name.",
-)
-@click.option(
-    "--registry",
-    default=None,
-    metavar="PATH",
-    envvar="KGRAG_REGISTRY",
-    help="Path to KGRAG registry SQLite (default: KGRAG_REGISTRY env var).",
-)
-def build(corpus_dir, update, kg_name, registry):
-    """Build DocKG databases from an ingested Markdown corpus.
-
-    Invokes ``dockg build`` on CORPUS_DIR to populate ``.dockg/graph.sqlite``
-    and ``.dockg/lancedb/``.  If ``--register NAME`` is given the resulting KG
-    is registered in the KGRAG registry as a diary KG.
-
-    \b
-    CORPUS_DIR  Directory of .md chunk files produced by ``ingest``.
-
-    Examples:
-
-    \b
-        diary-transformer build pepys_corpus/
-        diary-transformer build pepys_corpus/ --update
-        diary-transformer build pepys_corpus/ --register pepys-diary
-    """
+def _build_dockg(corpus_dir: str, update: bool, kg_name, registry) -> None:
+    """Shared implementation for build and build-update commands."""
     corpus = Path(corpus_dir).resolve()
 
-    # ---- Step 1: dockg build ----
     cmd = ["dockg", "build", "--repo", str(corpus)]
     if update:
         cmd.append("--update")
@@ -414,6 +391,71 @@ def build(corpus_dir, update, kg_name, registry):
             f"\nTo register in KGRAG: "
             f"[bold]diary-transformer build {corpus_dir} --register <name>[/bold]"
         )
+
+
+@cli.command("build")
+@click.argument("corpus_dir", metavar="CORPUS_DIR", type=click.Path(exists=True, file_okay=False))
+@click.option(
+    "--register",
+    "kg_name",
+    default=None,
+    metavar="NAME",
+    help="Register the built KG in the KGRAG registry under this name.",
+)
+@click.option(
+    "--registry",
+    default=None,
+    metavar="PATH",
+    envvar="KGRAG_REGISTRY",
+    help="Path to KGRAG registry SQLite (default: KGRAG_REGISTRY env var).",
+)
+def build(corpus_dir, kg_name, registry):
+    """Build (wipe + rebuild) DocKG databases from an ingested Markdown corpus.
+
+    Always performs a full rebuild. Use ``build-update`` for incremental updates.
+
+    \b
+    CORPUS_DIR  Directory of .md chunk files produced by ``ingest``.
+
+    Examples:
+
+    \b
+        diary-transformer build pepys_corpus/
+        diary-transformer build pepys_corpus/ --register pepys-diary
+    """
+    _build_dockg(corpus_dir, update=False, kg_name=kg_name, registry=registry)
+
+
+@cli.command("build-update")
+@click.argument("corpus_dir", metavar="CORPUS_DIR", type=click.Path(exists=True, file_okay=False))
+@click.option(
+    "--register",
+    "kg_name",
+    default=None,
+    metavar="NAME",
+    help="Register the built KG in the KGRAG registry under this name.",
+)
+@click.option(
+    "--registry",
+    default=None,
+    metavar="PATH",
+    envvar="KGRAG_REGISTRY",
+    help="Path to KGRAG registry SQLite (default: KGRAG_REGISTRY env var).",
+)
+def build_update(corpus_dir, kg_name, registry):
+    """Incrementally update DocKG databases (keeps existing index, adds new chunks).
+
+    Passes ``--update`` to ``dockg build``. Use ``build`` for a full rebuild.
+
+    \b
+    CORPUS_DIR  Directory of .md chunk files produced by ``ingest``.
+
+    Examples:
+
+    \b
+        diary-transformer build-update pepys_corpus/
+    """
+    _build_dockg(corpus_dir, update=True, kg_name=kg_name, registry=registry)
 
 
 # ---------------------------------------------------------------------------
