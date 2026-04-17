@@ -1,0 +1,31 @@
+{
+  "format": "1.0",
+  "last_update": "2026-03-28T22:46:09.195854+00:00",
+  "snapshots": [
+    {
+      "key": "21a3f46862c757c413d15eefd770d6a9987363e0",
+      "branch": "main",
+      "timestamp": "2026-03-28T22:46:09.195155+00:00",
+      "version": "0.2.0",
+      "file": "21a3f46862c757c413d15eefd770d6a9987363e0.json",
+      "metrics": {
+        "total_nodes": 7479,
+        "total_edges": 7479,
+        "node_counts": {
+          "directory": 91,
+          "file": 7388
+        },
+        "edge_counts": {
+          "CONTAINS": 7479
+        },
+        "total_files": 7388,
+        "total_dirs": 91,
+        "dir_node_counts": {}
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": null
+      }
+    }
+  ]
+}

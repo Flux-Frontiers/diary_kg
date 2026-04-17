@@ -211,11 +211,11 @@ __marimo__/
 # CodeKG generated artifacts — databases are transient/reproducible, snapshots are tracked
 # MUST include .codekg/snapshots!
 # This is the correct pattern
-.codekg/lancedb/
-.codekg/lancedb-*
-.codekg/graph.sqlite
-.codekg/graph.sqlite*
-.codekg/models
+.pycodekg/lancedb/
+.pycodekg/lancedb-*
+.pycodekg/graph.sqlite
+.pycodekg/graph.sqlite*
+.pycodekg/models
 
 # DocKG generated artifacts — same pattern as CodeKG; snapshots will be tracked once added
 .dockg/lancedb/
@@ -223,6 +223,20 @@ __marimo__/
 .dockg/graph.sqlite
 .dockg/graph.sqlite*
 .dockg/models
+
+# AgentKG generated artifacts — same pattern as CodeKG/DocKG
+.agentkg/lancedb/
+.agentkg/lancedb-*
+.agentkg/graph.sqlite
+.agentkg/graph.sqlite*
+.agentkg/models
+
+# FileTreeKG generated artifacts — same pattern as CodeKG/DocKG
+.filetreekg/lancedb/
+.filetreekg/lancedb-*
+.filetreekg/graph.sqlite
+.filetreekg/graph.sqlite*
+.filetreekg/models
 
 # DiaryKG
 # DocKG generated artifacts — same pattern as CodeKG; snapshots will be tracked once added

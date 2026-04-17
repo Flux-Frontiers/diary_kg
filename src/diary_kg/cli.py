@@ -11,6 +11,7 @@ Commands::
     diarykg snapshot save   [ROOT] [--label]
     diarykg snapshot show   KEY [ROOT]
     diarykg snapshot diff   KEY_A KEY_B [ROOT]
+    diarykg snapshot prune  [ROOT] [--dry-run]
 """
 
 from __future__ import annotations
@@ -70,7 +71,7 @@ def cli():
     default=None,
     help="Diary .txt path relative to ROOT (required on first build).",
 )
-@click.option("--wipe", is_flag=True, help="Delete existing corpus + DBs before rebuilding.")
+@click.option("--update", is_flag=True, help="Incremental update — keep existing corpus + DBs instead of wiping.")
 @click.option(
     "--batch-size", "-b", default=0, show_default=True, help="Entries to sample (0 = all)."
 )
@@ -95,7 +96,7 @@ def cli():
 def build(
     root,
     source_file,
-    wipe,
+    update,
     batch_size,
     seed,
     max_chunks,
@@ -114,9 +115,10 @@ def build(
 
     \b
         diarykg build . --source pepys_diary.txt
-        diarykg build . --source pepys_diary.txt --wipe --batch-size 0
+        diarykg build . --source pepys_diary.txt --update --batch-size 0
         diarykg build /projects/pepys --source pepys_diary.txt --snapshot
     """
+    wipe = not update
     kg = _kg(root, source_file)
     try:
         n = kg.build(
@@ -506,6 +508,57 @@ def snapshot_show(key, root, as_json):
     console.print()
 
 
+@snapshot.command("prune")
+@_ROOT_ARG
+@click.option("--dry-run", is_flag=True, help="Show what would be removed without deleting anything.")
+def snapshot_prune(root, dry_run):
+    """Remove vestigial snapshots that carry no new metric information.
+
+    \b
+    Cleans up three categories:
+      1. Metric-duplicates — interior snapshots with unchanged metrics.
+      2. Broken entries — manifest entries whose JSON file is missing.
+      3. Orphaned files — JSON files on disk not referenced by the manifest.
+
+    The oldest (baseline) and newest (latest) snapshots are always kept.
+
+    \b
+    ROOT  Project root directory (default: current directory).
+
+    Examples:
+
+    \b
+        diarykg snapshot prune --dry-run
+        diarykg snapshot prune
+    """
+    from diary_kg.snapshots import DiarySnapshotManager  # pylint: disable=import-outside-toplevel
+
+    snapshots_path = Path(root) / ".diarykg" / "snapshots"
+    mgr = DiarySnapshotManager(snapshots_path)
+    result = mgr.prune_snapshots(dry_run=dry_run)
+
+    prefix = "[dry-run] " if dry_run else ""
+    if result.total_cleaned == 0:
+        console.print("[green]Nothing to prune.[/green]")
+        return
+
+    if result.removed:
+        console.print(f"[yellow]{prefix}Metric-duplicates removed: {len(result.removed)}[/yellow]")
+        for key in result.removed:
+            console.print(f"  - {key}")
+    if result.broken_entries:
+        console.print(f"[yellow]{prefix}Broken manifest entries removed: {len(result.broken_entries)}[/yellow]")
+        for key in result.broken_entries:
+            console.print(f"  - {key}")
+    if result.orphaned_files:
+        console.print(f"[yellow]{prefix}Orphaned JSON files removed: {len(result.orphaned_files)}[/yellow]")
+        for fname in result.orphaned_files:
+            console.print(f"  - {fname}")
+
+    action = "would be" if dry_run else "were"
+    console.print(f"\n[green]Total: {result.total_cleaned} item(s) {action} cleaned.[/green]")
+
+
 @snapshot.command("diff")
 @click.argument("key_a")
 @click.argument("key_b")
@@ -592,7 +645,7 @@ VERSION=$(grep '^version' pyproject.toml 2>/dev/null | head -1 | cut -d'"' -f2)
 "$REPO_ROOT/.venv/bin/codekg" build --repo "$REPO_ROOT" || exit 1
 
 # Rebuild DocKG index from docs/ corpus in this repo.
-"$REPO_ROOT/.venv/bin/dockg" build --repo "$REPO_ROOT" --wipe || true
+"$REPO_ROOT/.venv/bin/dockg" build --repo "$REPO_ROOT" || true
 
 # Snapshot CodeKG (VERSION optional — auto-detects from installed package).
 "$REPO_ROOT/.venv/bin/codekg" snapshot save \\

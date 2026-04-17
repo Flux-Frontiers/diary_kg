@@ -234,7 +234,7 @@ def transform(
     help="Provenance label written into frontmatter (default: basename of INPUT).",
 )
 @click.option(
-    "--wipe", is_flag=True, help="Delete existing .md files in CORPUS_DIR before writing."
+    "--update", is_flag=True, default=False, help="Incremental update — keep existing .md files in CORPUS_DIR instead of wiping."
 )
 def ingest(
     input_path,
@@ -248,7 +248,7 @@ def ingest(
     workers,
     topics_file,
     source_file,
-    wipe,
+    update,
 ):
     """Ingest a diary file into a DocKG-compatible Markdown corpus.
 
@@ -264,9 +264,10 @@ def ingest(
 
     \b
         diary-transformer ingest pepys.txt pepys_corpus/
-        diary-transformer ingest pepys.txt pepys_corpus/ --batch-size 0 --wipe
+        diary-transformer ingest pepys.txt pepys_corpus/ --batch-size 0
         diary-transformer ingest pepys.txt pepys_corpus/ --source-file pepys_diary.txt
     """
+    wipe = not update
     corpus = Path(corpus_dir)
 
     if wipe and corpus.exists():
@@ -308,7 +309,7 @@ def ingest(
 
 @cli.command("build")
 @click.argument("corpus_dir", metavar="CORPUS_DIR", type=click.Path(exists=True, file_okay=False))
-@click.option("--wipe", is_flag=True, help="Pass --wipe to dockg build (rebuild from scratch).")
+@click.option("--update", is_flag=True, default=False, help="Incremental update — pass --update to dockg build instead of wiping.")
 @click.option(
     "--register",
     "kg_name",
@@ -323,7 +324,7 @@ def ingest(
     envvar="KGRAG_REGISTRY",
     help="Path to KGRAG registry SQLite (default: KGRAG_REGISTRY env var).",
 )
-def build(corpus_dir, wipe, kg_name, registry):
+def build(corpus_dir, update, kg_name, registry):
     """Build DocKG databases from an ingested Markdown corpus.
 
     Invokes ``dockg build`` on CORPUS_DIR to populate ``.dockg/graph.sqlite``
@@ -337,15 +338,15 @@ def build(corpus_dir, wipe, kg_name, registry):
 
     \b
         diary-transformer build pepys_corpus/
-        diary-transformer build pepys_corpus/ --wipe
+        diary-transformer build pepys_corpus/ --update
         diary-transformer build pepys_corpus/ --register pepys-diary
     """
     corpus = Path(corpus_dir).resolve()
 
     # ---- Step 1: dockg build ----
     cmd = ["dockg", "build", "--repo", str(corpus)]
-    if wipe:
-        cmd.append("--wipe")
+    if update:
+        cmd.append("--update")
 
     console.print(f"[bold]Building DocKG[/bold] for corpus: {corpus}")
     console.print(f"  Running: {' '.join(cmd)}")
