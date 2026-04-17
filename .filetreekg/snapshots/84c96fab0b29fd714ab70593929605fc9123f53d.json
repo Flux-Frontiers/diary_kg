@@ -1,0 +1,55 @@
+{
+  "key": "84c96fab0b29fd714ab70593929605fc9123f53d",
+  "branch": "main",
+  "timestamp": "2026-04-17T17:24:49.635912+00:00",
+  "version": "0.91.1",
+  "metrics": {
+    "total_nodes": 8555,
+    "total_edges": 8555,
+    "node_counts": {
+      "directory": 109,
+      "file": 8446
+    },
+    "edge_counts": {
+      "CONTAINS": 8555
+    },
+    "total_files": 8446,
+    "total_dirs": 109,
+    "dir_node_counts": {
+      ".agentkg": 124,
+      ".claude": 123,
+      ".diarykg": 8117,
+      ".mcp.json": 1,
+      ".pre-commit-config.yaml": 1,
+      ".pycodekg": 69,
+      ".secrets.baseline": 1,
+      "CHANGELOG.md": 1,
+      "README.md": 1,
+      "analysis": 3,
+      "benchmarks": 18,
+      "commit.txt": 1,
+      "diary": 3,
+      "diary_kg.code-workspace": 1,
+      "docs": 8,
+      "missions": 2,
+      "pepys": 32,
+      "pepys_mpnet_embeddings_run_summary.md": 1,
+      "pepys_only_topics.yaml": 1,
+      "poetry.lock": 1,
+      "poetry.toml": 1,
+      "pyproject.toml": 1,
+      "scripts": 6,
+      "src": 25,
+      "tests": 13
+    }
+  },
+  "hotspots": [],
+  "issues": [],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 1076,
+    "edges": 1076,
+    "files_delta": 1058,
+    "dirs_delta": 18
+  }
+}

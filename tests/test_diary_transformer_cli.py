@@ -208,11 +208,11 @@ class TestBuildCommand:
         assert "dockg" in cmd
         assert "build" in cmd
 
-    def test_wipe_flag_forwarded(self, tmp_path):
+    def test_build_update_passes_update_flag(self, tmp_path):
         corpus = tmp_path / "corpus"
         corpus.mkdir()
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
-            _runner().invoke(cli, ["build", str(corpus), "--wipe"])
+            _runner().invoke(cli, ["build-update", str(corpus)])
         cmd = mock_run.call_args[0][0]
-        assert "--wipe" in cmd
+        assert "--update" in cmd
