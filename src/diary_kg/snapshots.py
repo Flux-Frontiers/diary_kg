@@ -19,10 +19,12 @@ Usage
 from __future__ import annotations
 
 import json
-import subprocess
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+
+from kg_snapshot.snapshots import PruneResult as PruneResult  # noqa: F401 — re-export
+from kg_snapshot.snapshots import SnapshotManager as _BaseSnapshotManager
 
 # ---------------------------------------------------------------------------
 # Dataclasses
@@ -131,7 +133,7 @@ class DiarySnapshotManifest:
 # ---------------------------------------------------------------------------
 
 
-class DiarySnapshotManager:
+class DiarySnapshotManager(_BaseSnapshotManager):
     """Manages DiaryKG snapshot storage, retrieval, and comparison."""
 
     def __init__(self, snapshots_dir: Path | str) -> None:
@@ -164,10 +166,8 @@ class DiarySnapshotManager:
         :param source_file: Source diary file label.
         :return: New ``DiarySnapshot`` instance (not yet saved).
         """
-        if branch is None:
-            branch = self._get_current_branch()
-        if not tree_hash:
-            tree_hash = self._get_current_tree_hash()
+        branch = branch or self._get_current_branch()
+        tree_hash = tree_hash or self._get_current_tree_hash()
 
         node_count = db_stats.get("node_count", 0)
         edge_count = db_stats.get("edge_count", 0)
@@ -413,26 +413,4 @@ class DiarySnapshotManager:
             edges=snap_new.metrics.edge_count - snap_old.metrics.edge_count,
         )
 
-    @staticmethod
-    def _get_current_tree_hash() -> str:
-        """Get current git tree hash (HEAD^{tree})."""
-        try:
-            return subprocess.check_output(
-                ["git", "rev-parse", "HEAD^{tree}"],
-                text=True,
-                stderr=subprocess.DEVNULL,
-            ).strip()
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return ""
-
-    @staticmethod
-    def _get_current_branch() -> str:
-        """Get current git branch name."""
-        try:
-            return subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                text=True,
-                stderr=subprocess.DEVNULL,
-            ).strip()
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return "unknown"
+    # _get_current_tree_hash and _get_current_branch inherited from _BaseSnapshotManager

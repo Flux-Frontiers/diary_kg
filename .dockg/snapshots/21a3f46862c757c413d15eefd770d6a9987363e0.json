@@ -1,0 +1,122 @@
+{
+  "key": "21a3f46862c757c413d15eefd770d6a9987363e0",
+  "branch": "main",
+  "timestamp": "2026-03-28T22:45:59.906218+00:00",
+  "version": "0.5.1",
+  "metrics": {
+    "db_path": ".dockg/graph.sqlite",
+    "total_nodes": 4451,
+    "total_edges": 33409,
+    "node_counts": {
+      "chunk": 1216,
+      "document": 15,
+      "entity": 1091,
+      "keyword": 936,
+      "section": 700,
+      "topic": 493
+    },
+    "edge_counts": {
+      "CONTAINS": 1916,
+      "CO_OCCURS_WITH": 17568,
+      "HAS_KEYWORD": 4742,
+      "HAS_TOPIC": 1222,
+      "MENTIONS_ENTITY": 5834,
+      "NEXT": 504,
+      "SIMILAR_TO": 1623
+    },
+    "meaningful_nodes": 4436,
+    "coverage_score": 0.9572368421052632,
+    "issues_count": 0,
+    "complexity_median": 18.0
+  },
+  "hotspots": [
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0021",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "2.1 System Overview",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 20
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0009",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "1.1 The Problem: From Static Text to Conversational Memory",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0019",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "During ingestion: Write timestamps directly to database",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0029",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "Day markers: \"1st\", \"2nd\", \"10th\", \"25th\"",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0038",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "Set minimum entry length",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0043",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "3.2 Phase 2: Semantic Chunking",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0079",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "4.3 Performance Characteristics",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0120",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "9.1 Part of a Larger System",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0121",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "9.1 Part of a Larger System",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0135",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "9.4 What This Unlocks",
+      "references": 0,
+      "semantic_links": 18,
+      "total_links": 19
+    }
+  ],
+  "issues": [],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 620,
+    "edges": 4815,
+    "coverage_delta": -0.0009012397441587883,
+    "issues_delta": 0
+  }
+}
