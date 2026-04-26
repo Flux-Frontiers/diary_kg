@@ -96,7 +96,7 @@ spacy = "^3.8.11"
 # our own adaptors
 kg-snapshot = { git = "https://github.com/Flux-Frontiers/kg_snapshot.git" }
 kg-utils = { git = "https://github.com/Flux-Frontiers/KG_utils.git" }
-pycode-kg = {git = "https://github.com/Flux-Frontiers/pycode_kg.git", optional=true}
+pycode-kg = {version = ">=0.16.0", optional=true}
 agent-kg = {git = "https://github.com/Flux-Frontiers/agent_kg.git", optional=true}
 ftree-kg = {git = "https://github.com/Flux-Frontiers/ftree_kg.git", optional=true}
 doc-kg = {version = ">=0.12.0", optional=true}
@@ -156,6 +156,9 @@ explicit_package_bases = true
 testpaths = ["tests"]
 addopts = "-v --tb=short"
 pythonpath = ["src"]
+filterwarnings = [
+    "ignore::sklearn.exceptions.ConvergenceWarning",
+]
 
 [tool.pylint.messages_control]
 disable = ["all"]
