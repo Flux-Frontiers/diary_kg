@@ -18,6 +18,6 @@ from __future__ import annotations
 from .kg import DEFAULT_MODEL, DiaryKG
 from .primitives import CrossHit, CrossSnippet, KGEntry, KGKind
 
-__version__ = "0.91.1"
+__version__ = "0.92.0"
 
 __all__ = ["DiaryKG", "DEFAULT_MODEL", "CrossHit", "CrossSnippet", "KGEntry", "KGKind"]

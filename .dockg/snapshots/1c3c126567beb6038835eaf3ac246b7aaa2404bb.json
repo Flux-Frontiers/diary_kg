@@ -1,0 +1,124 @@
+{
+  "key": "1c3c126567beb6038835eaf3ac246b7aaa2404bb",
+  "branch": "main",
+  "timestamp": "2026-04-26T19:23:50.130469+00:00",
+  "version": "0.12.0",
+  "metrics": {
+    "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+    "total_nodes": 4499,
+    "total_edges": 40294,
+    "node_counts": {
+      "chunk": 1222,
+      "document": 16,
+      "entity": 1119,
+      "keyword": 943,
+      "section": 705,
+      "topic": 494
+    },
+    "edge_counts": {
+      "CONTAINS": 1927,
+      "CO_OCCURS_WITH": 17956,
+      "HAS_KEYWORD": 4766,
+      "HAS_TOPIC": 1228,
+      "MENTIONS_ENTITY": 5922,
+      "NEXT": 503,
+      "SIMILAR_TO": 7992
+    },
+    "meaningful_nodes": 4483,
+    "coverage_score": 0.9585379159847246,
+    "issues_count": 1,
+    "complexity_median": 60.0
+  },
+  "hotspots": [
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0009",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "1.1 The Problem: From Static Text to Conversational Memory",
+      "references": 0,
+      "semantic_links": 66,
+      "total_links": 67
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0121",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "9.1 Part of a Larger System",
+      "references": 0,
+      "semantic_links": 62,
+      "total_links": 63
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0183",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "12. Conclusion: From Static Text to Conversational Memory",
+      "references": 0,
+      "semantic_links": 62,
+      "total_links": 62
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0189",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "Significance",
+      "references": 0,
+      "semantic_links": 61,
+      "total_links": 62
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0014",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "1.3 Solution: A General-Purpose Memory Transformation Pipeline",
+      "references": 0,
+      "semantic_links": 60,
+      "total_links": 61
+    },
+    {
+      "id": "chunk:docs/personal_agent_pipeline_article.md:0000",
+      "file_path": "docs/personal_agent_pipeline_article.md",
+      "label": "A General-Purpose Pipeline for Transforming Rich Prose into Conversational Memory",
+      "references": 0,
+      "semantic_links": 59,
+      "total_links": 59
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0000",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "A General-Purpose Pipeline for Transforming Rich Prose into Conversational Memory",
+      "references": 0,
+      "semantic_links": 58,
+      "total_links": 58
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE.md:0015",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE.md",
+      "label": "1.3 Solution: A General-Purpose Memory Transformation Pipeline",
+      "references": 0,
+      "semantic_links": 57,
+      "total_links": 58
+    },
+    {
+      "id": "chunk:docs/personal_agent_pipeline_article.md:0001",
+      "file_path": "docs/personal_agent_pipeline_article.md",
+      "label": "Abstract",
+      "references": 0,
+      "semantic_links": 57,
+      "total_links": 58
+    },
+    {
+      "id": "chunk:docs/COMPLETE_TECHNICAL_ARTICLE_internal.md:0103",
+      "file_path": "docs/COMPLETE_TECHNICAL_ARTICLE_internal.md",
+      "label": "9.1 Part of a Larger System",
+      "references": 0,
+      "semantic_links": 53,
+      "total_links": 54
+    }
+  ],
+  "issues": [
+    "Chunk density appears low; consider reducing --chunk-size or reviewing corpus content."
+  ],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": 668,
+    "edges": 11700,
+    "coverage_delta": 0.0003998341353026458,
+    "issues_delta": 1
+  }
+}

@@ -16,7 +16,30 @@
 #
 # Author: Eric G. Suchanek, PhD
 # Last Revision: 2026-04-17 13:26:51
-
+#
+# Quick install (pip)
+# -------------------
+#   pip install -e "."                  core runtime only
+#   pip install -e ".[viz]"             core + 2D visualization (streamlit, pyvis, plotly)
+#   pip install -e ".[viz3d]"           core + 3D visualization (pyvista, pyvistaqt, PyQt5)
+#
+# Quick install (poetry)
+# ----------------------
+#   poetry install                      core runtime only
+#   poetry install --extras "viz"       core + 2D visualization
+#   poetry install --extras "viz3d"     core + 3D visualization
+#   poetry install --with dev           core + dev tools (pytest, ruff, mypy, pre-commit)
+#   poetry install --all-extras --with dev   everything
+#
+# Run tests
+# ---------
+#   pytest                              uses [tool.pytest.ini_options] (testpaths = tests/)
+#   pytest -v --tb=short                verbose with short tracebacks
+#
+# Build KG indices (after code changes)
+# --------------------------------------
+#   diarykg build --source pepys/pepys_enriched_full.txt
+#   dockg build --repo .
 
 
 [build-system]
@@ -25,7 +48,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "diary-kg"
-version = "0.91.1"
+version = "0.92.0"
 description = "A knowledge graph builder and semantic search engine for diaries and journals"
 authors = ["Eric G. Suchanek, PhD <suchanek@mac.com>"]
 license = "Elastic-2.0"
@@ -72,10 +95,11 @@ spacy = "^3.8.11"
 
 # our own adaptors
 kg-snapshot = { git = "https://github.com/Flux-Frontiers/kg_snapshot.git" }
+kg-utils = { git = "https://github.com/Flux-Frontiers/KG_utils.git" }
 pycode-kg = {git = "https://github.com/Flux-Frontiers/pycode_kg.git", optional=true}
 agent-kg = {git = "https://github.com/Flux-Frontiers/agent_kg.git", optional=true}
 ftree-kg = {git = "https://github.com/Flux-Frontiers/ftree_kg.git", optional=true}
-doc-kg = {git = "https://github.com/Flux-Frontiers/doc_kg.git", optional=true}
+doc-kg = {version = ">=0.12.0", optional=true}
 memory-kg = {git = "https://github.com/Flux-Frontiers/memory_kg.git", optional=true}
 
 #proteuspy = "^0.99.35"

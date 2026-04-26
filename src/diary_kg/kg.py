@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import subprocess
 from collections import Counter
@@ -27,10 +26,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from diary_kg.snapshots import DiarySnapshotManager
 
-#: Default sentence-transformer model — mirrors DocKG / KGRAG default.
-#: Override via the ``DIARYKG_MODEL`` environment variable.
-DEFAULT_MODEL: str = os.environ.get("DIARYKG_MODEL", "all-mpnet-base-v2")
-
+from kg_utils.embed import DEFAULT_MODEL as DEFAULT_MODEL
 
 _FM_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
@@ -469,7 +465,7 @@ class DiaryKG:
         hits = []
         with sqlite3.connect(str(self._db_path)) as con:
             for hit in chunk_hits:
-                score = max(0.0, 1.0 - (hit.distance**2) / 2.0)
+                score = max(0.0, 1.0 - hit.distance)
                 row = con.execute(
                     """
                     SELECT text, timestamp, category, context, diary_source_file

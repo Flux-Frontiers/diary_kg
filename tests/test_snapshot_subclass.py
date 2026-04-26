@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from kg_snapshot import SnapshotManager as BaseSnapshotManager
 
 from diary_kg.snapshots import (
     DiarySnapshot,
@@ -18,7 +19,6 @@ from diary_kg.snapshots import (
     DiarySnapshotManager,
     DiarySnapshotMetrics,
 )
-from kg_snapshot import SnapshotManager as BaseSnapshotManager
 
 
 @pytest.fixture
@@ -60,8 +60,10 @@ def test_git_helpers_inherited(mgr: DiarySnapshotManager) -> None:
 def test_capture_returns_diary_snapshot(
     mgr: DiarySnapshotManager, sample_info: dict, sample_db_stats: dict
 ) -> None:
-    with patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"), \
-         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"):
+    with (
+        patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
+        patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
+    ):
         snap = mgr.capture(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
 
     assert isinstance(snap, DiarySnapshot)
@@ -72,8 +74,10 @@ def test_metrics_attribute_access(
     mgr: DiarySnapshotManager, sample_info: dict, sample_db_stats: dict
 ) -> None:
     """Attribute-style access on DiarySnapshotMetrics must not break (Option A guarantee)."""
-    with patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"), \
-         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"):
+    with (
+        patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
+        patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
+    ):
         snap = mgr.capture(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
 
     assert snap.metrics.chunk_count == 200
@@ -86,8 +90,10 @@ def test_metrics_attribute_access(
 def test_save_and_load_preserves_typed_metrics(
     mgr: DiarySnapshotManager, sample_info: dict, sample_db_stats: dict
 ) -> None:
-    with patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"), \
-         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"):
+    with (
+        patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
+        patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
+    ):
         snap = mgr.capture(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
     mgr.save_snapshot(snap)
 
@@ -102,14 +108,18 @@ def test_delta_backfilled_on_load(
     mgr: DiarySnapshotManager, sample_info: dict, sample_db_stats: dict
 ) -> None:
     """vs_previous is backfilled from manifest on load, not set at capture time."""
-    with patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"), \
-         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"):
+    with (
+        patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
+        patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
+    ):
         snap_a = mgr.capture(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
     mgr.save_snapshot(snap_a)
 
     info_b = dict(sample_info, chunk_count=220, entry_count=45)
-    with patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"), \
-         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash002"):
+    with (
+        patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
+        patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash002"),
+    ):
         snap_b = mgr.capture(version="1.0.1", info=info_b, db_stats=sample_db_stats)
     mgr.save_snapshot(snap_b)
 
@@ -120,16 +130,20 @@ def test_delta_backfilled_on_load(
     assert loaded.vs_previous.entries == 3
 
 
-def test_save_rejects_zero_chunks(
-    mgr: DiarySnapshotManager, sample_db_stats: dict
-) -> None:
+def test_save_rejects_zero_chunks(mgr: DiarySnapshotManager, sample_db_stats: dict) -> None:
     empty_info = {
-        "chunk_count": 0, "entry_count": 0,
-        "topic_counts": {}, "context_counts": {},
-        "temporal_span": {}, "chunking_strategy": "", "chunk_size": 512,
+        "chunk_count": 0,
+        "entry_count": 0,
+        "topic_counts": {},
+        "context_counts": {},
+        "temporal_span": {},
+        "chunking_strategy": "",
+        "chunk_size": 512,
     }
-    with patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"), \
-         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash000"):
+    with (
+        patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
+        patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash000"),
+    ):
         snap = mgr.capture(version="0.0.0", info=empty_info, db_stats=sample_db_stats)
     with pytest.raises(ValueError, match="0 chunks"):
         mgr.save_snapshot(snap)

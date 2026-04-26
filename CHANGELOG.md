@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `CITATION.cff`: GitHub/Zenodo software citation metadata (CFF 1.2.0) — enables
+  `Cite this repository` button and `@software` BibTeX export for academic referencing
+- `README.md`: Zenodo DOI badge linking to archived releases
+
+### Changed
+- `pyproject.toml`: version bumped 0.91.1 → 0.92.0; `doc-kg` switched from git URL to
+  PyPI release (`>=0.12.0`); `kg-utils` added as an explicit core dependency; added
+  install quick-reference comment block
+- `src/diary_kg/kg.py`: `DEFAULT_MODEL` now re-exported from `kg_utils.embed` (shared
+  constant, removes local `os.environ` lookup); fixed hit-score formula from
+  `1 - d²/2` → `1 - d` (correct cosine-distance → similarity mapping); removed unused
+  `os` import
+- `.pre-commit-config.yaml`: moved `ruff` and `detect-secrets` hooks before local hooks;
+  `ruff`/`ruff-format` now run with `always_run: true` and `pass_filenames: false`;
+  expanded `detect-secrets` exclusion list to cover `.filetreekg/` and `.pycodekg/`
+  snapshot directories (SHA tree hashes flagged as false-positive secrets)
+- `.claude/commands/`: renamed `codekg.md` → `pycodekg.md` to align with updated
+  PyCodeKG skill name
+- `README.md`: version badge corrected from placeholder `0.1.0` to `0.91.1`
+
+### Added
 - `benchmarks/pepys_ch5_flight.py`: WaveRider Chapter 5 experiment — destination-relative
   temporal encoding; appends `abs(fyear_i − fyear_dest)` as the temporal axis so the
   destination has coordinate 0 and the KNN graph acts as a gravitational attractor;
