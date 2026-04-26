@@ -1,22 +1,22 @@
 {
-  "key": "07b11fb653fa7aa47717075ac5aa885cd867ebcf",
+  "key": "ab03e08f152b203582f9082864663c512ed0e575",
   "branch": "main",
-  "timestamp": "2026-04-26T22:22:02.544621+00:00",
+  "timestamp": "2026-04-26T23:39:49.626176+00:00",
   "version": "0.7.0",
   "metrics": {
-    "total_nodes": 9163,
-    "total_edges": 9163,
+    "total_nodes": 9268,
+    "total_edges": 9268,
     "node_counts": {
       "directory": 109,
-      "file": 9054
+      "file": 9159
     },
     "edge_counts": {
-      "CONTAINS": 9163
+      "CONTAINS": 9268
     },
-    "total_files": 9054,
+    "total_files": 9159,
     "total_dirs": 109,
     "dir_node_counts": {
-      ".agentkg": 731,
+      ".agentkg": 836,
       ".claude": 123,
       ".diarykg": 8117,
       ".mcp.json": 1,
@@ -48,9 +48,9 @@
   "issues": [],
   "vs_previous": null,
   "vs_baseline": {
-    "nodes": 1684,
-    "edges": 1684,
-    "files_delta": 1666,
+    "nodes": 1789,
+    "edges": 1789,
+    "files_delta": 1771,
     "dirs_delta": 18
   }
 }

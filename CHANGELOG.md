@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `README.md`: Zenodo DOI badge linking to archived releases
 
 ### Changed
+- `pyproject.toml`: `kg-utils` (git URL) replaced by `kgmodule-utils = "^0.2.0"` (PyPI
+  release) — package was renamed on PyPI; `commit.txt` added to `.gitignore`
+- `src/diary_kg/kg.py`: `DiaryKG.__init__` now resolves model short aliases via
+  `KNOWN_MODELS.get(model, model)` so callers can pass `"bge-small"` instead of the
+  full HuggingFace ID; `KNOWN_MODELS` imported alongside `DEFAULT_MODEL` from
+  `kg_utils.embed`
 - `pyproject.toml`: `pycode-kg` switched from git URL to PyPI release (`>=0.16.0`),
   matching `doc-kg` and the pattern used in kgrag
 - `src/diary_transformer/diary_embedder.py`: wired `_embed_shard` to the shared
