@@ -59,7 +59,8 @@ from diary_transformer.diary_embedder import (  # noqa: E402
 )
 
 try:
-    from importlib.metadata import version as _pkg_version, PackageNotFoundError
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as _pkg_version
 
     _VERSION = _pkg_version("diary-kg")
 except (ImportError, PackageNotFoundError):
@@ -231,9 +232,7 @@ def main() -> None:
     texts, timestamps = parse_diary(str(diary_path))
     n_entries = len(texts)
     date_range = [timestamps[0].isoformat(), timestamps[-1].isoformat()]
-    console.print(
-        f"  {n_entries} entries  ({timestamps[0].date()} → {timestamps[-1].date()})"
-    )
+    console.print(f"  {n_entries} entries  ({timestamps[0].date()} → {timestamps[-1].date()})")
 
     # ---- Build benchmark document skeleton ----
     now = datetime.now().isoformat(timespec="seconds")
@@ -269,9 +268,7 @@ def main() -> None:
         if existing:
             doc["results"] = existing.get("results", [])
             completed = {(r["workers"], r["batch_size"]) for r in doc["results"]}
-            console.print(
-                f"[yellow]Resuming: {len(completed)} pair(s) already complete[/yellow]"
-            )
+            console.print(f"[yellow]Resuming: {len(completed)} pair(s) already complete[/yellow]")
 
     # ---- Grid sweep ----
     total = len(args.workers) * len(args.batches)
@@ -341,9 +338,7 @@ def main() -> None:
                 "wall_time_s": worst["wall_time_s"],
                 "entries_per_sec": worst["entries_per_sec"],
             },
-            "speedup_best_vs_worst": round(
-                worst["wall_time_s"] / best["wall_time_s"], 2
-            )
+            "speedup_best_vs_worst": round(worst["wall_time_s"] / best["wall_time_s"], 2)
             if best["wall_time_s"]
             else None,
         }

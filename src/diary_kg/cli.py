@@ -71,7 +71,11 @@ def cli():
     default=None,
     help="Diary .txt path relative to ROOT (required on first build).",
 )
-@click.option("--update", is_flag=True, help="Incremental update — keep existing corpus + DBs instead of wiping.")
+@click.option(
+    "--update",
+    is_flag=True,
+    help="Incremental update — keep existing corpus + DBs instead of wiping.",
+)
 @click.option(
     "--batch-size", "-b", default=0, show_default=True, help="Entries to sample (0 = all)."
 )
@@ -510,7 +514,9 @@ def snapshot_show(key, root, as_json):
 
 @snapshot.command("prune")
 @_ROOT_ARG
-@click.option("--dry-run", is_flag=True, help="Show what would be removed without deleting anything.")
+@click.option(
+    "--dry-run", is_flag=True, help="Show what would be removed without deleting anything."
+)
 def snapshot_prune(root, dry_run):
     """Remove vestigial snapshots that carry no new metric information.
 
@@ -547,11 +553,15 @@ def snapshot_prune(root, dry_run):
         for key in result.removed:
             console.print(f"  - {key}")
     if result.broken_entries:
-        console.print(f"[yellow]{prefix}Broken manifest entries removed: {len(result.broken_entries)}[/yellow]")
+        console.print(
+            f"[yellow]{prefix}Broken manifest entries removed: {len(result.broken_entries)}[/yellow]"
+        )
         for key in result.broken_entries:
             console.print(f"  - {key}")
     if result.orphaned_files:
-        console.print(f"[yellow]{prefix}Orphaned JSON files removed: {len(result.orphaned_files)}[/yellow]")
+        console.print(
+            f"[yellow]{prefix}Orphaned JSON files removed: {len(result.orphaned_files)}[/yellow]"
+        )
         for fname in result.orphaned_files:
             console.print(f"  - {fname}")
 
