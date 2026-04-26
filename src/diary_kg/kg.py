@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from diary_kg.snapshots import DiarySnapshotManager
 
 from kg_utils.embed import DEFAULT_MODEL as DEFAULT_MODEL
+from kg_utils.embed import KNOWN_MODELS
 
 _FM_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
@@ -64,7 +65,7 @@ class DiaryKG:
     ) -> None:
         self.root = Path(root).resolve()
         self._source_file_override = source_file
-        self._model = model
+        self._model = KNOWN_MODELS.get(model, model)
 
         self._kg_dir = self.root / self.KG_DIR
         self._corpus_dir = self._kg_dir / "corpus"

@@ -258,3 +258,4 @@ pepys/.diary_cache
 pepys/pepys_enriched_full_mpnet_embeddings.json
 
 .agentkg/
+commit.txt

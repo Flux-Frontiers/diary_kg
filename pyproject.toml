@@ -95,7 +95,7 @@ spacy = "^3.8.11"
 
 # our own adaptors
 kg-snapshot = { git = "https://github.com/Flux-Frontiers/kg_snapshot.git" }
-kg-utils = { git = "https://github.com/Flux-Frontiers/KG_utils.git" }
+kgmodule-utils = "^0.2.0"
 pycode-kg = {version = ">=0.16.0", optional=true}
 agent-kg = {git = "https://github.com/Flux-Frontiers/agent_kg.git", optional=true}
 ftree-kg = {git = "https://github.com/Flux-Frontiers/ftree_kg.git", optional=true}
