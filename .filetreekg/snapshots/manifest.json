@@ -1,6 +1,6 @@
 {
   "format": "1.0",
-  "last_update": "2026-04-26T19:23:51.702574+00:00",
+  "last_update": "2026-04-26T22:22:02.545542+00:00",
   "snapshots": [
     {
       "key": "21a3f46862c757c413d15eefd770d6a9987363e0",
@@ -304,6 +304,120 @@
           "nodes": 1397,
           "edges": 1397,
           "files_delta": 1379,
+          "dirs_delta": 18
+        }
+      }
+    },
+    {
+      "key": "d81c625d31cab858565d67f09d2cf37b403cd1e8",
+      "branch": "main",
+      "timestamp": "2026-04-26T22:20:33.875463+00:00",
+      "version": "0.7.0",
+      "file": "d81c625d31cab858565d67f09d2cf37b403cd1e8.json",
+      "metrics": {
+        "total_nodes": 9087,
+        "total_edges": 9087,
+        "node_counts": {
+          "directory": 109,
+          "file": 8978
+        },
+        "edge_counts": {
+          "CONTAINS": 9087
+        },
+        "total_files": 8978,
+        "total_dirs": 109,
+        "dir_node_counts": {
+          ".agentkg": 655,
+          ".claude": 123,
+          ".diarykg": 8117,
+          ".mcp.json": 1,
+          ".pre-commit-config.yaml": 1,
+          ".pycodekg": 69,
+          ".secrets.baseline": 1,
+          "CHANGELOG.md": 1,
+          "CITATION.cff": 1,
+          "README.md": 1,
+          "analysis": 3,
+          "benchmarks": 18,
+          "commit.txt": 1,
+          "diary": 3,
+          "diary_kg.code-workspace": 1,
+          "docs": 8,
+          "missions": 2,
+          "pepys": 32,
+          "pepys_mpnet_embeddings_run_summary.md": 1,
+          "pepys_only_topics.yaml": 1,
+          "poetry.lock": 1,
+          "poetry.toml": 1,
+          "pyproject.toml": 1,
+          "scripts": 6,
+          "src": 25,
+          "tests": 13
+        }
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 1608,
+          "edges": 1608,
+          "files_delta": 1590,
+          "dirs_delta": 18
+        }
+      }
+    },
+    {
+      "key": "07b11fb653fa7aa47717075ac5aa885cd867ebcf",
+      "branch": "main",
+      "timestamp": "2026-04-26T22:22:02.544621+00:00",
+      "version": "0.7.0",
+      "file": "07b11fb653fa7aa47717075ac5aa885cd867ebcf.json",
+      "metrics": {
+        "total_nodes": 9163,
+        "total_edges": 9163,
+        "node_counts": {
+          "directory": 109,
+          "file": 9054
+        },
+        "edge_counts": {
+          "CONTAINS": 9163
+        },
+        "total_files": 9054,
+        "total_dirs": 109,
+        "dir_node_counts": {
+          ".agentkg": 731,
+          ".claude": 123,
+          ".diarykg": 8117,
+          ".mcp.json": 1,
+          ".pre-commit-config.yaml": 1,
+          ".pycodekg": 69,
+          ".secrets.baseline": 1,
+          "CHANGELOG.md": 1,
+          "CITATION.cff": 1,
+          "README.md": 1,
+          "analysis": 3,
+          "benchmarks": 18,
+          "commit.txt": 1,
+          "diary": 3,
+          "diary_kg.code-workspace": 1,
+          "docs": 8,
+          "missions": 2,
+          "pepys": 32,
+          "pepys_mpnet_embeddings_run_summary.md": 1,
+          "pepys_only_topics.yaml": 1,
+          "poetry.lock": 1,
+          "poetry.toml": 1,
+          "pyproject.toml": 1,
+          "scripts": 6,
+          "src": 25,
+          "tests": 13
+        }
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": 1684,
+          "edges": 1684,
+          "files_delta": 1666,
           "dirs_delta": 18
         }
       }

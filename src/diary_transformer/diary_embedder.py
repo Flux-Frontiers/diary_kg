@@ -65,6 +65,7 @@ from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
 import numpy as np
+from kg_utils.embed import resolve_model_path
 from rich.console import Console
 from sentence_transformers import SentenceTransformer
 
@@ -81,6 +82,13 @@ except PackageNotFoundError:
 DEFAULT_MODEL = "sentence-transformers/all-mpnet-base-v2"
 # Project root is three levels up from src/diary_transformer/diary_embedder.py
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+
+def _local_model_path(model_name: str) -> Path:
+    """Return the local cache path for *model_name* (diary-kg-scoped fallback)."""
+    return resolve_model_path(model_name, local_fallback=_PROJECT_ROOT / ".diarykg" / "models")
+
+
 DEFAULT_DIARY = str(_PROJECT_ROOT / "pepys" / "pepys_enriched_full.txt")
 DEFAULT_OUTPUT = str(_PROJECT_ROOT / "pepys_mpnet_embeddings.json")
 
@@ -242,7 +250,17 @@ def _embed_shard(args: tuple) -> np.ndarray:
     :return: Float32 array of shape (len(shard), D).
     """
     texts_shard, model_id, batch_size, worker_id = args
-    embedder = SentenceTransformer(model_id, trust_remote_code=True)
+    trust_remote = "nomic-ai/" in model_id
+    local_path = _local_model_path(model_id)
+    if local_path.exists():
+        embedder = SentenceTransformer(str(local_path), trust_remote_code=trust_remote)
+    else:
+        try:
+            embedder = SentenceTransformer(
+                model_id, local_files_only=True, trust_remote_code=trust_remote
+            )
+        except OSError:
+            embedder = SentenceTransformer(model_id, trust_remote_code=trust_remote)
     vecs = embedder.encode(
         texts_shard,
         batch_size=batch_size,

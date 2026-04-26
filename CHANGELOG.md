@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `README.md`: Zenodo DOI badge linking to archived releases
 
 ### Changed
+- `pyproject.toml`: `pycode-kg` switched from git URL to PyPI release (`>=0.16.0`),
+  matching `doc-kg` and the pattern used in kgrag
+- `src/diary_transformer/diary_embedder.py`: wired `_embed_shard` to the shared
+  `kg_utils.embed` model cache — added `_local_model_path()` helper using
+  `resolve_model_path` with `.diarykg/models` as the project-local fallback; `_embed_shard`
+  now uses a 3-step load sequence (local cache path → `local_files_only=True` → download)
+  matching the doc_kg pattern; `trust_remote_code` derived from model name instead of
+  hardcoded `True`
 - `pyproject.toml`: version bumped 0.91.1 → 0.92.0; `doc-kg` switched from git URL to
   PyPI release (`>=0.12.0`); `kg-utils` added as an explicit core dependency; added
   install quick-reference comment block
