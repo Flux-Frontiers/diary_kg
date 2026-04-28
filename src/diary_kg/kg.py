@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 from kg_utils.embed import DEFAULT_MODEL as DEFAULT_MODEL
 from kg_utils.embed import KNOWN_MODELS
+from kg_utils.embedder import wrap_embedder
 
 _FM_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
@@ -166,7 +167,7 @@ class DiaryKG:
         topics_file: str | None = None,
         wipe: bool = False,
         embed_cache: str | None = None,
-        embed_model: str = "nomic-ai/nomic-embed-text-v1",
+        embed_model: str = DEFAULT_MODEL,
         embed_workers: int = 0,
     ) -> int:
         """Run the full build pipeline: ingest → index.
@@ -187,7 +188,7 @@ class DiaryKG:
         :param embed_cache: Path for the JSON embedding cache written by
             ``diary_embedder``.  Pass ``None`` (default) to skip.
         :param embed_model: HuggingFace model id for embedding
-            (default: ``nomic-ai/nomic-embed-text-v1``).
+            (default: ``BAAI/bge-small-en-v1.5``).
         :param embed_workers: Parallel workers for embedding (0 = cpu_count).
         :return: Number of ``.md`` chunk files written.
         :raises ValueError: If no source file is configured.
@@ -246,6 +247,12 @@ class DiaryKG:
             embed_workers=embed_workers,
         )
 
+        # Reuse DiaryTransformer's already-loaded SentenceTransformer for DocKG.
+        # Both now use the same model (DEFAULT_MODEL); loading a second instance
+        # on MPS while the first is still live triggers SIGBUS on the first batch.
+        shared_embedder = wrap_embedder(dt.sentence_model, self._model)
+        del dt
+
         # Step 2 — build DocKG index
         print(f"Building DocKG index for {self._corpus_dir}...")
         try:
@@ -256,8 +263,9 @@ class DiaryKG:
                 db_path=str(self._db_path),
                 lancedb_dir=str(self._lancedb_dir),
                 model=self._model,
+                embedder=shared_embedder,
             )
-            dockg.build()
+            dockg.build(wipe=True)
             self._dockg = dockg
         except ImportError:
             # Fallback: invoke dockg CLI
@@ -297,6 +305,63 @@ class DiaryKG:
 
         print(f"DiaryKG build complete: {n} chunks indexed.")
         return n
+
+    def rebuild_index(self) -> None:
+        """Re-run DocKG indexing on the existing corpus, skipping ingest.
+
+        Use this when the corpus ``.md`` files are already up-to-date but the
+        LanceDB / SQLite index needs to be rebuilt — e.g. after changing the
+        embedding model or fixing an index-build bug.
+
+        :raises FileNotFoundError: If the corpus directory doesn't exist.
+        """
+        if not self._corpus_dir.exists():
+            raise FileNotFoundError(
+                f"Corpus not found: {self._corpus_dir}. Run 'diarykg build' first."
+            )
+
+        # Wipe only the index, keep corpus files.
+        import shutil  # pylint: disable=import-outside-toplevel
+
+        if self._lancedb_dir.exists():
+            shutil.rmtree(self._lancedb_dir)
+        if self._db_path.exists():
+            self._db_path.unlink()
+        self._dockg = None
+
+        print(f"Building DocKG index for {self._corpus_dir}...")
+        try:
+            from doc_kg.kg import DocKG  # pylint: disable=import-outside-toplevel
+
+            dockg = DocKG(
+                corpus_root=str(self._corpus_dir),
+                db_path=str(self._db_path),
+                lancedb_dir=str(self._lancedb_dir),
+                model=self._model,
+            )
+            dockg.build(wipe=True, discover_similar=False)
+            self._dockg = dockg
+        except ImportError:
+            import subprocess  # pylint: disable=import-outside-toplevel
+
+            subprocess.run(
+                [
+                    "dockg",
+                    "build",
+                    "--repo",
+                    str(self._corpus_dir),
+                    "--db",
+                    str(self._db_path),
+                    "--lancedb",
+                    str(self._lancedb_dir),
+                ],
+                check=True,
+            )
+
+        n_edges = self._inject_topic_edges()
+        print(f"Injected {n_edges} classifier HAS_TOPIC edges.")
+        n_enriched = self._enrich_metadata()
+        print(f"Enriched {n_enriched} chunk nodes with diary metadata.")
 
     def _inject_topic_edges(self) -> int:
         """Inject classifier-derived topic nodes and HAS_TOPIC edges into the graph.
@@ -682,7 +747,7 @@ class DiaryKG:
         info["chunk_size"] = config.get("chunk_size", 512)
         db_stats = self.stats()
         mgr = self._snapshot_mgr()
-        snap = mgr.capture(version=version, info=info, db_stats=db_stats, label=label)
+        snap = mgr.capture_diary(version=version, info=info, db_stats=db_stats, label=label)
         mgr.save_snapshot(snap)
         return snap.to_dict()
 

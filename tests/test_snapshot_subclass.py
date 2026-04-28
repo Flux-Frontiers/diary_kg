@@ -1,8 +1,5 @@
 """
-test_diary_subclass.py — Verify DiarySnapshotManager inherits correctly.
-
-Option A migration: domain types (DiarySnapshotMetrics, DiarySnapshotDelta,
-DiarySnapshot) are unchanged.  Only the git helpers are inherited from base.
+test_snapshot_subclass.py — Verify DiarySnapshotManager inherits from kg_utils.snapshots.
 """
 
 from __future__ import annotations
@@ -11,14 +8,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from kg_snapshot import SnapshotManager as BaseSnapshotManager
+from kg_utils.snapshots import Snapshot, SnapshotManager
 
-from diary_kg.snapshots import (
-    DiarySnapshot,
-    DiarySnapshotDelta,
-    DiarySnapshotManager,
-    DiarySnapshotMetrics,
-)
+from diary_kg.snapshots import DiarySnapshotManager
 
 
 @pytest.fixture
@@ -46,7 +38,7 @@ def sample_db_stats() -> dict:
 
 
 def test_inherits_from_base() -> None:
-    assert issubclass(DiarySnapshotManager, BaseSnapshotManager)
+    assert issubclass(DiarySnapshotManager, SnapshotManager)
 
 
 def test_git_helpers_inherited(mgr: DiarySnapshotManager) -> None:
@@ -57,51 +49,50 @@ def test_git_helpers_inherited(mgr: DiarySnapshotManager) -> None:
     assert isinstance(tree_hash, str) and len(tree_hash) > 0
 
 
-def test_capture_returns_diary_snapshot(
+def test_capture_returns_snapshot(
     mgr: DiarySnapshotManager, sample_info: dict, sample_db_stats: dict
 ) -> None:
     with (
         patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
     ):
-        snap = mgr.capture(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
+        snap = mgr.capture_diary(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
 
-    assert isinstance(snap, DiarySnapshot)
-    assert isinstance(snap.metrics, DiarySnapshotMetrics)
-
-
-def test_metrics_attribute_access(
-    mgr: DiarySnapshotManager, sample_info: dict, sample_db_stats: dict
-) -> None:
-    """Attribute-style access on DiarySnapshotMetrics must not break (Option A guarantee)."""
-    with (
-        patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
-        patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
-    ):
-        snap = mgr.capture(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
-
-    assert snap.metrics.chunk_count == 200
-    assert snap.metrics.entry_count == 42
-    assert snap.metrics.node_count == 350
-    assert snap.metrics.edge_count == 480
-    assert snap.metrics.chunking_strategy == "semantic"
+    assert isinstance(snap, Snapshot)
+    assert isinstance(snap.metrics, dict)
 
 
-def test_save_and_load_preserves_typed_metrics(
+def test_metrics_dict_access(
     mgr: DiarySnapshotManager, sample_info: dict, sample_db_stats: dict
 ) -> None:
     with (
         patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
     ):
-        snap = mgr.capture(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
+        snap = mgr.capture_diary(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
+
+    assert snap.metrics["chunk_count"] == 200
+    assert snap.metrics["entry_count"] == 42
+    assert snap.metrics["total_nodes"] == 350
+    assert snap.metrics["total_edges"] == 480
+    assert snap.metrics["chunking_strategy"] == "semantic"
+
+
+def test_save_and_load_preserves_metrics(
+    mgr: DiarySnapshotManager, sample_info: dict, sample_db_stats: dict
+) -> None:
+    with (
+        patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
+        patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
+    ):
+        snap = mgr.capture_diary(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
     mgr.save_snapshot(snap)
 
     loaded = mgr.load_snapshot("hash001")
     assert loaded is not None
-    assert isinstance(loaded.metrics, DiarySnapshotMetrics)
-    assert loaded.metrics.chunk_count == 200
-    assert loaded.metrics.topic_counts["science"] == 10
+    assert isinstance(loaded.metrics, dict)
+    assert loaded.metrics["chunk_count"] == 200
+    assert loaded.metrics["topic_counts"]["science"] == 10
 
 
 def test_delta_backfilled_on_load(
@@ -112,7 +103,7 @@ def test_delta_backfilled_on_load(
         patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
     ):
-        snap_a = mgr.capture(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
+        snap_a = mgr.capture_diary(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
     mgr.save_snapshot(snap_a)
 
     info_b = dict(sample_info, chunk_count=220, entry_count=45)
@@ -120,14 +111,14 @@ def test_delta_backfilled_on_load(
         patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash002"),
     ):
-        snap_b = mgr.capture(version="1.0.1", info=info_b, db_stats=sample_db_stats)
+        snap_b = mgr.capture_diary(version="1.0.1", info=info_b, db_stats=sample_db_stats)
     mgr.save_snapshot(snap_b)
 
     loaded = mgr.load_snapshot("hash002")
     assert loaded is not None
-    assert isinstance(loaded.vs_previous, DiarySnapshotDelta)
-    assert loaded.vs_previous.chunks == 20
-    assert loaded.vs_previous.entries == 3
+    assert isinstance(loaded.vs_previous, dict)
+    assert loaded.vs_previous["chunks"] == 20
+    assert loaded.vs_previous["entries"] == 3
 
 
 def test_save_rejects_zero_chunks(mgr: DiarySnapshotManager, sample_db_stats: dict) -> None:
@@ -144,6 +135,6 @@ def test_save_rejects_zero_chunks(mgr: DiarySnapshotManager, sample_db_stats: di
         patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash000"),
     ):
-        snap = mgr.capture(version="0.0.0", info=empty_info, db_stats=sample_db_stats)
+        snap = mgr.capture_diary(version="0.0.0", info=empty_info, db_stats=sample_db_stats)
     with pytest.raises(ValueError, match="0 chunks"):
         mgr.save_snapshot(snap)

@@ -160,6 +160,46 @@ def build(
 
 
 # ---------------------------------------------------------------------------
+# reindex
+# ---------------------------------------------------------------------------
+
+
+@cli.command("reindex")
+@_ROOT_ARG
+def reindex(root):
+    """Rebuild the LanceDB + SQLite index from the existing corpus, skipping ingest.
+
+    Use this after changing the embedding model or fixing an index bug when the
+    corpus .md files are already up-to-date.
+
+    \b
+    ROOT  Project root directory (default: current directory).
+
+    Example:
+
+    \b
+        diarykg reindex
+    """
+    kg = _kg(root, None)
+    try:
+        kg.rebuild_index()
+    except FileNotFoundError as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        sys.exit(1)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        import traceback  # pylint: disable=import-outside-toplevel
+
+        console.print(f"[red]Error:[/red] {exc}")
+        traceback.print_exc()
+        sys.exit(1)
+
+    kg_dir = Path(root) / DiaryKGRef.KG_DIR
+    console.print("\n[green]✓ DiaryKG reindexed[/green]")
+    console.print(f"  SQLite  : {kg_dir}/graph.sqlite")
+    console.print(f"  LanceDB : {kg_dir}/lancedb/")
+
+
+# ---------------------------------------------------------------------------
 # query
 # ---------------------------------------------------------------------------
 

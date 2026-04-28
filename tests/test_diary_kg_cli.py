@@ -399,3 +399,51 @@ class TestSnapshotSaveCommand:
             result = _runner().invoke(cli, ["snapshot", "save", str(tmp_path), "--label", "first"])
         assert result.exit_code == 0
         assert "deadbeef1234" in result.output
+
+
+# ---------------------------------------------------------------------------
+# reindex command
+# ---------------------------------------------------------------------------
+
+
+class TestReindex:
+    def test_reindex_help(self):
+        result = _runner().invoke(cli, ["reindex", "--help"])
+        assert result.exit_code == 0
+        assert "corpus" in result.output.lower() or "index" in result.output.lower()
+
+    def test_reindex_in_help_output(self):
+        result = _runner().invoke(cli, ["--help"])
+        assert result.exit_code == 0
+        assert "reindex" in result.output
+
+    def test_reindex_success_calls_rebuild_index(self, tmp_path):
+        mock_kg = _mock_kg()
+        with patch("diary_kg.cli._kg", return_value=mock_kg):
+            result = _runner().invoke(cli, ["reindex", str(tmp_path)])
+        mock_kg.rebuild_index.assert_called_once()
+        assert result.exit_code == 0
+
+    def test_reindex_success_output_shows_paths(self, tmp_path):
+        mock_kg = _mock_kg()
+        with patch("diary_kg.cli._kg", return_value=mock_kg):
+            result = _runner().invoke(cli, ["reindex", str(tmp_path)])
+        assert result.exit_code == 0
+        assert "reindexed" in result.output.lower()
+        assert "graph.sqlite" in result.output
+        assert "lancedb" in result.output
+
+    def test_reindex_corpus_not_found_exits_nonzero(self, tmp_path):
+        mock_kg = _mock_kg()
+        mock_kg.rebuild_index.side_effect = FileNotFoundError("Corpus not found")
+        with patch("diary_kg.cli._kg", return_value=mock_kg):
+            result = _runner().invoke(cli, ["reindex", str(tmp_path)])
+        assert result.exit_code != 0
+        assert "error" in result.output.lower() or "not found" in result.output.lower()
+
+    def test_reindex_unexpected_error_exits_nonzero(self, tmp_path):
+        mock_kg = _mock_kg()
+        mock_kg.rebuild_index.side_effect = RuntimeError("lancedb exploded")
+        with patch("diary_kg.cli._kg", return_value=mock_kg):
+            result = _runner().invoke(cli, ["reindex", str(tmp_path)])
+        assert result.exit_code != 0

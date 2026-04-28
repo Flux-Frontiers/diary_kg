@@ -1,8 +1,8 @@
 """
 test_diary_kg_snapshots.py
 
-Unit tests for diary_kg.snapshots — DiarySnapshotMetrics, DiarySnapshotDelta,
-DiarySnapshot, DiarySnapshotManifest, and DiarySnapshotManager.
+Unit tests for diary_kg.snapshots — DiarySnapshotManager using the
+kg_utils.snapshots dict-based Snapshot model.
 """
 
 from __future__ import annotations
@@ -11,39 +11,34 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from kg_utils.snapshots import Snapshot
 
-from diary_kg.snapshots import (
-    DiarySnapshot,
-    DiarySnapshotDelta,
-    DiarySnapshotManager,
-    DiarySnapshotManifest,
-    DiarySnapshotMetrics,
-)
+from diary_kg.snapshots import DiarySnapshotManager
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _metrics(
+def _make_metrics(
     chunk_count: int = 10,
     entry_count: int = 5,
     node_count: int = 20,
     edge_count: int = 15,
     topic_counts: dict | None = None,
     context_counts: dict | None = None,
-) -> DiarySnapshotMetrics:
-    return DiarySnapshotMetrics(
-        chunk_count=chunk_count,
-        entry_count=entry_count,
-        node_count=node_count,
-        edge_count=edge_count,
-        topic_counts=topic_counts or {"work": 4, "domestic": 3},
-        context_counts=context_counts or {"Home": 3, "Office": 2},
-        temporal_span={"start": "1660-01-01T00:00", "end": "1667-04-15T22:30"},
-        chunking_strategy="sentence_group",
-        chunk_size=512,
-    )
+) -> dict:
+    return {
+        "chunk_count": chunk_count,
+        "entry_count": entry_count,
+        "total_nodes": node_count,
+        "total_edges": edge_count,
+        "topic_counts": topic_counts or {"work": 4, "domestic": 3},
+        "context_counts": context_counts or {"Home": 3, "Office": 2},
+        "temporal_span": {"start": "1660-01-01T00:00", "end": "1667-04-15T22:30"},
+        "chunking_strategy": "sentence_group",
+        "chunk_size": 512,
+    }
 
 
 def _snapshot(
@@ -52,104 +47,21 @@ def _snapshot(
     timestamp: str | None = None,
     chunk_count: int = 10,
     label: str | None = None,
-) -> DiarySnapshot:
-    return DiarySnapshot(
+) -> Snapshot:
+    m = _make_metrics(chunk_count=chunk_count)
+    if label is not None:
+        m["label"] = label
+    return Snapshot(
         branch=branch,
         timestamp=timestamp or datetime.now(UTC).isoformat(),
         version="0.1.0",
-        metrics=_metrics(chunk_count=chunk_count),
+        metrics=m,
         tree_hash=tree_hash,
-        label=label,
-        source_file="pepys_diary.txt",
     )
 
 
 def _make_mgr(tmp_path: Path) -> DiarySnapshotManager:
     return DiarySnapshotManager(tmp_path / "snapshots")
-
-
-# ---------------------------------------------------------------------------
-# Dataclasses
-# ---------------------------------------------------------------------------
-
-
-class TestDiarySnapshotMetrics:
-    def test_required_fields(self):
-        m = _metrics()
-        assert m.chunk_count == 10
-        assert m.entry_count == 5
-        assert m.node_count == 20
-        assert m.edge_count == 15
-
-    def test_defaults(self):
-        m = DiarySnapshotMetrics(chunk_count=0, entry_count=0, node_count=0, edge_count=0)
-        assert m.topic_counts == {}
-        assert m.context_counts == {}
-        assert m.temporal_span == {}
-        assert m.chunking_strategy == ""
-        assert m.chunk_size == 512
-
-
-class TestDiarySnapshotDelta:
-    def test_defaults_are_zero(self):
-        d = DiarySnapshotDelta()
-        assert d.chunks == 0
-        assert d.entries == 0
-        assert d.nodes == 0
-        assert d.edges == 0
-
-    def test_set_values(self):
-        d = DiarySnapshotDelta(chunks=5, entries=2, nodes=10, edges=8)
-        assert d.chunks == 5
-
-
-class TestDiarySnapshot:
-    def test_key_returns_tree_hash(self):
-        s = _snapshot(tree_hash="deadbeef")
-        assert s.key == "deadbeef"
-
-    def test_to_dict_roundtrip(self):
-        s = _snapshot()
-        d = s.to_dict()
-        assert d["key"] == s.tree_hash
-        assert d["branch"] == s.branch
-        assert d["version"] == s.version
-        assert "metrics" in d
-
-    def test_from_dict_roundtrip(self):
-        s = _snapshot(label="test label")
-        restored = DiarySnapshot.from_dict(s.to_dict())
-        assert restored.key == s.key
-        assert restored.branch == s.branch
-        assert restored.label == s.label
-        assert restored.metrics.chunk_count == s.metrics.chunk_count
-
-    def test_vs_previous_serialized(self):
-        s = _snapshot()
-        s.vs_previous = DiarySnapshotDelta(chunks=2, entries=1, nodes=4, edges=3)
-        d = s.to_dict()
-        assert d["vs_previous"]["chunks"] == 2
-
-    def test_vs_previous_none_in_dict(self):
-        s = _snapshot()
-        d = s.to_dict()
-        assert d["vs_previous"] is None
-
-
-class TestDiarySnapshotManifest:
-    def test_empty_manifest(self):
-        m = DiarySnapshotManifest()
-        assert m.snapshots == []
-        assert m.format_version == "1.0"
-
-    def test_to_dict_from_dict_roundtrip(self):
-        m = DiarySnapshotManifest(
-            last_update="2024-01-01T00:00:00",
-            snapshots=[{"key": "abc", "timestamp": "2024-01-01T00:00:00"}],
-        )
-        restored = DiarySnapshotManifest.from_dict(m.to_dict())
-        assert len(restored.snapshots) == 1
-        assert restored.last_update == m.last_update
 
 
 # ---------------------------------------------------------------------------
@@ -212,7 +124,6 @@ class TestSaveLoadSnapshot:
 
 class TestListSnapshots:
     def _populate(self, mgr: DiarySnapshotManager) -> list[str]:
-        """Save 3 snapshots at staggered timestamps; return keys."""
         keys = []
         base_ts = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         for i, (key, chunk_count) in enumerate([("k1", 5), ("k2", 10), ("k3", 15)]):
@@ -241,8 +152,8 @@ class TestListSnapshots:
         s2 = _snapshot(tree_hash="feat1", branch="feature")
         s1.timestamp = datetime(2024, 1, 1, tzinfo=UTC).isoformat()
         s2.timestamp = datetime(2024, 1, 2, tzinfo=UTC).isoformat()
-        mgr.save_snapshot(s1)
-        mgr.save_snapshot(s2)
+        mgr.save_snapshot(s1, force=True)
+        mgr.save_snapshot(s2, force=True)
         main_snaps = mgr.list_snapshots(branch="main")
         assert all(s.get("branch") == "main" for s in main_snaps)
         assert len(main_snaps) == 1
@@ -251,7 +162,6 @@ class TestListSnapshots:
         mgr = _make_mgr(tmp_path)
         self._populate(mgr)
         snaps = mgr.list_snapshots()
-        # All but the last (oldest) should have vs_previous delta
         for snap in snaps[:-1]:
             assert snap.get("deltas", {}).get("vs_previous") is not None
 
@@ -265,8 +175,8 @@ class TestGetBaselineAndPrevious:
         mgr = _make_mgr(tmp_path)
         old = _snapshot(tree_hash="old1", timestamp=datetime(2023, 1, 1, tzinfo=UTC).isoformat())
         new = _snapshot(tree_hash="new1", timestamp=datetime(2024, 1, 1, tzinfo=UTC).isoformat())
-        mgr.save_snapshot(old)
-        mgr.save_snapshot(new)
+        mgr.save_snapshot(old, force=True)
+        mgr.save_snapshot(new, force=True)
         baseline = mgr.get_baseline()
         assert baseline is not None
         assert baseline.key == "old1"
@@ -281,7 +191,7 @@ class TestGetBaselineAndPrevious:
         s2 = _snapshot(tree_hash="s2", timestamp=datetime(2024, 1, 2, tzinfo=UTC).isoformat())
         s3 = _snapshot(tree_hash="s3", timestamp=datetime(2024, 1, 3, tzinfo=UTC).isoformat())
         for s in [s1, s2, s3]:
-            mgr.save_snapshot(s)
+            mgr.save_snapshot(s, force=True)
         prev = mgr.get_previous("s3")
         assert prev is not None
         assert prev.key == "s2"
@@ -313,16 +223,15 @@ class TestDiffSnapshots:
     def test_diff_topic_counts_delta(self, tmp_path):
         mgr = _make_mgr(tmp_path)
         a = _snapshot(tree_hash="sa")
-        a.metrics.topic_counts = {"work": 2, "domestic": 3}
+        a.metrics["topic_counts"] = {"work": 2, "domestic": 3}
         b = _snapshot(tree_hash="sb")
-        b.metrics.topic_counts = {"work": 5, "domestic": 3, "social": 1}
+        b.metrics["topic_counts"] = {"work": 5, "domestic": 3, "social": 1}
         mgr.save_snapshot(a)
         mgr.save_snapshot(b)
         result = mgr.diff_snapshots("sa", "sb")
         assert "topic_counts_delta" in result
         assert result["topic_counts_delta"].get("work") == 3
         assert result["topic_counts_delta"].get("social") == 1
-        # domestic unchanged — should NOT appear
         assert "domestic" not in result["topic_counts_delta"]
 
     def test_diff_missing_key_returns_error(self, tmp_path):
@@ -349,7 +258,7 @@ class TestCapture:
             "chunk_size": 512,
         }
         db_stats = {"node_count": 20, "edge_count": 15}
-        snap = mgr.capture(
+        snap = mgr.capture_diary(
             version="0.1.0",
             info=info,
             db_stats=db_stats,
@@ -358,11 +267,11 @@ class TestCapture:
             label="test capture",
             source_file="pepys.txt",
         )
-        assert isinstance(snap, DiarySnapshot)
-        assert snap.metrics.chunk_count == 10
-        assert snap.metrics.node_count == 20
-        assert snap.label == "test capture"
-        assert snap.source_file == "pepys.txt"
+        assert isinstance(snap, Snapshot)
+        assert snap.metrics["chunk_count"] == 10
+        assert snap.metrics["total_nodes"] == 20
+        assert snap.metrics.get("label") == "test capture"
+        assert snap.metrics.get("source_file") == "pepys.txt"
         assert snap.key == "testhash"
 
     def test_capture_sets_vs_previous_when_prior_exists(self, tmp_path):
@@ -381,8 +290,8 @@ class TestCapture:
             "chunking_strategy": "",
             "chunk_size": 512,
         }
-        db_stats = {"node_count": 0, "edge_count": 0}
-        snap = mgr.capture(
+        db_stats = {"node_count": 20, "edge_count": 0}
+        snap = mgr.capture_diary(
             version="0.2.0",
             info=info,
             db_stats=db_stats,
@@ -390,16 +299,16 @@ class TestCapture:
             tree_hash="second",
         )
         assert snap.vs_previous is not None
-        assert snap.vs_previous.chunks == 5  # 10 - 5
+        assert snap.vs_previous["chunks"] == 5  # 10 - 5
 
     def test_capture_non_int_node_count_treated_as_zero(self, tmp_path):
         mgr = _make_mgr(tmp_path)
-        snap = mgr.capture(
+        snap = mgr.capture_diary(
             version="0.1.0",
             info={"chunk_count": 5, "entry_count": 2},
             db_stats={"node_count": "n/a", "edge_count": "n/a"},
             branch="main",
             tree_hash="xyz",
         )
-        assert snap.metrics.node_count == 0
-        assert snap.metrics.edge_count == 0
+        assert snap.metrics["total_nodes"] == 0
+        assert snap.metrics["total_edges"] == 0

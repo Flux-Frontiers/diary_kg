@@ -9,7 +9,7 @@ diary_embedder.py
 -----------------
 Multi-process ingestion pipeline: parse a pipe-delimited diary file,
 optionally subsample with temporal diversity, embed every entry via
-sentence-transformers (all-mpnet-base-v2), and save the result as a
+sentence-transformers (BAAI/bge-small-en-v1.5), and save the result as a
 JSON cache consumable by pepys_manifold_explorer.py and WaveRider missions.
 
 The expensive embedding step is parallelised across CPU cores using
@@ -37,7 +37,7 @@ Usage (CLI entry point)
   diary-embedder \\
       --diary path/to/pepys_enriched_full.txt \\
       --output path/to/my_cache.json \\
-      --model sentence-transformers/all-mpnet-base-v2 \\
+      --model BAAI/bge-small-en-v1.5 \\
       --workers 8 \\
       --batch-size 128
 
@@ -65,9 +65,9 @@ from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
 import numpy as np
-from kg_utils.embed import resolve_model_path
+from kg_utils.embed import DEFAULT_MODEL as DEFAULT_MODEL
+from kg_utils.embedder import load_sentence_transformer
 from rich.console import Console
-from sentence_transformers import SentenceTransformer
 
 console = Console()
 
@@ -79,18 +79,12 @@ except PackageNotFoundError:
 # ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
-DEFAULT_MODEL = "sentence-transformers/all-mpnet-base-v2"
 # Project root is three levels up from src/diary_transformer/diary_embedder.py
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 
-def _local_model_path(model_name: str) -> Path:
-    """Return the local cache path for *model_name* (diary-kg-scoped fallback)."""
-    return resolve_model_path(model_name, local_fallback=_PROJECT_ROOT / ".diarykg" / "models")
-
-
 DEFAULT_DIARY = str(_PROJECT_ROOT / "pepys" / "pepys_enriched_full.txt")
-DEFAULT_OUTPUT = str(_PROJECT_ROOT / "pepys_mpnet_embeddings.json")
+DEFAULT_OUTPUT = str(_PROJECT_ROOT / "pepys_bge_embeddings.json")
 
 
 # ---------------------------------------------------------------------------
@@ -250,17 +244,7 @@ def _embed_shard(args: tuple) -> np.ndarray:
     :return: Float32 array of shape (len(shard), D).
     """
     texts_shard, model_id, batch_size, worker_id = args
-    trust_remote = "nomic-ai/" in model_id
-    local_path = _local_model_path(model_id)
-    if local_path.exists():
-        embedder = SentenceTransformer(str(local_path), trust_remote_code=trust_remote)
-    else:
-        try:
-            embedder = SentenceTransformer(
-                model_id, local_files_only=True, trust_remote_code=trust_remote
-            )
-        except OSError:
-            embedder = SentenceTransformer(model_id, trust_remote_code=trust_remote)
+    embedder = load_sentence_transformer(model_id)
     vecs = embedder.encode(
         texts_shard,
         batch_size=batch_size,
@@ -291,6 +275,11 @@ def embed_multiprocess(
     :param batch_size: Encoding batch size per worker.
     :return: Float32 array of shape (N, D).
     """
+    # Limit OMP/tokenizer threads so worker subprocesses don't each spawn
+    # a full thread pool, which exhausts stack space and triggers SIGBUS.
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+    os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
     n_workers = n_workers or os.cpu_count() or 1
     n_workers = min(n_workers, len(texts))
     chunk_size = (len(texts) + n_workers - 1) // n_workers
@@ -322,18 +311,26 @@ def save_cache(
 ) -> None:
     """Save embeddings + metadata to JSON.
 
+    Embeddings are written row-by-row to avoid materialising the full
+    (N × D) array as Python floats in one shot, which causes a ~750 MB
+    memory spike for large corpora and can trigger SIGBUS on macOS.
+
     :param path: Output file path.
     :param embeddings: Float32 (N, D) array.
     :param texts: Aligned list of entry strings.
     :param timestamps: Aligned list of datetime objects.
     """
-    data = {
-        "embeddings": embeddings.tolist(),
-        "texts": texts,
-        "timestamps": [ts.isoformat() for ts in timestamps],
-    }
     with open(path, "w", encoding="utf-8") as fh:
-        json.dump(data, fh)
+        fh.write('{"embeddings":[')
+        for i in range(len(embeddings)):
+            if i:
+                fh.write(",")
+            fh.write(json.dumps(embeddings[i].tolist()))
+        fh.write('],"texts":')
+        fh.write(json.dumps(texts))
+        fh.write(',"timestamps":')
+        fh.write(json.dumps([ts.isoformat() for ts in timestamps]))
+        fh.write("}")
     console.print(f"[green]Cache saved ({len(texts)} entries) → {path}[/green]")
 
 
@@ -393,11 +390,37 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Path for the Markdown run summary (default: <output-stem>_run_summary.md)",
     )
+    p.add_argument(
+        "--init",
+        action="store_true",
+        help="Download required spaCy model (en_core_web_sm) and exit",
+    )
     return p.parse_args()
 
 
+def _init_models() -> None:
+    """Download the spaCy model required by DiaryTransformer."""
+    import spacy.cli  # pylint: disable=import-outside-toplevel
+
+    model = "en_core_web_sm"
+    console.rule("[bold blue]Diary · Init")
+    console.print(f"Downloading spaCy model [bold]{model}[/bold] …")
+    try:
+        spacy.cli.download(model)
+        console.print(f"[green]✓ {model} ready.[/green]")
+    except SystemExit:
+        pass  # spacy.cli.download calls sys.exit(0) on success
+
+
 def main() -> None:
+    # Must be set before any Pool is created. fork + PyTorch = Bus error on macOS.
+    multiprocessing.set_start_method("spawn", force=True)
     args = parse_args()
+
+    if args.init:
+        _init_models()
+        return
+
     console.rule("[bold blue]Diary · Multi-Process Embedder")
 
     diary_path = Path(args.diary)

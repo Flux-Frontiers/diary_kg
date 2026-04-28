@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import spacy
+from kg_utils.embed import DEFAULT_MODEL as DEFAULT_MODEL
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from sentence_transformers import SentenceTransformer
@@ -173,7 +174,7 @@ class DiaryTransformer:
             sys.exit(1)
 
         try:
-            self.sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
+            self.sentence_model = SentenceTransformer(DEFAULT_MODEL)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             console.print(f"[bold red]Error loading sentence transformer: {exc}[/bold red]")
             sys.exit(1)
@@ -426,7 +427,7 @@ class DiaryTransformer:
         max_chunks_per_entry: int = 3,
         source_file: str | None = None,
         embed_cache: str | None = None,
-        embed_model: str = "nomic-ai/nomic-embed-text-v1",
+        embed_model: str = DEFAULT_MODEL,
         embed_workers: int = 0,
     ) -> int:
         """Transform diary entries and write DocKG-compatible Markdown files.
@@ -437,8 +438,8 @@ class DiaryTransformer:
         file — so cross-KG queries can cite the real document.
 
         Optionally, after writing the corpus, embeds all chunk texts via
-        ``diary_embedder.embed_multiprocess`` (nomic-ai model, multi-process)
-        and writes a JSON cache consumable by ``pepys_manifold_explorer.py``.
+        ``diary_embedder.embed_multiprocess`` and writes a JSON cache
+        consumable by ``pepys_manifold_explorer.py``.
 
         Directory layout::
 
@@ -466,7 +467,7 @@ class DiaryTransformer:
         :param embed_cache: If set, path for the JSON embedding cache produced
             by ``diary_embedder``.  Skipped when ``None`` (default).
         :param embed_model: HuggingFace model id passed to
-            ``embed_multiprocess`` (default: ``nomic-ai/nomic-embed-text-v1``).
+            ``embed_multiprocess`` (default: ``BAAI/bge-small-en-v1.5``).
         :param embed_workers: Parallel embedding workers (0 = ``os.cpu_count()``).
         :return: Number of ``.md`` files written.
         """
