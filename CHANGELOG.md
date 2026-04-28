@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+---
+
+## [0.92.2] - 2026-04-28
+
+### Added
 - `diarykg reindex` CLI command: rebuilds the LanceDB + SQLite index from the
   existing corpus without re-running ingest — useful after changing embedding
   models or fixing index bugs; exits non-zero on `FileNotFoundError` or
