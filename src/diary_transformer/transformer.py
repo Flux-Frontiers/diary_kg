@@ -23,9 +23,9 @@ from typing import Any
 
 import spacy
 from kg_utils.embed import DEFAULT_MODEL as DEFAULT_MODEL
+from kg_utils.embedder import load_sentence_transformer
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-from sentence_transformers import SentenceTransformer
 
 from .chunker import segment_content
 from .classifier import (
@@ -174,7 +174,7 @@ class DiaryTransformer:
             sys.exit(1)
 
         try:
-            self.sentence_model = SentenceTransformer(DEFAULT_MODEL)
+            self.sentence_model = load_sentence_transformer(DEFAULT_MODEL)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             console.print(f"[bold red]Error loading sentence transformer: {exc}[/bold red]")
             sys.exit(1)
