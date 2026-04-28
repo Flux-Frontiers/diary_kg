@@ -100,7 +100,7 @@ distributions, temporal span, and chunking parameters at any commit.
 | Use | Model | Dims | Notes |
 |---|---|---|---|
 | Knowledge graph build | `BAAI/bge-small-en-v1.5` | 384 | Fast, general-text, L2-normalized |
-| Multipass pipeline | `nomic-ai/nomic-embed-text-v1` | 768 | Asymmetric retrieval, `search_document:` prefix |
+| Multipass pipeline | `BAAI/bge-small-en-v1.5` | 384 | Same model stack-wide; loaded via `load_sentence_transformer()` |
 
 Model loading is handled by `kg_utils.embedder.load_sentence_transformer()`,
 which enforces `local_files_only=True` when a cached copy exists — preventing
