@@ -471,7 +471,7 @@ def build_update(corpus_dir, kg_name, registry):
 )
 @click.option(
     "--model",
-    default="sentence-transformers/all-mpnet-base-v2",
+    default="BAAI/bge-small-en-v1.5",
     show_default=True,
     help="HuggingFace model id.",
 )
@@ -518,7 +518,7 @@ def embed(diary_path, output, n, model, workers, batch_size, max_chars, force, s
     )
 
     diary = Path(diary_path)
-    out_path = Path(output) if output else diary.parent / (diary.stem + "_mpnet_embeddings.json")
+    out_path = Path(output) if output else diary.parent / (diary.stem + "_bge_embeddings.json")
 
     if out_path.exists() and not force:
         console.print(

@@ -8,6 +8,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `diarykg reindex` CLI command: rebuilds the LanceDB + SQLite index from the
+  existing corpus without re-running ingest — useful after changing embedding
+  models or fixing index bugs; exits non-zero on `FileNotFoundError` or
+  unexpected errors
+- `DiaryKG.rebuild_index()`: wipes only the index (lancedb + sqlite), then
+  re-runs DocKG build with `wipe=True` and `discover_similar=False`; injects
+  topic edges and enriches chunk metadata afterward
+- `kg_utils.embedder.wrap_embedder()`: wraps a live `SentenceTransformer`
+  instance as an `Embedder` so `DiaryKG.build()` can share the model already
+  loaded by `DiaryTransformer`, preventing a second MPS allocation during build
+- `diary_embedder.save_cache()`: streaming row-by-row JSON serialisation
+  avoids a ~750 MB memory spike when materialising large embedding arrays
+
+### Changed
+- `src/diary_kg/kg.py`: `DiaryKG.build()` now passes `wipe=True` to every
+  `dockg.build()` call; `wipe=False` generated a 1024-clause OR-delete
+  predicate that recursed 666 levels in LanceDB's Rust evaluator, overflowing
+  the tokio worker-thread stack and causing SIGBUS on macOS
+- `src/diary_kg/kg.py`: `DiaryKG.build()` creates a `shared_embedder` via
+  `wrap_embedder(dt.sentence_model, self._model)` and passes it to `DocKG`
+  to avoid loading a second `SentenceTransformer` on MPS while the first is
+  still live; `embed_model` default changed from
+  `"nomic-ai/nomic-embed-text-v1"` to `DEFAULT_MODEL` (`"BAAI/bge-small-en-v1.5"`)
+- `src/diary_transformer/diary_embedder.py`: `_embed_shard` replaced 10-line
+  manual ST load with `load_sentence_transformer(model_id)` from
+  `kg_utils.embedder`; removed `_local_model_path()` (function lives in
+  `kg_utils.embed.resolve_model_path`); `DEFAULT_OUTPUT` renamed to
+  `pepys_bge_embeddings.json`; `OMP_NUM_THREADS` and `TOKENIZERS_PARALLELISM`
+  set before spawning worker pool to prevent thread-count explosion + SIGBUS
+- `src/diary_transformer/diary_embedder.py`: `DEFAULT_MODEL` now imported from
+  `kg_utils.embed`; docstring example updated to `BAAI/bge-small-en-v1.5`
+- `src/diary_kg/snapshots.py`: `DiarySnapshotManager` refactored to subclass
+  the new `kg_utils.snapshots.SnapshotManager` base class; removed 100+ lines
+  of duplicated dataclass/manifest code; `DiarySnapshot*` dataclasses removed
+  (now `kg_utils.snapshots.Snapshot`)
+- `.github/workflows/publish.yml`: added `poetry publish` step before GitHub
+  release creation; fixed release title from "CodeKG" to "DiaryKG"
+- `.claude/commands/release.md`: updated CodeKG build command to use new
+  `pycodekg build --repo .` CLI
+- `.claude/skills/dockg/SKILL.md`: updated to reflect `--update` flag
+  replacing `--wipe`; added multipass pipeline docs; corrected model tables
+- `pyproject.toml`: version bumped to `0.92.2`; header updated; install
+  quick-reference expanded; `kgdeps` extra documented
+
+### Fixed
+- SIGBUS (Bus Error 10) on Apple Silicon during `diarykg reindex`: root cause
+  was `dockg.build(wipe=False)` generating a 1024-clause OR-delete predicate
+  that caused a 666-deep recursion in LanceDB's Rust predicate evaluator,
+  overflowing the tokio worker-thread stack guard page; fix is `wipe=True`
+
+### Added
 - `CITATION.cff`: GitHub/Zenodo software citation metadata (CFF 1.2.0) — enables
   `Cite this repository` button and `@software` BibTeX export for academic referencing
 - `README.md`: Zenodo DOI badge linking to archived releases

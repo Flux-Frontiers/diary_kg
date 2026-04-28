@@ -259,7 +259,7 @@ class TestSnapshotHelpers:
 
         snaps = kg.snapshot_list()
         assert len(snaps) == 1
-        assert snaps[0]["label"] == "test snap"
+        assert snaps[0]["metrics"]["label"] == "test snap"
 
     def test_snapshot_show_after_save(self, built_kg_root):
         kg = DiaryKG(built_kg_root)

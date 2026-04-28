@@ -1,11 +1,23 @@
-chore(release): bump version to 0.92.0
+feat(embedder,reindex): centralize ST loading in kg_utils + SIGBUS fix
 
-- Add CITATION.cff with Zenodo DOI for academic referencing
-- Switch doc-kg dependency from git URL to PyPI release (>=0.12.0)
-- Fix hit-score formula in kg.py: 1-d²/2 → 1-d (cosine distance)
-- Re-export DEFAULT_MODEL from kg_utils.embed (shared constant)
-- Expand detect-secrets exclusions to cover .filetreekg/ and .pycodekg/
-- Reorder pre-commit hooks: ruff + detect-secrets before local checks
-- Rename .claude/commands/codekg.md → pycodekg.md
+Root cause: dockg.build(wipe=False) generated a 1024-clause OR-delete
+predicate that recursed 666 levels in LanceDB's Rust predicate evaluator,
+overflowing the tokio worker-thread stack guard page on macOS (SIGBUS).
+
+Key changes:
+- DiaryKG.build() and rebuild_index() now call dockg.build(wipe=True,
+  discover_similar=False) — the wipe=False recursion was the primary SIGBUS
+  trigger; discover_similar=False avoids a ~4-hour O(n²) scan on 41k nodes
+- _embed_shard in diary_embedder uses load_sentence_transformer() from
+  kg_utils.embedder — removes 10-line manual ST load with local_files_only fix
+- wrap_embedder() shares DiaryTransformer's live ST instance with DocKG,
+  avoiding a second MPS allocation during build
+- DiarySnapshotManager now subclasses kg_utils.snapshots.SnapshotManager
+  (removes 100+ lines of duplicated dataclass/manifest code)
+- diarykg reindex CLI command added: rebuilds index without re-ingesting
+- save_cache() serializes embeddings row-by-row to avoid ~750 MB spike
+- OMP_NUM_THREADS + TOKENIZERS_PARALLELISM set before worker pool spawn
+- embed_model default: nomic-ai/nomic-embed-text-v1 → BAAI/bge-small-en-v1.5
+- Version bumped 0.92.0 → 0.92.2
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
