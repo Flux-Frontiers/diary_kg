@@ -61,11 +61,11 @@ the final report.
    ```
 2. If not found, check whether the package is installed:
    ```bash
-   $RUNNER python -m pip show code-kg 2>/dev/null   # or .venv/bin/pip show code-kg
+   $RUNNER python -m pip show diary-kg 2>/dev/null   # or .venv/bin/pip show diary-kg
    ```
 3. If missing, instruct the user to install it:
    ```bash
-   poetry add "code-kg @ git+https://github.com/Flux-Frontiers/code_kg.git"
+   poetry install
    ```
    Then stop — the user must install before continuing.
 
@@ -77,7 +77,7 @@ the final report.
 
 5. Check the DiaryKG version:
    ```bash
-   $RUNNER python -c "import code_kg; print(code_kg.__version__)"
+   $RUNNER python -c "import diary_kg; print(diary_kg.__version__)"
    ```
 
 ---
@@ -137,8 +137,8 @@ Run a quick end-to-end test to confirm the full pipeline works before configurin
 1. Run a graph stats check:
    ```bash
    $RUNNER python -c "
-   from code_kg import DiaryKG
-   kg = DiaryKG(repo_root='$REPO_ROOT')
+   from diary_kg import DiaryKG
+   kg = DiaryKG(root='$REPO_ROOT')
    import json; print(json.dumps(kg.stats(), indent=2))
    "
    ```
@@ -269,7 +269,7 @@ The DiaryKG skill provides AI agents with expert knowledge about DiaryKG install
 | **Kilo Code** | `~/.kilocode/skills/diarykg/` |
 | **Claude Code** | `~/.claude/skills/diarykg/` |
 
-Run the install script (from the `code_kg` repo root):
+Run the install script (from the `diary_kg` repo root):
 
 ```bash
 bash scripts/install-skill.sh

@@ -3,7 +3,7 @@ diary_kg/module/base.py
 
 DiaryKGAdapter — KGRAG adapter for diary_kg.kg.DiaryKG.
 
-Follows the same structural pattern as code_kg.module.base.KGModule:
+Adapter contract:
 
   - lazy-initialised backing instance (``_load()`` / ``_kg``)
   - five-method adapter interface (is_available, query, pack, stats, analyze)

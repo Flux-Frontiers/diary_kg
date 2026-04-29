@@ -1,6 +1,6 @@
 {
   "source_file": "pepys/pepys_enriched_full.txt",
-  "built_at": "2026-04-01T02:24:24.903453+00:00",
+  "built_at": "2026-04-29T13:18:31.198188+00:00",
   "chunk_count": 7285,
   "batch_size": 0,
   "chunking_strategy": "sentence_group",

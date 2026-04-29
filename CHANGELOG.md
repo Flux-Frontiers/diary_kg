@@ -17,6 +17,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.92.3] - 2026-04-29
+
+### Added
+- `diarykg snapshot save -v/--version` and `-l/--label` flags: explicit
+  documentation in command help text and the module docstring. The help text
+  now states that `version` is an option (not a positional) and that bare
+  positional arguments are treated as `ROOT`.
+- README: expanded Python API surface example covering `DiaryKG.query()`,
+  `pack()`, `info()`, `stats()`, `analyze()`, and `snapshot_save/list/show/diff`.
+
+### Changed
+- `README.md`: full rewrite to match DiaryKG's actual CLI surface and
+  architecture; removed legacy CodeKG fork content (3D visualizer sections,
+  `codekg viz/viz3d/viz-timeline/architecture/centrality` examples,
+  installer-script docs that don't apply); restructured around the real
+  `diarykg build/query/pack/analyze/snapshot/install-hooks` commands and the
+  separate `diarykg-mcp` entry point
+- `src/diary_kg/cli.py`: install-hooks pre-commit template now invokes
+  `pycodekg` (was `codekg`) and stages `.pycodekg/snapshots/`; the
+  `pycodekg snapshot save` call now passes the required `VERSION` positional
+  read from `pyproject.toml`, fixing a previously silent failure where the
+  snapshot was skipped on every commit
+- `.github/SNAPSHOTS_CI.md`: programmatic-API example now uses
+  `DiaryKG.snapshot_list/show/diff` (was a direct
+  `code_kg.snapshots.SnapshotManager` import that no longer exists in this
+  project)
+- `.claude/commands/release.md`: Step 4c analysis now uses `pycodekg analyze`
+  and stages `.pycodekg/`; version-badge URL and `__init__.py` path corrected
+  from `src/code_kg/` to `src/diary_kg/`
+- `.claude/commands/setup-diarykg-mcp.md`: install/version probes now use
+  `diary-kg`/`diary_kg` instead of `code-kg`/`code_kg`; stats snippet imports
+  `from diary_kg import DiaryKG`
+- `.claude/commands/sync-mcp-docs.md`: source-of-truth path updated to
+  `src/diary_kg/mcp_server.py`; skill paths updated to `.claude/skills/diarykg/`
+- `.claude/skills/publish/SKILL.md`: rewritten for the `diary-kg` release
+  workflow; `DIARYKG_SKIP_SNAPSHOT` replaces `CODEKG_SKIP_SNAPSHOT`;
+  post-release guidance covers both `pycodekg snapshot save` and
+  `diarykg snapshot save`
+- `.claude/skills/kgrag*` and `.claude/skills/new-kg-module/SKILL.md`:
+  bulk-renamed `codekg`/`code-kg`/`CodeKG`/`code_kg`/`CODEKG_*` to
+  `pycodekg`/`pycode-kg`/`PyCodeKG`/`pycode_kg`/`PYCODEKG_*` so the federated
+  KG documentation reflects the tools this project actually uses
+- `.pre-commit-config.yaml`: dropped `\.codekg/.*` from the detect-secrets
+  exclusion list (project no longer produces that directory)
+- `scripts/benchmark_embedders.py`: import switched from `code_kg.CodeKG` to
+  `pycode_kg.PyCodeKG`; default SQLite/LanceDB paths moved from `.codekg/` to
+  `.pycodekg/`; build hint updated to `pycodekg build --repo . --wipe`
+- `scripts/generate_wiki.py`: GitHub repo slug, wiki header/logo title, and
+  Python-API section updated from `code_kg`/CodeKG to `diary_kg`/DiaryKG
+- `src/diary_kg/{kg,snapshots,module/__init__,module/base,module/types}.py`:
+  dropped "mirrors code_kg" / "matches code_kg" docstring references that no
+  longer reflect the project's structure
+- `pyproject.toml`, `src/diary_kg/__init__.py`: version bumped 0.92.2 → 0.92.3
+
+### Fixed
+- `diarykg snapshot save "<VERSION>"` previously failed with
+  `Error: DiaryKG is not built. Run build() first.` because Click bound the
+  version string to the positional `ROOT` argument, resolving it to a
+  non-existent directory. Help text and module docstring now make clear that
+  `-v/--version` is the option to use, and bare positionals are treated as
+  `ROOT`.
+
+### Removed
+- `.claude/skills/codekg/` (`SKILL.md` + `clinerules.md`) and
+  `.claude/skills/codekg-thorough-analysis/SKILL.md`: stale upstream-tool
+  skills documenting the `codekg` CLI. The project uses `pycodekg`; both
+  skills remain available globally in `~/.claude/skills/`.
+- `docs/ADAPTER_SPEC.md`: cross-KG adapter specification left over from the
+  CodeKG fork; no longer authoritative (KGRAG reference docs in
+  `.claude/skills/kgrag/references/` cover the federated query layer).
+
+---
+
 ## [0.92.2] - 2026-04-28
 
 ### Added

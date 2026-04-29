@@ -8,7 +8,7 @@ Commands::
     diarykg analyze  [ROOT]                   # Markdown analysis report
     diarykg status   [ROOT]                   # quick health check
     diarykg snapshot list   [ROOT]
-    diarykg snapshot save   [ROOT] [--label]
+    diarykg snapshot save   [ROOT] [-v VERSION] [-l LABEL]
     diarykg snapshot show   KEY [ROOT]
     diarykg snapshot diff   KEY_A KEY_B [ROOT]
     diarykg snapshot prune  [ROOT] [--dry-run]
@@ -427,11 +427,16 @@ def snapshot_save(root, version, label):
     \b
     ROOT  Project root directory (default: current directory).
 
+    The version string is an option, not a positional argument — pass it
+    with -v/--version. Bare positionals are treated as ROOT.
+
     Examples:
 
     \b
         diarykg snapshot save
-        diarykg snapshot save . --label "after adding 1667 entries"
+        diarykg snapshot save -v 0.92.2
+        diarykg snapshot save -v 0.92.2 -l "after adding 1667 entries"
+        diarykg snapshot save /projects/pepys -v 0.92.2
     """
     kg = _kg(root)
     try:
@@ -691,18 +696,18 @@ TREE_HASH=$(git write-tree)
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 VERSION=$(grep '^version' pyproject.toml 2>/dev/null | head -1 | cut -d'"' -f2)
 
-# Rebuild CodeKG index for diary_kg source code.
-"$REPO_ROOT/.venv/bin/codekg" build --repo "$REPO_ROOT" || exit 1
+# Rebuild PyCodeKG index for diary_kg source code.
+"$REPO_ROOT/.venv/bin/pycodekg" build --repo "$REPO_ROOT" || exit 1
 
 # Rebuild DocKG index from docs/ corpus in this repo.
 "$REPO_ROOT/.venv/bin/dockg" build --repo "$REPO_ROOT" || true
 
-# Snapshot CodeKG (VERSION optional — auto-detects from installed package).
-"$REPO_ROOT/.venv/bin/codekg" snapshot save \\
+# Snapshot PyCodeKG (VERSION required — read from pyproject.toml).
+"$REPO_ROOT/.venv/bin/pycodekg" snapshot save "${VERSION:-unknown}" \\
     --repo . \\
     --tree-hash "$TREE_HASH" \\
     --branch "$BRANCH" \\
-  || { echo "[codekg] snapshot skipped (run 'codekg build' to initialize)" >&2; }
+  || { echo "[pycodekg] snapshot skipped (run 'pycodekg build' to initialize)" >&2; }
 
 # Snapshot DocKG if available (VERSION required — read from pyproject.toml).
 if [ -f "$REPO_ROOT/.dockg/graph.sqlite" ]; then
@@ -714,7 +719,7 @@ if [ -f "$REPO_ROOT/.dockg/graph.sqlite" ]; then
 fi
 
 # Stage both snapshot directories so they are included in the commit.
-git add .codekg/snapshots/ 2>/dev/null || true
+git add .pycodekg/snapshots/ 2>/dev/null || true
 git add .dockg/snapshots/ 2>/dev/null || true
 
 # Run pre-commit framework checks (ruff, mypy, detect-secrets, etc.) AFTER
@@ -748,9 +753,9 @@ def install_hooks(repo: str, force: bool) -> None:
     """Install the DiaryKG pre-commit git hook.
 
     After installation, before each commit:
-      1. Rebuilds CodeKG and DocKG indices from staged content
+      1. Rebuilds PyCodeKG and DocKG indices from staged content
       2. Captures metrics snapshots keyed by git tree hash
-      3. Stages .codekg/snapshots/ and .dockg/snapshots/ atomically
+      3. Stages .pycodekg/snapshots/ and .dockg/snapshots/ atomically
       4. Runs pre-commit framework checks (ruff, mypy, etc.)
 
     Skip with: DIARYKG_SKIP_SNAPSHOT=1 git commit ...
@@ -781,9 +786,11 @@ def install_hooks(repo: str, force: bool) -> None:
     hook_path.chmod(mode)
 
     console.print(f"[green]OK[/green] Installed pre-commit hook: {hook_path}")
-    console.print("  CodeKG and DocKG indices will be rebuilt and snapshotted before each commit.")
     console.print(
-        "  Run 'codekg build --repo .' and 'dockg build --repo .' first if not yet built."
+        "  PyCodeKG and DocKG indices will be rebuilt and snapshotted before each commit."
+    )
+    console.print(
+        "  Run 'pycodekg build --repo .' and 'dockg build --repo .' first if not yet built."
     )
 
 

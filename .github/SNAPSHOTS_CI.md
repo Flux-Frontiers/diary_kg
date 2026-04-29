@@ -7,7 +7,7 @@ Snapshots are automatically captured on every commit to the `develop` branch via
 The **Temporal Snapshots** workflow (`.github/workflows/snapshots.yml`):
 
 1. **Triggers on:** Every push to `develop` branch or manual workflow dispatch
-2. **Builds:** CodeKG database (SQLite + LanceDB vector index)
+2. **Builds:** DiaryKG database (SQLite + LanceDB vector index)
 3. **Captures:** Temporal snapshot with current metrics:
    - Total nodes/edges
    - Docstring coverage
@@ -57,10 +57,18 @@ diarykg snapshot diff <commit-a> <commit-b>
 
 ## Manual Snapshot
 
-Trigger a snapshot manually without committing:
+Trigger a snapshot manually without committing. The version is an option
+(`-v` / `--version`); bare positionals are treated as the project root.
 
 ```bash
-diarykg snapshot save 0.5.2-rc1 --repo .
+# from inside the project root
+diarykg snapshot save -v 0.5.2-rc1
+
+# with a label
+diarykg snapshot save -v 0.5.2-rc1 -l "rc1 after backfill"
+
+# explicit root
+diarykg snapshot save /projects/pepys -v 0.5.2-rc1
 ```
 
 ## Configuration
@@ -76,7 +84,7 @@ on:
 
 ### Bot Credentials
 The workflow uses GitHub's built-in `actions/checkout@v4` and pushes with:
-- **Author:** CodeKG Bot `<diarykg@flux-frontiers.dev>`
+- **Author:** DiaryKG Bot `<diarykg@flux-frontiers.dev>`
 - **Permissions:** Requires `contents: write` (already set in workflow)
 
 ### Artifact Retention
@@ -109,25 +117,26 @@ Other generated files (analysis reports, graphs) are not committed.
 
 ## Using Snapshots in Your Workflow
 
-Import and compare snapshots programmatically:
+Use the DiaryKG API to inspect and compare snapshots programmatically:
 
 ```python
-from code_kg.snapshots import SnapshotManager
+from diary_kg import DiaryKG
 
-mgr = SnapshotManager(".diarykg/snapshots")
+kg = DiaryKG(".")
 
-# Get all snapshots
-snapshots = mgr.list_snapshots()
+# Get all snapshots (list of manifest entry dicts, newest-first)
+snapshots = kg.snapshot_list()
 
-# Load specific snapshot by commit
-snapshot = mgr.load_snapshot("dd1b9d3a70")
+# Load specific snapshot by tree-hash key
+snapshot = kg.snapshot_show("dd1b9d3a70")
 
 # Compare two snapshots
-diff = mgr.diff_snapshots("commit_a", "commit_b")
+diff = kg.snapshot_diff("key_a", "key_b")
 
 # Analyze metrics over time
 for snap in snapshots:
-    print(f"{snap['version']}: {snap['metrics']['coverage']*100:.1f}% coverage")
+    m = snap["metrics"]
+    print(f"{snap['version']}: {m['chunk_count']} chunks, {m['entry_count']} entries")
 ```
 
 ## Troubleshooting
@@ -139,7 +148,7 @@ for snap in snapshots:
 
 ### Snapshot commit failed
 - Database build may have failed — check logs
-- Check CodeKG output for analysis errors
+- Check DiaryKG output for analysis errors
 - Artifact will still be uploaded even if commit fails
 
 ### Out of space on runner
