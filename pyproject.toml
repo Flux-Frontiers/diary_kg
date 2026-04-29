@@ -186,6 +186,9 @@ explicit_package_bases = true
 testpaths  = ["tests"]
 addopts    = "-v --tb=short"
 pythonpath = ["src"]
+markers = [
+    "integration: requires external models or services (skipped in CI)",
+]
 filterwarnings = [
     "ignore::sklearn.exceptions.ConvergenceWarning",
 ]

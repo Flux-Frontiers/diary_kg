@@ -8,8 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `integration` pytest marker registered in `pyproject.toml`; tests that require
+  live model downloads (e.g. `test_embedder.py`) should be decorated with
+  `@pytest.mark.integration` to be excluded from CI runs automatically.
 
 ### Changed
+- CI test job now runs `pytest -m "not integration"` to skip integration tests
+  that require sentence-transformers model downloads, keeping CI fast and
+  dependency-free.
+- `kgmodule-utils` minimum version bumped to `>=0.2.3` (upstream dependency update).
+- `poetry.lock` refreshed: `doc-kg` 0.12.2 → 0.12.3, `gitpython` 3.1.47 → 3.1.49;
+  `httptools` 0.7.1 and `itsdangerous` 2.2.0 added as transitive dependencies.
+- DiaryKG, DocKG, and FileTreeKG snapshots updated to reflect current corpus and
+  codebase state.
 
 ### Fixed
 
