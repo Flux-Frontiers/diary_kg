@@ -1,6 +1,6 @@
 {
   "format": "1.0",
-  "last_update": "2026-04-17T17:23:34.040213+00:00",
+  "last_update": "2026-04-29T18:14:00.292754+00:00",
   "snapshots": [
     {
       "key": "11a5d90fa6ac3eb559eb141db7913663254343ad",
@@ -573,6 +573,73 @@
           "edges": -1295,
           "coverage_delta": -0.03199999999999997,
           "critical_issues_delta": 0
+        }
+      }
+    },
+    {
+      "key": "668e9ba068ae4f0a4e500fa34f576166f3ad5241",
+      "branch": "main",
+      "timestamp": "2026-04-29T18:14:00.291988+00:00",
+      "version": "0.92.3",
+      "file": "668e9ba068ae4f0a4e500fa34f576166f3ad5241.json",
+      "metrics": {
+        "db_path": ".pycodekg/graph.sqlite",
+        "total_nodes": 2523,
+        "meaningful_nodes": 164,
+        "total_edges": 2292,
+        "node_counts": {
+          "class": 16,
+          "function": 71,
+          "method": 57,
+          "module": 20,
+          "symbol": 2359
+        },
+        "edge_counts": {
+          "ATTR_ACCESS": 692,
+          "CALLS": 939,
+          "CONTAINS": 144,
+          "IMPORTS": 175,
+          "INHERITS": 2,
+          "RESOLVES_TO": 340
+        },
+        "module_count": 20,
+        "class_count": 16,
+        "function_count": 71,
+        "method_count": 57,
+        "docstring_coverage": 0.841,
+        "snapshot_count": 6,
+        "critical_issues": 1,
+        "complexity_median": 4,
+        "module_node_counts": {
+          "src/diary_kg/__init__.py": 3,
+          "src/diary_kg/cli.py": 289,
+          "src/diary_kg/kg.py": 366,
+          "src/diary_kg/mcp_server.py": 63,
+          "src/diary_kg/module/__init__.py": 2,
+          "src/diary_kg/module/base.py": 60,
+          "src/diary_kg/module/types.py": 11,
+          "src/diary_kg/primitives.py": 10,
+          "src/diary_kg/snapshots.py": 60,
+          "src/diary_transformer/__init__.py": 2,
+          "src/diary_transformer/chunker.py": 94,
+          "src/diary_transformer/classifier.py": 75,
+          "src/diary_transformer/cli.py": 178,
+          "src/diary_transformer/diary_embedder.py": 194,
+          "src/diary_transformer/features.py": 133,
+          "src/diary_transformer/models.py": 4,
+          "src/diary_transformer/parser.py": 37,
+          "src/diary_transformer/state.py": 107,
+          "src/diary_transformer/topic_classifier.py": 91,
+          "src/diary_transformer/transformer.py": 293
+        }
+      },
+      "deltas": {
+        "vs_previous": null,
+        "vs_baseline": {
+          "nodes": -5688,
+          "edges": -9284,
+          "coverage_delta": 0.473,
+          "critical_issues_delta": -1
         }
       }
     }

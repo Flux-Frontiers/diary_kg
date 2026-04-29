@@ -696,35 +696,33 @@ TREE_HASH=$(git write-tree)
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 VERSION=$(grep '^version' pyproject.toml 2>/dev/null | head -1 | cut -d'"' -f2)
 
-# Rebuild PyCodeKG index for diary_kg source code.
+# ---------------------------------------------------------------------------
+# PyCodeKG — rebuild + snapshot
+# ---------------------------------------------------------------------------
 "$REPO_ROOT/.venv/bin/pycodekg" build --repo "$REPO_ROOT" || exit 1
-
-# Rebuild DocKG index from docs/ corpus in this repo.
-"$REPO_ROOT/.venv/bin/dockg" build --repo "$REPO_ROOT" || true
-
-# Snapshot PyCodeKG (VERSION required — read from pyproject.toml).
 "$REPO_ROOT/.venv/bin/pycodekg" snapshot save "${VERSION:-unknown}" \\
     --repo . \\
     --tree-hash "$TREE_HASH" \\
     --branch "$BRANCH" \\
   || { echo "[pycodekg] snapshot skipped (run 'pycodekg build' to initialize)" >&2; }
+git add .pycodekg/snapshots/ 2>/dev/null || true
 
-# Snapshot DocKG if available (VERSION required — read from pyproject.toml).
+# ---------------------------------------------------------------------------
+# DocKG — rebuild + snapshot (if index is present)
+# ---------------------------------------------------------------------------
 if [ -f "$REPO_ROOT/.dockg/graph.sqlite" ]; then
+    "$REPO_ROOT/.venv/bin/dockg" build --repo "$REPO_ROOT" || true
     "$REPO_ROOT/.venv/bin/dockg" snapshot save "${VERSION:-unknown}" \\
         --repo . \\
         --tree-hash "$TREE_HASH" \\
         --branch "$BRANCH" \\
       || { echo "[dockg] snapshot skipped" >&2; }
+    git add .dockg/snapshots/ 2>/dev/null || true
 fi
 
-# Stage both snapshot directories so they are included in the commit.
-git add .pycodekg/snapshots/ 2>/dev/null || true
-git add .dockg/snapshots/ 2>/dev/null || true
-
-# Run pre-commit framework checks (ruff, mypy, detect-secrets, etc.) AFTER
-# snapshots are captured and staged. Delegates to .pre-commit-config.yaml so
-# quality checks stay in one place.
+# ---------------------------------------------------------------------------
+# Run pre-commit framework checks AFTER all snapshots are captured and staged.
+# ---------------------------------------------------------------------------
 PRECOMMIT="$REPO_ROOT/.venv/bin/pre-commit"
 if [ -x "$PRECOMMIT" ]; then
     "$PRECOMMIT" run || exit 1
