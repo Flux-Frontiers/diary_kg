@@ -1,9 +1,9 @@
 ---
 name: publish
-description: Step-by-step release workflow for publishing code-kg to PyPI using Poetry. Use this skill when the user wants to cut a release, bump the version, update the CHANGELOG, tag a commit, build and publish to PyPI, or run any part of the release pipeline for the code-kg project.
+description: Step-by-step release workflow for publishing diary-kg to PyPI using Poetry. Use this skill when the user wants to cut a release, bump the version, update the CHANGELOG, tag a commit, build and publish to PyPI, or run any part of the release pipeline for the diary-kg project.
 ---
 
-# Publish Skill — code-kg Release Workflow
+# Publish Skill — diary-kg Release Workflow
 
 ## Prerequisites
 
@@ -36,22 +36,24 @@ Move items from `## [Unreleased]` to a new versioned section:
 
 Leave `## [Unreleased]` empty at the top for future entries.
 
-### 3. Bump version in pyproject.toml
+### 3. Bump version in pyproject.toml and src/diary_kg/__init__.py
 
 ```bash
 poetry version patch   # or minor / major
 ```
 
-Verify: `grep '^version' pyproject.toml`
+Then update `__version__` in `src/diary_kg/__init__.py` to match.
+
+Verify: `grep '^version' pyproject.toml` and `grep __version__ src/diary_kg/__init__.py`
 
 ### 4. Commit the release
 
 ```bash
-git add pyproject.toml CHANGELOG.md
-CODEKG_SKIP_SNAPSHOT=1 git commit -m "chore: release vX.Y.Z"
+git add pyproject.toml src/diary_kg/__init__.py CHANGELOG.md
+DIARYKG_SKIP_SNAPSHOT=1 git commit -m "chore: release vX.Y.Z"
 ```
 
-> Use `CODEKG_SKIP_SNAPSHOT=1` to prevent the post-commit hook from creating a snapshot on a release commit.
+> Use `DIARYKG_SKIP_SNAPSHOT=1` to prevent the pre-commit hook from rebuilding indices and writing a snapshot on a release commit.
 
 ### 5. Tag the release
 
@@ -93,8 +95,8 @@ git push origin main --tags
 
 ## After Release
 
-- Update `.claude/skills/codekg/SKILL.md` if the install command or version references changed
-- Save a snapshot: `codekg snapshot save X.Y.Z --repo . --commit $(git rev-parse HEAD) --branch main`
+- Save a PyCodeKG snapshot of the released source: `pycodekg snapshot save X.Y.Z --repo .`
+- Save a DiaryKG corpus snapshot if the corpus changed: `diarykg snapshot save -v X.Y.Z`
 
 ---
 
@@ -102,6 +104,6 @@ git push origin main --tags
 
 If something went wrong after `poetry publish`:
 
-- PyPI releases cannot be deleted (only yanked): `poetry run twine yank code-kg X.Y.Z`
+- PyPI releases cannot be deleted (only yanked): `poetry run twine yank diary-kg X.Y.Z`
 - Revert the commit: `git revert HEAD` then `git push`
 - Delete the tag: `git tag -d vX.Y.Z && git push origin :refs/tags/vX.Y.Z`

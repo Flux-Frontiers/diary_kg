@@ -728,10 +728,10 @@ class DiaryKG:
     def snapshot_save(self, version: str = "0.1.0", label: str | None = None) -> dict[str, Any]:
         """Capture a point-in-time snapshot of corpus metrics.
 
-        Key is the git tree hash (``HEAD^{tree}``), matching the code_kg
-        pattern.  Metrics include chunk/entry/node/edge counts, temporal
-        span, and topic/context distributions.  Deltas vs previous and
-        baseline are computed automatically.
+        Key is the git tree hash (``HEAD^{tree}``).  Metrics include
+        chunk/entry/node/edge counts, temporal span, and topic/context
+        distributions.  Deltas vs previous and baseline are computed
+        automatically.
 
         :param version: Version label for this snapshot.
         :param label: Optional human-readable description.

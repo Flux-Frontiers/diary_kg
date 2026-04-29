@@ -3,10 +3,10 @@ diary_kg/module/types.py
 
 Result types and scoring utilities for DiaryKG queries.
 
-Mirrors code_kg.module.types but adapted for diary/journal corpora:
+Adapted for diary/journal corpora:
   - no line numbers (entries are timestamped prose, not source files)
   - scores derived from DocKG vector distance
-  - snippet content is raw diary text, not source code
+  - snippet content is raw diary text
 
 Author: Eric G. Suchanek, PhD
 """
@@ -57,7 +57,7 @@ class DiarySnippetPack:
 def semantic_score_from_distance(distance: float) -> float:
     """Convert an L2/cosine embedding distance to a [0, 1] relevance score.
 
-    Uses the same formula as code_kg: ``score = 1 / (1 + distance)``.
+    Formula: ``score = 1 / (1 + distance)``.
 
     :param distance: Non-negative embedding distance from vector search.
     :return: Relevance score in ``[0.0, 1.0]``; higher is more relevant.

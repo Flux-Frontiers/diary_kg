@@ -1,8 +1,6 @@
 """
 diary_kg.module — KGRAG adapter SDK for DiaryKG.
 
-Mirrors the code_kg.module package structure.
-
     from diary_kg.module import DiaryKGAdapter
     from diary_kg.primitives import CrossHit, CrossSnippet, KGEntry, KGKind
 """

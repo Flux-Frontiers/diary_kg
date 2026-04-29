@@ -69,7 +69,7 @@ memory-kg   = { git = "https://github.com/Flux-Frontiers/memory_kg.git", optiona
 # ---------------------------------------------------------------------------
 [project]
 name = "diary-kg"
-version = "0.92.2"
+version = "0.92.3"
 description = "A knowledge graph builder and semantic search engine for diaries and journals"
 readme = "README.md"
 license = "Elastic-2.0"
@@ -91,7 +91,7 @@ classifiers = [
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0,<9",
-    "kgmodule-utils>=0.2.0",
+    "kgmodule-utils>=0.2.3",
     "lancedb>=0.29.0",
     "mcp>=1.0.0",
     "numpy>=1.24.0",

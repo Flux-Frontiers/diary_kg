@@ -1,6 +1,6 @@
 {
   "format": "1.0",
-  "last_update": "2026-03-27T01:21:25.752085+00:00",
+  "last_update": "2026-04-29T13:26:21.767024+00:00",
   "snapshots": [
     {
       "key": "2544eccf3106abd60f85eb8352747b8493c8d78a",
@@ -74,6 +74,81 @@
           "entries": 0,
           "nodes": 2,
           "edges": -8
+        }
+      }
+    },
+    {
+      "key": "8fad378f077122a03764aff7d94b9cd1f6380c81",
+      "branch": "main",
+      "timestamp": "2026-04-29T13:26:21.765426+00:00",
+      "version": "0.92.2",
+      "file": "8fad378f077122a03764aff7d94b9cd1f6380c81.json",
+      "metrics": {
+        "chunk_count": 7285,
+        "entry_count": 7282,
+        "total_nodes": 41776,
+        "total_edges": 43122604,
+        "topic_counts": {
+          "pepys_domestic": 3136,
+          "pepys_court": 1884,
+          "work": 1268,
+          "domestic": 269,
+          "spiritual": 156,
+          "pepys_social": 137,
+          "pepys_locations": 116,
+          "pepys_religious": 87,
+          "pepys_naval": 56,
+          "pepys_financial": 45,
+          "preferences": 17,
+          "pepys_health": 17,
+          "family": 16,
+          "personal_info": 14,
+          "weather": 11,
+          "finance": 11,
+          "food": 8,
+          "feelings": 7,
+          "pepys_weather": 7,
+          "hobbies": 7,
+          "learning": 4,
+          "skills": 4,
+          "friends": 2,
+          "self_harm_risk": 2,
+          "goals": 2,
+          "automotive": 1,
+          "pets": 1
+        },
+        "context_counts": {
+          "Office": 2886,
+          "Home": 1846,
+          "General": 1025,
+          "Work": 591,
+          "Social": 287,
+          "Finance": 241,
+          "Reflection": 187,
+          "Emotion": 110,
+          "Health": 61,
+          "Family": 51
+        },
+        "temporal_span": {
+          "start": "1660-01-01T08:00",
+          "end": "1669-08-02T07:00"
+        },
+        "chunking_strategy": "sentence_group",
+        "chunk_size": 512,
+        "source_file": "pepys/pepys_enriched_full.txt"
+      },
+      "deltas": {
+        "vs_previous": {
+          "chunks": 638,
+          "entries": 832,
+          "nodes": 41776,
+          "edges": 43122604
+        },
+        "vs_baseline": {
+          "chunks": 638,
+          "entries": 832,
+          "nodes": 41776,
+          "edges": 43122604
         }
       }
     }

@@ -1,7 +1,7 @@
 """
 snapshots.py — Temporal Snapshots of DiaryKG Metrics
 
-Mirrors the code_kg SnapshotManager pattern exactly:
+Snapshot model:
 - Key is the git tree hash (HEAD^{tree}), stable across rebases
 - Snapshots stored in .diarykg/snapshots/{tree_hash}.json
 - manifest.json indexes all snapshots with fast lookup
