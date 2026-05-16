@@ -1,7 +1,7 @@
 # pyproject.toml — DiaryKG package configuration (PEP 621)
 #
 # Author: Eric G. Suchanek, PhD
-# Last Revision: 2026-04-28
+# Last Revision: 2026-05-16
 #
 # Build system : Poetry 2.x with PEP 621 [project] table
 #
@@ -128,7 +128,7 @@ viz3d = [
 # pycode-kg and doc-kg are on PyPI; agent-kg, ftree-kg, memory-kg are not yet — install manually from git
 kgdeps = [
     "doc-kg>=0.12.0",
-    "pycode-kg>=0.16.0",
+    "pycode-kg>=0.19.0",
 ]
 all = [
     "detect-secrets>=1.5.0",
