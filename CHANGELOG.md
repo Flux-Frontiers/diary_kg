@@ -8,23 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+---
+
+## [0.92.4] - 2026-04-29
+
+### Added
 - `integration` pytest marker registered in `pyproject.toml`; tests that require
   live model downloads (e.g. `test_embedder.py`) should be decorated with
   `@pytest.mark.integration` to be excluded from CI runs automatically.
+- `pepys/hindsight_analysis.py`: new hindsight analysis script.
 
 ### Changed
 - CI test job now runs `pytest -m "not integration"` to skip integration tests
   that require sentence-transformers model downloads, keeping CI fast and
   dependency-free.
-- `kgmodule-utils` minimum version bumped to `>=0.2.3` (upstream dependency update).
-- `poetry.lock` refreshed: `doc-kg` 0.12.2 → 0.12.3, `gitpython` 3.1.47 → 3.1.49;
-  `httptools` 0.7.1 and `itsdangerous` 2.2.0 added as transitive dependencies.
-- DiaryKG, DocKG, and FileTreeKG snapshots updated to reflect current corpus and
-  codebase state.
-
-### Fixed
-
-### Removed
+- Pre-commit hook template (`diarykg install-hooks`) trimmed to pycodekg + dockg
+  only; removed stale codekg, ftreekg, and diarykg snapshot sections. Live hook
+  synced to match.
+- `transformers` constraint corrected to `>=4.57.6,<5` (was `>=4.40.0,<4.57`,
+  which conflicted with `pycode-kg>=0.16.0`).
+- `kgmodule-utils` minimum version bumped to `>=0.2.3` (upstream).
+- `poetry.lock` refreshed: `doc-kg` 0.12.3, `gitpython` 3.1.49, `transformers`
+  4.57.6; `httptools` 0.7.1 and `itsdangerous` 2.2.0 added as transitive deps.
+- DocKG and PyCodeKG snapshots updated to reflect current codebase state.
 
 ---
 
