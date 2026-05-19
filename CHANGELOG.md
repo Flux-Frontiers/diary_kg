@@ -17,6 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.92.5] - 2026-05-19
+
+### Fixed
+- `kg.py` CLI fallback for `dockg build` used `--db` (removed option) instead
+  of `--sqlite`; corrected in both `build()` and `rebuild_index()` paths.
+- `kg.py` CLI fallback now passes `--no-similar` to `dockg build` in both
+  paths, matching the Python API path (`discover_similar=False`). For
+  single-author diary corpora the all-pairs SIMILAR_TO scan produces millions
+  of low-signal edges due to author-vocabulary uniformity inflating cosine
+  scores; disabling it keeps the index lean and query traversal fast.
+
+---
+
 ## [0.92.4] - 2026-04-29
 
 ### Added
