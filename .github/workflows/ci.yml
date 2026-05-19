@@ -28,7 +28,7 @@ jobs:
           key: lint-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
 
       - name: Install dev dependencies
-        run: poetry install --only dev --no-interaction
+        run: poetry install --extras dev --no-interaction
 
       - name: Check formatting
         run: poetry run ruff format --check .
