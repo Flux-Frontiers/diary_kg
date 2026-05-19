@@ -27,7 +27,7 @@ jobs:
           virtualenvs-in-project: true
 
       - name: Install dependencies
-        run: poetry install --extras dev --no-interaction
+        run: poetry install --no-interaction
 
       - name: Run tests
         run: poetry run pytest --tb=short -q -m "not integration"
