@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logos/diarykg_logo.png" alt="DiaryKG" width="160"/>
+</p>
+
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic%202.0-blue.svg)](https://www.elastic.co/licensing/elastic-license)
 [![Version](https://img.shields.io/badge/version-0.92.5-blue.svg)](https://github.com/Flux-Frontiers/diary_kg/releases)
@@ -358,6 +362,46 @@ The repo ships an optional pre-commit git hook that rebuilds PyCodeKG and DocKG 
 diarykg install-hooks --repo .
 # Skip per-commit with: DIARYKG_SKIP_SNAPSHOT=1 git commit ...
 ```
+
+---
+
+## Example Corpus: corpus_pepys
+
+[**corpus_pepys**](https://github.com/Flux-Frontiers/corpus_pepys) is the
+reference implementation — the complete diary of Samuel Pepys (1660–1669)
+packaged as a self-contained Docker image with a KGRAG query API and a
+Pepys-specific Streamlit chat UI.
+
+```bash
+git clone https://github.com/Flux-Frontiers/corpus_pepys
+cd corpus_pepys
+make build-index   # build DiaryKG from the included corpus (~3 min)
+make build-image   # bake index into Docker image
+make run           # KGRAG API on http://localhost:8000
+make chat          # Streamlit chat UI on http://localhost:8501
+```
+
+Query with curl:
+
+```bash
+curl -s -X POST http://localhost:8000/runsync \
+  -H "Content-Type: application/json" \
+  -d '{"input":{"query":"Great Fire of London","corpus":"pepys","k":5}}' | jq .
+```
+
+The repo includes 3,355 parsed diary entries, 7,282 NLP-enriched chunks,
+topic configs, processing scripts, and the full technical write-ups from
+[docs/](docs/). It is the canonical example of how to stand up a DiaryKG
+corpus as a portable, air-gapped Docker service.
+
+---
+
+## Brand & Logo
+
+Logo generation prompt and brand guidelines (color palette, style rules,
+family DNA) are in [assets/brands.md](assets/brands.md).
+
+DiaryKG accent color: **Rose `#FF6B8A`**.
 
 ---
 
