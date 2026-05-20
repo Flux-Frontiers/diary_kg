@@ -179,6 +179,7 @@ ignore = ["E501"]
 python_version        = "3.12"
 strict                = false
 ignore_missing_imports = true
+follow_imports        = "silent"
 mypy_path             = "src"
 explicit_package_bases = true
 
