@@ -55,15 +55,6 @@ packages = [
     { include = "diary_transformer", from = "src" },
 ]
 
-# Git-based dependencies (not available on PyPI — install manually if needed):
-#   pip install git+https://github.com/Flux-Frontiers/agent_kg.git
-#   pip install git+https://github.com/Flux-Frontiers/ftree_kg.git
-#   pip install git+https://github.com/Flux-Frontiers/memory_kg.git
-[tool.poetry.dependencies]
-agent-kg    = { git = "https://github.com/Flux-Frontiers/agent_kg.git",  optional = true }
-ftree-kg    = { git = "https://github.com/Flux-Frontiers/ftree_kg.git",  optional = true }
-memory-kg   = { git = "https://github.com/Flux-Frontiers/memory_kg.git", optional = true }
-
 # ---------------------------------------------------------------------------
 # PEP 621 project metadata
 # ---------------------------------------------------------------------------
@@ -127,7 +118,6 @@ viz3d = [
     "pyvistaqt>=0.11.0",
     "trame-vtk>=2.0.0",
 ]
-# pycode-kg and doc-kg are on PyPI; agent-kg, ftree-kg, memory-kg are not yet — install manually from git
 kgdeps = [
     "doc-kg>=0.15.0",
     "pycode-kg>=0.19.0",
