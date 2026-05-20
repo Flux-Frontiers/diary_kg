@@ -8,10 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Brand assets: full logo suite (`assets/logos/logo_{32,64,128,256,512}.png`),
+  SVG source (`assets/diarykg_logo.svg`), raster master (`assets/diarykg_logo.png`),
+  and badge variants (`assets/badges/badge_{20,40,80,200}.png`).
+- `scripts/process_logo.py`: logo post-processing helper (resize, badge generation).
+- `pillow >=10.0.0` added to dev dependency group for image processing.
 
 ### Changed
+- `README.md` header logo updated to point to `assets/logos/logo_512.png`.
 
 ### Fixed
+- `TestReindex.test_reindex_success_output_shows_paths`: collapse newlines before
+  asserting on path strings so the test passes when CI wraps long tmp-dir paths
+  across terminal lines.
 
 ### Removed
 

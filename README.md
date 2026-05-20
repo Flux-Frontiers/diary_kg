@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logos/diarykg_logo.png" alt="DiaryKG" width="160"/>
+  <img src="assets/logos/logo_512.png" alt="DiaryKG" width="160"/>
 </p>
 
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](https://www.python.org/)
