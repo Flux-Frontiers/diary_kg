@@ -56,20 +56,28 @@ def parse_args() -> argparse.Namespace:
 
 
 def remove_background(arr: np.ndarray, bg_thresh: int, feather: int) -> np.ndarray:
-    """Return RGBA uint8 array with checkerboard background replaced by real alpha."""
-    h, w = arr.shape[:2]
-    gray = arr[:, :, :3].mean(axis=2)
+    """Return RGBA uint8 array with background replaced by real alpha.
 
-    # Connected-component flood fill from image corners
-    bright = gray > bg_thresh
-    labeled, _ = ndimage.label(bright)
-    corner_labels = {
-        labeled[0, 0],
-        labeled[0, w - 1],
-        labeled[h - 1, 0],
-        labeled[h - 1, w - 1],
-    } - {0}
-    bg_mask = np.isin(labeled, list(corner_labels))
+    Samples the corner pixel color and flood-fills connected pixels whose
+    max-channel distance from that color is within the tolerance derived from
+    bg_thresh (tolerance = 255 - bg_thresh, so thresh=220 → tol=35).
+    """
+    h, w = arr.shape[:2]
+
+    # Sample background color from all four corners and average
+    corners = np.stack([arr[0, 0, :3], arr[0, w - 1, :3], arr[h - 1, 0, :3], arr[h - 1, w - 1, :3]])
+    bg_color = corners.mean(axis=0)
+    tolerance = 255 - bg_thresh  # default thresh=220 → tol=35
+
+    # Pixels within tolerance of bg_color are background candidates
+    dist_from_bg = np.max(np.abs(arr[:, :, :3].astype(np.float32) - bg_color), axis=2)
+    bg_candidate = dist_from_bg < tolerance
+
+    # All connected regions of background-colored pixels become transparent —
+    # this catches enclosed counters (inside of D, a, o …) that corner-only
+    # flood-fill can never reach.
+    labeled, _ = ndimage.label(bg_candidate)
+    bg_mask = labeled > 0
 
     dist_into_fg = ndimage.distance_transform_edt(~bg_mask)
 
@@ -151,7 +159,15 @@ def main() -> None:
 
     # ── Load & fix transparency ──────────────────────────────────────────────
     print(f"Loading {src} …")
-    img = Image.open(src).convert("RGB")
+    raw = Image.open(src)
+    if raw.mode == "RGBA":
+        # Composite against a mid-grey canvas so transparent corners don't
+        # collapse to black and confuse background-colour detection.
+        canvas = Image.new("RGB", raw.size, (200, 200, 200))
+        canvas.paste(raw, mask=raw.split()[3])
+        img = canvas
+    else:
+        img = raw.convert("RGB")
     arr = np.array(img, dtype=np.uint8)
 
     print(f"  Removing background  (thresh={args.bg_thresh}, feather={args.feather}px) …")
