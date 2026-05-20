@@ -60,7 +60,7 @@ packages = [
 # ---------------------------------------------------------------------------
 [project]
 name = "diary-kg"
-version = "0.92.5"
+version = "0.92.6"
 description = "A knowledge graph builder and semantic search engine for diaries and journals"
 readme = "README.md"
 license = "Elastic-2.0"
