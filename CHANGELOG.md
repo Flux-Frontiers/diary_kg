@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+---
+
+## [0.92.6] - 2026-05-21
+
+### Added
 - Brand assets: full logo suite (`assets/logos/logo_{32,64,128,256,512}.png`),
   SVG source (`assets/diarykg_logo.svg`), raster master (`assets/diarykg_logo.png`),
   and badge variants (`assets/badges/badge_{20,40,80,200}.png`).
