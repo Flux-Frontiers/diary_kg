@@ -7,7 +7,7 @@
 [![Version](https://img.shields.io/badge/version-0.92.6-blue.svg)](https://github.com/Flux-Frontiers/diary_kg/releases)
 [![CI](https://github.com/Flux-Frontiers/diary_kg/actions/workflows/ci.yml/badge.svg)](https://github.com/Flux-Frontiers/diary_kg/actions/workflows/ci.yml)
 [![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
-[![DOI](https://zenodo.org/badge/1183242132.svg)](https://zenodo.org/badge/latestdoi/1183242132)
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.19865198.svg)](https://doi.org/10.5281/zenodo.19865198)
 
 **DiaryKG** — A deterministic knowledge graph for diaries and journals with semantic indexing and source-grounded snippet packing.
 
