@@ -223,6 +223,7 @@ __marimo__/
 .dockg/graph.sqlite
 .dockg/graph.sqlite*
 .dockg/models
+.dockg/embeddings.json
 
 # AgentKG generated artifacts — same pattern as CodeKG/DocKG
 .agentkg/lancedb/

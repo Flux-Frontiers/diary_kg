@@ -1,0 +1,123 @@
+{
+  "key": "b530c0998bf537fbc17fc3beb805da40c5129e52",
+  "branch": "main",
+  "timestamp": "2026-06-08T16:48:45.797030+00:00",
+  "version": "0.92.7",
+  "metrics": {
+    "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+    "total_nodes": 1859,
+    "total_edges": 12343,
+    "node_counts": {
+      "chunk": 322,
+      "document": 13,
+      "entity": 531,
+      "keyword": 563,
+      "section": 193,
+      "topic": 237
+    },
+    "edge_counts": {
+      "CONTAINS": 515,
+      "CO_OCCURS_WITH": 8154,
+      "HAS_KEYWORD": 1288,
+      "HAS_TOPIC": 336,
+      "MENTIONS_ENTITY": 1447,
+      "NEXT": 103,
+      "REFERENCES": 2,
+      "SIMILAR_TO": 498
+    },
+    "meaningful_nodes": 1846,
+    "coverage_score": 0.9720496894409938,
+    "issues_count": 0,
+    "complexity_median": 19.0
+  },
+  "hotspots": [
+    {
+      "id": "chunk:analysis/diary_kg_analysis_20260324.md:0005",
+      "file_path": "analysis/diary_kg_analysis_20260324.md",
+      "label": "Fan-In Ranking",
+      "references": 0,
+      "semantic_links": 22,
+      "total_links": 23
+    },
+    {
+      "id": "chunk:analysis/diary_kg_analysis_20260324.md:0034",
+      "file_path": "analysis/diary_kg_analysis_20260324.md",
+      "label": "Graph Traversal Node Edge",
+      "references": 0,
+      "semantic_links": 21,
+      "total_links": 21
+    },
+    {
+      "id": "chunk:analysis/diary_kg_analysis_20260324.md:0014",
+      "file_path": "analysis/diary_kg_analysis_20260324.md",
+      "label": "Docstring Coverage",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 20
+    },
+    {
+      "id": "chunk:docs/TEMPORAL_FLIGHT_CH5.md:0008",
+      "file_path": "docs/TEMPORAL_FLIGHT_CH5.md",
+      "label": "Flight 1 \u2014 Short Hop (94 Days)",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 20
+    },
+    {
+      "id": "chunk:docs/TEMPORAL_FLIGHT_CH5.md:0010",
+      "file_path": "docs/TEMPORAL_FLIGHT_CH5.md",
+      "label": "Flight 2 \u2014 The Great Crossing (1,627 Days, 4.46 Years)",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 20
+    },
+    {
+      "id": "chunk:CHANGELOG.md:0024",
+      "file_path": "CHANGELOG.md",
+      "label": "Added",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:README.md:0004",
+      "file_path": "README.md",
+      "label": "Architecture",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:analysis/diary_kg_analysis_20260324.md:0000",
+      "file_path": "analysis/diary_kg_analysis_20260324.md",
+      "label": "chunk:0001",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:analysis/diary_kg_analysis_20260324.md:0002",
+      "file_path": "analysis/diary_kg_analysis_20260324.md",
+      "label": "Baseline Metrics",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 19
+    },
+    {
+      "id": "chunk:analysis/diary_kg_analysis_20260324.md:0012",
+      "file_path": "analysis/diary_kg_analysis_20260324.md",
+      "label": "Public API Surface",
+      "references": 0,
+      "semantic_links": 19,
+      "total_links": 19
+    }
+  ],
+  "issues": [],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": -1972,
+    "edges": -16251,
+    "coverage_delta": 0.01391160759157184,
+    "issues_delta": 0
+  }
+}

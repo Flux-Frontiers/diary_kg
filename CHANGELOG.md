@@ -17,6 +17,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.92.7] - 2026-06-08
+
+### Changed
+- Bumped `kgmodule-utils` dependency from `>=0.2.3` to `>=0.4.0`; the new
+  release adds shared graph store, semantic index, and pipeline base types
+  used by downstream KG modules.
+- `poetry.lock` refreshed: `kgmodule-utils` updated to `0.4.2`, `ty 0.0.44`
+  added as a transitive dependency of `kgmodule-utils`.
+
+### Fixed
+- Added `.dockg/embeddings.json` to `.gitignore` to prevent the 15 MB
+  pre-computed embeddings cache from being tracked by git and tripping the
+  pre-commit large-file check (`>2000 KB`).
+
+---
+
 ## [0.92.6] - 2026-05-21
 
 ### Added
