@@ -134,7 +134,7 @@ class DiaryKGAdapter:
         """
         self._load()
         try:
-            raw: list[dict[str, Any]] = self._kg.query(q, k=k)  # type: ignore[union-attr]
+            raw: list[dict[str, Any]] = self._kg.query(q, k=k)  # type: ignore
         except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return []
         return [self._to_hit(r) for r in raw]
@@ -156,7 +156,7 @@ class DiaryKGAdapter:
         """
         self._load()
         try:
-            raw: list[dict[str, Any]] = self._kg.pack(q, k=k)  # type: ignore[union-attr]
+            raw: list[dict[str, Any]] = self._kg.pack(q, k=k)  # type: ignore
         except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return []
         return [self._to_snippet(r) for r in raw]
@@ -172,7 +172,7 @@ class DiaryKGAdapter:
         """
         self._load()
         try:
-            return self._kg.stats()  # type: ignore[union-attr]
+            return self._kg.stats()  # type: ignore
         except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return {"kind": "diary", "error": str(exc)}
 
@@ -186,7 +186,7 @@ class DiaryKGAdapter:
         """
         self._load()
         try:
-            return self._kg.analyze()  # type: ignore[union-attr]
+            return self._kg.analyze()  # type: ignore
         except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return f"# DiaryKG Analysis\n\nAnalysis failed: {exc}\n"
 
@@ -203,7 +203,7 @@ class DiaryKGAdapter:
         """
         self._load()
         try:
-            return self._kg.info()  # type: ignore[union-attr]
+            return self._kg.info()  # type: ignore
         except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return {"error": str(exc)}
 

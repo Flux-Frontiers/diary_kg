@@ -7,7 +7,7 @@
 #
 # Quick install (pip)
 # -------------------
-#   pip install -e ".[dev]"             core + dev tools (pytest, ruff, mypy, etc.)
+#   pip install -e ".[dev]"             core + dev tools (pytest, ruff, ty, etc.)
 #   pip install -e ".[viz]"             core + Streamlit/Plotly/PyVis visualizer
 #   pip install -e ".[viz3d]"           core + 3D visualization (pyvista, etc.)
 #   pip install -e ".[kgdeps]"          core + KG integrations (pycode-kg, doc-kg)
@@ -94,7 +94,7 @@ dependencies = [
 
 [tool.poetry.group.dev.dependencies]
 detect-secrets = ">=1.5.0"
-mypy = ">=1.10.0"
+ty = ">=0.0.44"
 pdoc = ">=14.0.0"
 pre-commit = ">=4.5.1"
 pylint = ">=4.0.5"
@@ -126,7 +126,7 @@ all = [
     "detect-secrets>=1.5.0",
     "doc-kg>=0.15.0",
     "markdown>=3.6",
-    "mypy>=1.10.0",
+    "ty>=0.0.44",
     "pdoc>=14.0.0",
     "param>=2.0.0",
     "plotly>=5.14.0",
@@ -166,13 +166,12 @@ exclude = [".claude"]
 select = ["E", "F", "W", "I", "UP"]
 ignore = ["E501"]
 
-[tool.mypy]
-python_version        = "3.12"
-strict                = false
-ignore_missing_imports = true
-follow_imports        = "silent"
-mypy_path             = "src"
-explicit_package_bases = true
+[tool.ty.environment]
+python-version = "3.12"
+root = ["src"]
+
+[tool.ty.rules]
+unresolved-import = "ignore"
 
 [tool.pytest.ini_options]
 testpaths  = ["tests"]

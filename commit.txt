@@ -1,11 +1,9 @@
-chore(assets): add brand logo suite, fix CI test path-wrap assertion
+chore(release): bump version to 0.92.7
 
-- Add full logo suite: logos/logo_{32,64,128,256,512}.png, SVG source,
-  raster master, and badge variants (badge_{20,40,80,200}.png)
-- Add scripts/process_logo.py for logo resize / badge generation
-- Add pillow >=10.0.0 to dev dependency group
-- Update README header to reference assets/logos/logo_512.png
-- Fix TestReindex path assertion by collapsing newlines before checking,
-  so wrapped long CI tmp-dir paths no longer cause false failures
+- Bump kgmodule-utils to >=0.4.0 (adds shared graph store, semantic
+  index, and pipeline base types); lock updated to 0.4.2 + ty 0.0.44
+- Add .dockg/embeddings.json to .gitignore (15 MB cache was tripping
+  the pre-commit large-file check)
+- Refresh KG snapshots (DocKG + PyCodeKG) for v0.92.7
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>

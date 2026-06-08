@@ -44,7 +44,7 @@ def _extract_entry_features_worker(entry_data: tuple[int, str]) -> dict:
         try:
             import spacy  # pylint: disable=import-outside-toplevel
 
-            _extract_entry_features_worker.nlp = spacy.load("en_core_web_sm")  # type: ignore[attr-defined]
+            _extract_entry_features_worker.nlp = spacy.load("en_core_web_sm")  # type: ignore
         except OSError:
             return {
                 "index": idx,
@@ -56,7 +56,7 @@ def _extract_entry_features_worker(entry_data: tuple[int, str]) -> dict:
                 "proper_nouns": 0,
             }
 
-    nlp = _extract_entry_features_worker.nlp  # type: ignore[attr-defined]
+    nlp = _extract_entry_features_worker.nlp  # type: ignore
     doc = nlp(content)
     return {
         "index": idx,
