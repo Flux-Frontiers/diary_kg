@@ -1,33 +1,26 @@
-# Release Notes — v0.92.6
+# Release Notes — v0.92.7
 
-> Released: 2026-05-21
-
-### Added
-- Brand assets: full logo suite (`assets/logos/logo_{32,64,128,256,512}.png`),
-  SVG source (`assets/diarykg_logo.svg`), raster master (`assets/diarykg_logo.png`),
-  and badge variants (`assets/badges/badge_{20,40,80,200}.png`).
-- `scripts/process_logo.py`: logo post-processing helper (resize, badge generation).
-- `pillow >=10.0.0` added to dev dependency group for image processing.
-- `README.md`: added `corpus_pepys` exemplar section with Docker workflow and curl example.
-- `assets/brands.md`: brand guidelines and logo generation prompt for the DiaryKG family.
+> Released: 2026-06-08
 
 ### Changed
-- `README.md` header logo updated to point to `assets/logos/logo_512.png`.
-- CI: push and pull-request triggers added to `ci.yml` (was `workflow_dispatch`-only).
-- CI: dev dependencies moved to `[tool.poetry.group.dev.dependencies]` so
-  `poetry install` includes them without `--extras dev`; `ci.yml` lint and test
-  jobs updated accordingly.
+- Bumped `kgmodule-utils` dependency from `>=0.2.3` to `>=0.4.0`; the new
+  release adds shared graph store, semantic index, and pipeline base types
+  used by downstream KG modules.
+- `poetry.lock` refreshed: `kgmodule-utils` updated to `0.4.2`, `ty 0.0.44`
+  added as a transitive dependency of `kgmodule-utils`.
+- Replaced `mypy` with `ty` for type checking across the project: `[tool.mypy]`
+  removed from `pyproject.toml`, `[tool.ty.environment]` / `[tool.ty.rules]`
+  added; `mypy>=1.10.0` dev dependency swapped for `ty>=0.0.44`.
+- Pre-commit hook and `ci.yml` type-check job updated to run
+  `ty check src/` instead of `mypy src/`.
+- `# type: ignore[union-attr]` / `# type: ignore[attr-defined]` comments in
+  `module/base.py` and `diary_transformer/features.py` simplified to bare
+  `# type: ignore` (mypy-specific codes are not recognised by `ty`).
 
 ### Fixed
-- `TestReindex.test_reindex_success_output_shows_paths`: collapse newlines before
-  asserting on path strings so the test passes when CI wraps long tmp-dir paths
-  across terminal lines.
-- `mypy`: removed `follow_imports` setting that caused mypy to chase into
-  third-party packages and fail in CI.
-
-### Removed
-- `agent-kg`, `ftree-kg`, `memory-kg` optional dependencies removed from
-  `pyproject.toml`; none were imported in source and two were not on PyPI.
+- Added `.dockg/embeddings.json` to `.gitignore` to prevent the 15 MB
+  pre-computed embeddings cache from being tracked by git and tripping the
+  pre-commit large-file check (`>2000 KB`).
 
 ---
 
