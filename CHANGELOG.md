@@ -8,6 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+---
+
+## [0.93.1] - 2026-06-08
+
+### Changed
+- Promoted `doc-kg` to a **core** runtime dependency (previously an optional
+  `kgdeps` / `all` extra). Every KG operation — `build`, `reindex`, `query`,
+  `pack`, `stats` — requires DocKG via `_load_dockg()`, and DocKG's heavy
+  transitive deps (`lancedb`, `sentence-transformers`) are already core, so a
+  plain `pip install diary-kg` now yields a fully working package instead of one
+  that fails at runtime with `ImportError: doc-kg is not installed`.
+
+### Fixed
+- Corrected the `doc-kg` version floor from `>=0.15.0` to `>=0.15.6`. The hybrid
+  dense + lexical retrieval added in 0.93.0 calls `GraphStore.search_lexical()`,
+  which only exists in doc-kg 0.15.6+; the looser constraint could resolve an
+  incompatible doc-kg and break `query()` / `pack()`.
+
+---
+
+## [0.93.0] - 2026-06-08
+
+### Added
 - Hybrid dense + lexical (BM25) retrieval for `query()` and `pack()`. A new
   `DiaryKG._fused_chunk_seeds()` helper blends the dense vector channel with the
   FTS5/BM25 lexical channel via reciprocal rank fusion (`_RRF_K = 60`), so
@@ -23,10 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   node id alone.
 - Degrades cleanly to pure dense ranking when `nodes_fts` is absent (diaries
   built before doc-kg 0.15.6).
-
-### Fixed
-
-### Removed
 
 ---
 
