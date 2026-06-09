@@ -8,8 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Hybrid dense + lexical (BM25) retrieval for `query()` and `pack()`. A new
+  `DiaryKG._fused_chunk_seeds()` helper blends the dense vector channel with the
+  FTS5/BM25 lexical channel via reciprocal rank fusion (`_RRF_K = 60`), so
+  exact-phrase diary queries surface the right entry instead of being buried by
+  the embedding model. Mirrors doc_kg's DocKG fusion.
+- Tests for the fusion helper (`TestFusedChunkSeeds`): lexical rescue of a
+  dense-buried exact-phrase hit, and graceful fall-back to pure dense ranking
+  when the corpus has no lexical index.
 
 ### Changed
+- `query()` / `pack()` now read `file_path` from the `nodes` table directly
+  rather than relying on the seed hit, since fused seeds are identified by
+  node id alone.
+- Degrades cleanly to pure dense ranking when `nodes_fts` is absent (diaries
+  built before doc-kg 0.15.6).
 
 ### Fixed
 

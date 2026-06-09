@@ -8,11 +8,18 @@ stats) mock the internal _dockg attribute.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from diary_kg.kg import DiaryKG, _parse_frontmatter
+
+
+def _seed_hit(node_id: str, distance: float, kind: str = "chunk"):
+    """Minimal SeedHit stand-in for fusion tests."""
+    return SimpleNamespace(id=node_id, kind=kind, distance=distance, file_path="")
+
 
 # ---------------------------------------------------------------------------
 # _parse_frontmatter helper
@@ -273,3 +280,41 @@ class TestSnapshotHelpers:
         key = saved["key"]
         shown = kg.snapshot_show(key)
         assert shown["key"] == key
+
+
+# ---------------------------------------------------------------------------
+# _fused_chunk_seeds — hybrid dense + lexical (BM25) fusion
+# ---------------------------------------------------------------------------
+
+
+class TestFusedChunkSeeds:
+    def test_lexical_rescues_buried_exact_phrase(self, tmp_kg_root):
+        """An exact-phrase chunk buried by the dense channel is surfaced to #1."""
+        kg = DiaryKG(tmp_kg_root)
+        target = "c7"
+        # Dense buries the target at rank 7; also include a non-chunk to filter.
+        dense = [_seed_hit(f"c{i}", 0.30 + 0.01 * i) for i in range(8)]
+        dense.append(_seed_hit("ent:x", 0.05, kind="entity"))
+        mock_dockg = MagicMock()
+        mock_dockg.index.search.return_value = dense
+        mock_dockg.store.search_lexical.return_value = [target]  # phrase hit -> rank 0
+
+        fused = kg._fused_chunk_seeds(mock_dockg, "parmazan cheese", k=5)
+        ids = [i for i, _ in fused]
+
+        assert ids[0] == target  # rescued to the top
+        assert fused[0][1] >= 0.87  # lexical-boosted, high-confidence score
+        assert "ent:x" not in ids  # non-chunk dense hits are excluded
+
+    def test_falls_back_to_dense_without_fts(self, tmp_kg_root):
+        """No lexical index -> pure dense ranking, scores from cosine distance."""
+        kg = DiaryKG(tmp_kg_root)
+        dense = [_seed_hit(f"c{i}", 0.30 + 0.05 * i) for i in range(5)]
+        mock_dockg = MagicMock()
+        mock_dockg.index.search.return_value = dense
+        mock_dockg.store.search_lexical.return_value = []  # older corpus, no nodes_fts
+
+        fused = kg._fused_chunk_seeds(mock_dockg, "q", k=3)
+
+        assert [i for i, _ in fused] == ["c0", "c1", "c2"]
+        assert fused[0][1] == pytest.approx(0.70)  # 1 - 0.30

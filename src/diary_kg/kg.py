@@ -46,6 +46,17 @@ def _parse_frontmatter(text: str) -> dict[str, str]:
     return result
 
 
+# Reciprocal-rank-fusion constant for blending dense (vector) + lexical (BM25)
+# retrieval.  Mirrors doc_kg's DocKG fusion so exact-phrase diary queries surface
+# the right entry instead of being buried by the embedding model.
+_RRF_K = 60
+# Synthetic score basis for chunks that surface only via the lexical channel
+# (no dense rank): an exact-phrase BM25 hit is high-confidence, hence a high base
+# score, with a small per-rank decay to keep lexical-only hits ordered.
+_LEXICAL_SEED_BASE_SCORE = 0.88
+_LEXICAL_SEED_STEP = 0.01
+
+
 class DiaryKG:
     """Knowledge graph for a diary or journal corpus.
 
@@ -507,11 +518,54 @@ class DiaryKG:
     # Query / Pack
     # ------------------------------------------------------------------
 
+    def _fused_chunk_seeds(self, dockg: Any, q: str, k: int) -> list[tuple[str, float]]:
+        """Rank chunk seeds by fusing dense (vector) + lexical (BM25) retrieval.
+
+        Blends the dense vector search with the FTS5/BM25 lexical channel via
+        reciprocal rank fusion so exact-phrase queries surface the right diary
+        entry instead of being buried by the embedding model.  Degrades to pure
+        dense ranking when the corpus has no lexical index (``nodes_fts`` absent
+        on diaries built before doc-kg 0.15.6).
+
+        :param dockg: The backing :class:`~doc_kg.kg.DocKG` instance.
+        :param q: Natural-language query string.
+        :param k: Number of fused chunk seeds to keep.
+        :return: ``(chunk_node_id, score)`` pairs ordered best-first.
+        """
+        dense = [h for h in dockg.index.search(q, k=k * 15) if h.kind == "chunk"]
+        # search_lexical only indexes chunk nodes, so every id here is a chunk.
+        lex_ids = dockg.store.search_lexical(q, limit=k * 15)
+
+        dense_dist = {h.id: h.distance for h in dense}
+        lex_rank = {i: r for r, i in enumerate(lex_ids)}
+
+        scores: dict[str, float] = {}
+        for r, h in enumerate(dense):
+            scores[h.id] = scores.get(h.id, 0.0) + 1.0 / (_RRF_K + r)
+        for i, r in lex_rank.items():
+            scores[i] = scores.get(i, 0.0) + 1.0 / (_RRF_K + r)
+
+        # RRF selects the seed set; the displayed score is the stronger of the
+        # two channels (a high-confidence lexical hit must outrank a so-so dense
+        # one) so the returned order and the scores stay consistent.
+        order = sorted(scores, key=lambda i: -scores[i])[:k]
+        fused: list[tuple[str, float]] = []
+        for nid in order:
+            dense_score = max(0.0, 1.0 - dense_dist[nid]) if nid in dense_dist else 0.0
+            lex_score = (
+                _LEXICAL_SEED_BASE_SCORE - _LEXICAL_SEED_STEP * lex_rank[nid]
+                if nid in lex_rank
+                else 0.0
+            )
+            fused.append((nid, max(dense_score, lex_score)))
+        fused.sort(key=lambda t: -t[1])
+        return fused
+
     def query(self, q: str, k: int = 8) -> list[dict[str, Any]]:
         """Semantic search over the diary corpus.
 
-        Pure vector search over chunk nodes, with scores and diary metadata
-        sourced from the enriched SQLite ``nodes`` table.
+        Hybrid dense + lexical (BM25) search over chunk nodes, with scores and
+        diary metadata sourced from the enriched SQLite ``nodes`` table.
 
         :param q: Natural-language query string.
         :param k: Number of results to return.
@@ -524,32 +578,29 @@ class DiaryKG:
         dockg = self._load_dockg()
         sf = self.source_file
 
-        # Pure semantic search — oversample then filter to chunk nodes only
-        seed_hits = dockg.index.search(q, k=k * 15)
-        chunk_hits = [h for h in seed_hits if h.kind == "chunk"][:k]
-        if not chunk_hits:
+        fused = self._fused_chunk_seeds(dockg, q, k)
+        if not fused:
             return []
 
         hits = []
         with sqlite3.connect(str(self._db_path)) as con:
-            for hit in chunk_hits:
-                score = max(0.0, 1.0 - hit.distance)
+            for node_id, score in fused:
                 row = con.execute(
                     """
-                    SELECT text, timestamp, category, context, diary_source_file
+                    SELECT text, timestamp, category, context, diary_source_file, file_path
                       FROM nodes WHERE id=?
                     """,
-                    (hit.id,),
+                    (node_id,),
                 ).fetchone()
                 if not row:
                     continue
-                text, timestamp, category, context, diary_sf = row
+                text, timestamp, category, context, diary_sf, file_path = row
                 hits.append(
                     {
-                        "node_id": hit.id,
+                        "node_id": node_id,
                         "score": score,
                         "summary": (text or "")[:120],
-                        "source_file": diary_sf or sf or hit.file_path or "",
+                        "source_file": diary_sf or sf or file_path or "",
                         "timestamp": timestamp or "",
                         "category": category or "",
                         "context": context or "",
@@ -570,31 +621,29 @@ class DiaryKG:
         dockg = self._load_dockg()
         sf = self.source_file
 
-        seed_hits = dockg.index.search(q, k=k * 15)
-        chunk_hits = [h for h in seed_hits if h.kind == "chunk"][:k]
-        if not chunk_hits:
+        fused = self._fused_chunk_seeds(dockg, q, k)
+        if not fused:
             return []
 
         snippets = []
         with sqlite3.connect(str(self._db_path)) as con:
-            for hit in chunk_hits:
-                score = max(0.0, 1.0 - hit.distance)
+            for node_id, score in fused:
                 row = con.execute(
                     """
-                    SELECT text, timestamp, diary_source_file
+                    SELECT text, timestamp, diary_source_file, file_path
                       FROM nodes WHERE id=?
                     """,
-                    (hit.id,),
+                    (node_id,),
                 ).fetchone()
                 if not row:
                     continue
-                text, timestamp, diary_sf = row
+                text, timestamp, diary_sf, file_path = row
                 snippets.append(
                     {
-                        "node_id": hit.id,
+                        "node_id": node_id,
                         "score": score,
                         "content": text or "",
-                        "source_file": diary_sf or sf or hit.file_path or "",
+                        "source_file": diary_sf or sf or file_path or "",
                         "timestamp": timestamp or "",
                     }
                 )
