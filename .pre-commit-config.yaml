@@ -13,9 +13,9 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.10
+    rev: v0.15.13
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
         exclude: '^\.claude/'
         pass_filenames: false
@@ -33,13 +33,6 @@ repos:
 
   - repo: local
     hooks:
-      - id: pylint
-        name: pylint
-        entry: poetry run pylint src/diary_kg src/diary_transformer
-        language: system
-        pass_filenames: false
-        always_run: true
-        args: ['--rcfile=pyproject.toml']
       - id: ty
         name: ty
         entry: poetry run ty check src/
