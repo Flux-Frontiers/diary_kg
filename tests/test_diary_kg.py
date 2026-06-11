@@ -289,7 +289,12 @@ class TestSnapshotHelpers:
 
 class TestFusedChunkSeeds:
     def test_lexical_rescues_buried_exact_phrase(self, tmp_kg_root):
-        """An exact-phrase chunk buried by the dense channel is surfaced to #1."""
+        """Exact-phrase chunk buried in dense (rank 7) is surfaced into fused top-k.
+
+        With best-dense anchoring the lexical score is just below the best dense
+        score, so a phrase hit can't leapfrog a genuinely strong dense hit —
+        but it IS pulled from outside the top-k into the result set via RRF.
+        """
         kg = DiaryKG(tmp_kg_root)
         target = "c7"
         # Dense buries the target at rank 7; also include a non-chunk to filter.
@@ -302,8 +307,11 @@ class TestFusedChunkSeeds:
         fused = kg._fused_chunk_seeds(mock_dockg, "parmazan cheese", k=5)
         ids = [i for i, _ in fused]
 
-        assert ids[0] == target  # rescued to the top
-        assert fused[0][1] >= 0.87  # lexical-boosted, high-confidence score
+        # c7 was excluded from pure-dense top-5; RRF surfaces it into fused top-5.
+        assert target in ids
+        # Anchored just below best dense score (0.70 − 0.01 = 0.69).
+        target_score = next(score for nid, score in fused if nid == target)
+        assert target_score == pytest.approx(0.69, abs=1e-6)
         assert "ent:x" not in ids  # non-chunk dense hits are excluded
 
     def test_falls_back_to_dense_without_fts(self, tmp_kg_root):

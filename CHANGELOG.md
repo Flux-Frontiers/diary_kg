@@ -17,6 +17,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.93.2] - 2026-06-10
+
+### Added
+- Backfilled FTS5 lexical index (`nodes_fts`) on the production Pepys corpus.
+  The hybrid retrieval feature shipped in 0.93.0 was silently dead on diaries
+  built before doc-kg 0.15.7 because `nodes_fts` was never created; running
+  `dockg reindex-fts` activates it with no re-embedding.
+
+### Changed
+- Raised `doc-kg` floor from `>=0.15.6` to `>=0.15.8` to pick up calibrated
+  hybrid-retrieval constants and `rebuild_fts()`.
+- Reduced lexical oversampling limit in `_fused_chunk_seeds()` from `k×15` to
+  `k×3`. The wider window allowed OR-fallback floods on common diary words to
+  evict most of the dense top-k via RRF reward for long-tail membership.
+- Anchored lexical-seed scores to `best_dense − step×(rank+1)` instead of the
+  hardcoded `_LEXICAL_SEED_BASE_SCORE = 0.88`. The constant outranked every real
+  cosine hit (corpus tops out ~0.75) and caused OR-fallback hits to lead results
+  for thematic queries. Scores now float with the query, preventing lexical noise
+  from evicting strong semantic matches and ensuring scores are comparable across
+  KGs in federated KGRAG ranking.
+
+### Fixed
+- CI workflow renamed from `publish.yml` → `release.yml`; job id and `name:`
+  field updated to match.
+- Updated unit test for `_fused_chunk_seeds()` to reflect the new anchored-score
+  contract: a buried exact-phrase hit is surfaced into the fused top-k via RRF
+  (previously required it to be ranked #1 with score ≥ 0.87).
+
+---
+
 ## [0.93.1] - 2026-06-08
 
 ### Changed

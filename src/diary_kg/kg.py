@@ -533,8 +533,8 @@ class DiaryKG:
         :return: ``(chunk_node_id, score)`` pairs ordered best-first.
         """
         dense = [h for h in dockg.index.search(q, k=k * 15) if h.kind == "chunk"]
-        # search_lexical only indexes chunk nodes, so every id here is a chunk.
-        lex_ids = dockg.store.search_lexical(q, limit=k * 15)
+        # k*3 oversampling (not k*15) prevents OR-fallback floods from evicting dense hits.
+        lex_ids = dockg.store.search_lexical(q, limit=k * 3)
 
         dense_dist = {h.id: h.distance for h in dense}
         lex_rank = {i: r for r, i in enumerate(lex_ids)}
@@ -549,13 +549,14 @@ class DiaryKG:
         # two channels (a high-confidence lexical hit must outrank a so-so dense
         # one) so the returned order and the scores stay consistent.
         order = sorted(scores, key=lambda i: -scores[i])[:k]
+        # Anchor lexical scores just behind the best dense hit so OR-fallback
+        # noise can't outrank genuine semantic matches on this corpus.
+        best_dense = max((1.0 - d for d in dense_dist.values()), default=_LEXICAL_SEED_BASE_SCORE)
         fused: list[tuple[str, float]] = []
         for nid in order:
             dense_score = max(0.0, 1.0 - dense_dist[nid]) if nid in dense_dist else 0.0
             lex_score = (
-                _LEXICAL_SEED_BASE_SCORE - _LEXICAL_SEED_STEP * lex_rank[nid]
-                if nid in lex_rank
-                else 0.0
+                best_dense - _LEXICAL_SEED_STEP * (lex_rank[nid] + 1) if nid in lex_rank else 0.0
             )
             fused.append((nid, max(dense_score, lex_score)))
         fused.sort(key=lambda t: -t[1])
