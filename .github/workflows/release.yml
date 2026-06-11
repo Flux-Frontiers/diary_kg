@@ -27,7 +27,7 @@ jobs:
           virtualenvs-in-project: true
 
       - name: Install dependencies
-        run: poetry install --only-main --no-interaction
+        run: poetry install --only main --no-interaction
 
       - name: Build wheel and sdist
         run: poetry build
