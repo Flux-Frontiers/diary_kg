@@ -1,30 +1,29 @@
-# Release Notes — v0.93.1
+# Release Notes — v0.93.3
 
-> Released: 2026-06-08
+> Released: 2026-07-09
 
-A packaging-correctness release that completes the hybrid-retrieval work shipped
-in 0.93.0.
+A maintenance release focused on dependency and packaging hygiene. The headline
+fix raises the `kgmodule-utils` floor to pick up an encode-batch memory fix, so
+embedding large diary corpora no longer risks unbounded memory growth.
 
-### Changed
-- Promoted `doc-kg` to a **core** runtime dependency (previously an optional
-  `kgdeps` / `all` extra). Every KG operation — `build`, `reindex`, `query`,
-  `pack`, `stats` — requires DocKG via `_load_dockg()`, and DocKG's heavy
-  transitive deps (`lancedb`, `sentence-transformers`) are already core, so a
-  plain `pip install diary-kg` now yields a fully working package instead of one
-  that fails at runtime with `ImportError: doc-kg is not installed`.
+## What changed
 
-### Fixed
-- Corrected the `doc-kg` version floor from `>=0.15.0` to `>=0.15.6`. The hybrid
-  dense + lexical retrieval added in 0.93.0 calls `GraphStore.search_lexical()`,
-  which only exists in doc-kg 0.15.6+; the looser constraint could resolve an
-  incompatible doc-kg and break `query()` / `pack()`.
+**Embedding memory fix.** DiaryKG now requires `kgmodule-utils>=0.4.6`, which
+corrects memory accumulation in the batched encoder. Builds and re-indexes over
+large corpora stay within a bounded memory footprint.
 
-### Included from 0.93.0
-- Hybrid dense + lexical (BM25) retrieval for `query()` and `pack()` via
-  `DiaryKG._fused_chunk_seeds()` — reciprocal rank fusion of the dense vector
-  channel with the FTS5/BM25 lexical channel, so exact-phrase diary queries
-  surface the right entry instead of being buried by the embedding model.
-  Degrades cleanly to pure dense ranking when `nodes_fts` is absent.
+**Packaging cleanup.** The `dev` extra that had gone missing is restored,
+duplicate dev dependencies are collapsed, the unused TestPyPI source is removed,
+and stale version pins are refreshed. `poetry.lock` was regenerated to match.
+
+**CI fix.** The release workflow's Poetry invocation was using the invalid
+`--only-main` flag; it now correctly uses `--only main`.
+
+## Upgrading
+
+No action required — upgrade in place with `pip install --upgrade diary-kg`
+(or `poetry update diary-kg`). No data migration or rebuild is needed; existing
+knowledge graphs remain compatible.
 
 ---
 
