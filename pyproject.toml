@@ -78,7 +78,7 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0,<9",
     "doc-kg>=0.16.0",
-    "kgmodule-utils>=0.4.0",
+    "kgmodule-utils>=0.4.6",
     "lancedb>=0.29.0",
     "mcp>=1.0.0",
     "numpy>=1.24.0",
