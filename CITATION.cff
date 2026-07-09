@@ -13,8 +13,8 @@ authors:
     orcid: "https://orcid.org/0009-0009-0891-1507"
     email: suchanek@flux-frontiers.com
     affiliation: "Flux-Frontiers"
-version: "0.92.6"
-date-released: "2026-05-21"
+version: "0.93.3"
+date-released: "2026-07-09"
 doi: "10.5281/zenodo.19865198"
 license-url: "https://www.elastic.co/licensing/elastic-license"
 repository-code: "https://github.com/Flux-Frontiers/diary_kg"

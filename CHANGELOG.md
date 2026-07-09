@@ -17,6 +17,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.93.3] - 2026-07-09
+
+### Changed
+- Raised the `kgmodule-utils` floor to `>=0.4.6` to pick up the encode-batch
+  memory fix, preventing unbounded memory growth during large corpus embedding.
+- Packaging hygiene: added the missing `dev` extra, de-duplicated dev
+  dependencies, dropped the unused TestPyPI source, and bumped stale pins;
+  regenerated `poetry.lock` to match.
+
+### Fixed
+- CI: corrected the Poetry install flag from `--only-main` to `--only main` in
+  the release workflow.
+
+---
+
 ## [0.93.2] - 2026-06-10
 
 ### Added
