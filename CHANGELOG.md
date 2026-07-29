@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Removed
+
+### Fixed
+
+## [0.93.4] - 2026-07-29
+
+### Added
+
 - **Import-level MCP server tests** (`tests/test_mcp_server.py`). `mcp_server.py`
   builds its `FastMCP` instance and registers all three tools at module import,
   so an incompatible `mcp` breaks `diarykg-mcp` at import time — invisibly to
