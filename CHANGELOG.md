@@ -9,7 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Import-level MCP server tests** (`tests/test_mcp_server.py`). `mcp_server.py`
+  builds its `FastMCP` instance and registers all three tools at module import,
+  so an incompatible `mcp` breaks `diarykg-mcp` at import time — invisibly to
+  anyone with a pinned lock file. The tests assert the module imports, that
+  `mcp.server.fastmcp` still exists, that the entry point resolves, and that the
+  tool count matches the documented surface.
+
 ### Changed
+
+- **`mcp` upper-bounded to `<2`.** mcp 2.0 removed the bundled
+  `mcp.server.fastmcp` module — FastMCP was split out into the standalone
+  `fastmcp` package — so the previously unbounded `mcp>=1.0.0` let a clean
+  install from PyPI pull 2.x and break `diarykg-mcp` at import. Lift only
+  alongside a port to the standalone package.
 
 - **Dependency floors lifted to the currently published releases** —
   `kgmodule-utils>=0.8.0`, `doc-kg>=0.18.1`, `pycode-kg>=0.20.0`; lock
