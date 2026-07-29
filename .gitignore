@@ -208,55 +208,61 @@ __marimo__/
 
 .DS_Store
 
-# CodeKG generated artifacts — databases are transient/reproducible, snapshots are tracked
-# MUST include .codekg/snapshots!
-# This is the correct pattern
-.pycodekg/lancedb/
-.pycodekg/lancedb-*
-.pycodekg/graph.sqlite
-.pycodekg/graph.sqlite*
-.pycodekg/models
-
-# DocKG generated artifacts — same pattern as CodeKG; snapshots will be tracked once added
-.dockg/lancedb/
-.dockg/lancedb-*
-.dockg/graph.sqlite
-.dockg/graph.sqlite*
-.dockg/models
-.dockg/embeddings.json
-
-# AgentKG generated artifacts — same pattern as CodeKG/DocKG
-.agentkg/lancedb/
-.agentkg/lancedb-*
-.agentkg/graph.sqlite
-.agentkg/graph.sqlite*
-.agentkg/models
-
-# FileTreeKG generated artifacts — same pattern as CodeKG/DocKG
-.filetreekg/lancedb/
-.filetreekg/lancedb-*
-.filetreekg/graph.sqlite
-.filetreekg/graph.sqlite*
-.filetreekg/models
-
-# DiaryKG
-# DocKG generated artifacts — same pattern as CodeKG; snapshots will be tracked once added
-.diarykg/lancedb/
-.diarykg/lancedb-*
-.diarykg/graph.sqlite
-.diarykg/graph.sqlite*
-.diarykg/models
-.diarykg/corpus/
-
-# MCP server config — machine-specific, never commit
-.mcp.json
-
-
 # Large benchmark embedding files
 benchmarks/*.json
 pepys/*.pkl
 pepys/.diary_cache
 pepys/pepys_enriched_full_mpnet_embeddings.json
 
-.agentkg/
 commit.txt
+
+# === KG generated artifacts (normalized across the fleet) ===
+# Databases, vector indexes and model caches are transient and
+# reproducible. snapshots/ is TRACKED and must never be ignored --
+# never use a bare `**/.<ns>/` pattern here, it swallows snapshots too.
+
+**/.pycodekg/lancedb/
+**/.pycodekg/lancedb-*
+**/.pycodekg/*.sqlite
+**/.pycodekg/*.sqlite-shm
+**/.pycodekg/*.sqlite-wal
+**/.pycodekg/*.db
+**/.pycodekg/models
+
+**/.dockg/lancedb/
+**/.dockg/lancedb-*
+**/.dockg/*.sqlite
+**/.dockg/*.sqlite-shm
+**/.dockg/*.sqlite-wal
+**/.dockg/*.db
+**/.dockg/models
+**/.dockg/embeddings.json
+
+# AgentKG local store -- nothing under it is ever tracked
+**/.agentkg/
+
+**/.filetreekg/lancedb/
+**/.filetreekg/lancedb-*
+**/.filetreekg/*.sqlite
+**/.filetreekg/*.sqlite-shm
+**/.filetreekg/*.sqlite-wal
+**/.filetreekg/*.db
+**/.filetreekg/models
+
+**/.diarykg/lancedb/
+**/.diarykg/lancedb-*
+**/.diarykg/*.sqlite
+**/.diarykg/*.sqlite-shm
+**/.diarykg/*.sqlite-wal
+**/.diarykg/*.db
+**/.diarykg/models
+**/.diarykg/corpus
+
+# Agent scratch dirs (Claude Code / Codex)
+.agents/
+.codex/
+
+# MCP server config -- machine-specific, contains absolute paths
+.mcp.json
+.mcp.json.sav
+# === end KG generated artifacts ===
