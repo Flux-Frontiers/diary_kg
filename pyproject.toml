@@ -80,7 +80,13 @@ dependencies = [
     "doc-kg>=0.18.1",
     "kgmodule-utils>=0.8.0",
     "lancedb>=0.29.0",
-    "mcp>=1.0.0",
+    # Upper-bounded: mcp 2.0 removed the bundled `mcp.server.fastmcp` module
+    # (FastMCP was split out into the standalone `fastmcp` package) and rebuilt
+    # mcp.server around new submodules. src/diary_kg/mcp_server.py imports
+    # FastMCP from mcp, so an unbounded floor lets a clean install pull 2.x and
+    # break `diarykg-mcp` at import time. Lift this only alongside a port to
+    # the standalone fastmcp package.
+    "mcp>=1.0.0,<2",
     "numpy>=1.24.0",
     "pandas>=2.0.0",
     "rich>=14.3.3,<15",
