@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`kgmodule-utils` floor lifted to `>=0.9.0`**; lock regenerated. The floor
+  had drifted a release behind the published version, so a fresh install could
+  resolve an older shared core than the one this package is tested against.
+  Suite green against 0.9.0 (205 passed).
+
 ### Removed
 
 ### Fixed

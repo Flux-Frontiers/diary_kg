@@ -78,7 +78,7 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0,<9",
     "doc-kg>=0.18.1",
-    "kgmodule-utils>=0.8.0",
+    "kgmodule-utils>=0.9.0",
     "lancedb>=0.29.0",
     # Upper-bounded: mcp 2.0 removed the bundled `mcp.server.fastmcp` module
     # (FastMCP was split out into the standalone `fastmcp` package) and rebuilt
