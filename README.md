@@ -93,8 +93,9 @@ pip install "diary-kg[viz]"
 # With 3D visualization extras (PyVista, PyQt5, etc. — heavy dependencies)
 pip install "diary-kg[viz3d]"
 
-# With KG integration deps (pycode-kg, doc-kg)
-pip install "diary-kg[kgdeps]"
+# Cross-KG siblings are installed manually — never imported by diary_kg,
+# and declaring them here made every lock reconcile their transformers pins.
+pip install pycode-kg
 
 # Everything
 pip install "diary-kg[all]"
@@ -105,7 +106,6 @@ pip install "diary-kg[all]"
 ```bash
 poetry add diary-kg
 poetry add "diary-kg[viz]"
-poetry add "diary-kg[kgdeps]"
 ```
 
 ### Local development
@@ -331,7 +331,7 @@ diary_kg/
 - `mcp ≥ 1.0` — Model Context Protocol SDK
 - `rich ≥ 14.3` — terminal output and progress bars
 
-Optional extras (`viz`, `viz3d`, `kgdeps`, `dev`) are documented in [pyproject.toml](pyproject.toml).
+Optional extras (`viz`, `viz3d`, `dev`) are documented in [pyproject.toml](pyproject.toml).
 
 ---
 
