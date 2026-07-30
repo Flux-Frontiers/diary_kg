@@ -7,7 +7,7 @@ Snapshots are automatically captured on every commit to the `develop` branch via
 The **Temporal Snapshots** workflow (`.github/workflows/snapshots.yml`):
 
 1. **Triggers on:** Every push to `develop` branch or manual workflow dispatch
-2. **Builds:** DiaryKG database (SQLite + LanceDB vector index)
+2. **Builds:** DiaryKG database (SQLite + sqlite-vec vector index)
 3. **Captures:** Temporal snapshot with current metrics:
    - Total nodes/edges
    - Docstring coverage
@@ -153,7 +153,7 @@ for snap in snapshots:
 
 ### Out of space on runner
 - Large repositories may need more disk
-- Check `.diarykg/lancedb/` size
+- Check `.diarykg/vectors.sqlite` size
 - Consider adding cleanup step if needed
 
 ## Next Steps

@@ -55,14 +55,14 @@ packages = [
 # ---------------------------------------------------------------------------
 [project]
 name = "diary-kg"
-version = "0.93.4"
+version = "0.94.0"
 description = "A knowledge graph builder and semantic search engine for diaries and journals"
 readme = "README.md"
 license = "Elastic-2.0"
 authors = [
     { name = "Eric G. Suchanek, PhD", email = "suchanek@flux-frontiers.com" }
 ]
-keywords = ["knowledge-graph", "diary", "journal", "lancedb", "sqlite", "semantic-search", "nlp"]
+keywords = ["knowledge-graph", "diary", "journal", "sqlite-vec", "sqlite", "semantic-search", "nlp"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -77,9 +77,13 @@ classifiers = [
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0,<9",
-    "doc-kg>=0.18.1",
+    # [sqlite-vec] is required, not optional: DiaryKG pins DocKG's vector
+    # backend to sqlite-vec, and doc-kg ships the `sqlite_vec` runtime as an
+    # opt-in extra. Without it the pinned backend fails at index-open time.
+    # Floor is 0.18.2 — the release that added `DocKG(vectors_path=...)` and
+    # the `--vectors-path` CLI option this package now passes.
+    "doc-kg[sqlite-vec]>=0.18.2",
     "kgmodule-utils>=0.9.0",
-    "lancedb>=0.29.0",
     # Upper-bounded: mcp 2.0 removed the bundled `mcp.server.fastmcp` module
     # (FastMCP was split out into the standalone `fastmcp` package) and rebuilt
     # mcp.server around new submodules. src/diary_kg/mcp_server.py imports

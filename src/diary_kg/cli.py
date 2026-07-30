@@ -110,7 +110,7 @@ def build(
     topics_file,
     save_snapshot,
 ):
-    """Build the DiaryKG: ingest diary → index into SQLite + LanceDB.
+    """Build the DiaryKG: ingest diary → index into SQLite + sqlite-vec.
 
     \b
     ROOT  Project root directory (default: current directory).
@@ -149,7 +149,7 @@ def build(
     console.print(f"\n[green]✓ DiaryKG built[/green]  {n} chunks indexed")
     console.print(f"  Corpus  : {kg_dir}/corpus/")
     console.print(f"  SQLite  : {kg_dir}/graph.sqlite")
-    console.print(f"  LanceDB : {kg_dir}/lancedb/")
+    console.print(f"  Vectors : {kg_dir}/vectors.sqlite")
 
     if save_snapshot:
         try:
@@ -167,7 +167,7 @@ def build(
 @cli.command("reindex")
 @_ROOT_ARG
 def reindex(root):
-    """Rebuild the LanceDB + SQLite index from the existing corpus, skipping ingest.
+    """Rebuild the sqlite-vec + SQLite index from the existing corpus, skipping ingest.
 
     Use this after changing the embedding model or fixing an index bug when the
     corpus .md files are already up-to-date.
@@ -196,7 +196,7 @@ def reindex(root):
     kg_dir = Path(root) / DiaryKGRef.KG_DIR
     console.print("\n[green]✓ DiaryKG reindexed[/green]")
     console.print(f"  SQLite  : {kg_dir}/graph.sqlite")
-    console.print(f"  LanceDB : {kg_dir}/lancedb/")
+    console.print(f"  Vectors : {kg_dir}/vectors.sqlite")
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +400,7 @@ def status(root):
     console.print(f"  Built at    : {config.get('built_at', '[dim]n/a[/dim]')}")
     console.print(f"  Corpus      : {md_count} .md files  ({_size(corpus_dir)})")
     console.print(f"  SQLite      : {_size(kg_dir / 'graph.sqlite')}")
-    console.print(f"  LanceDB     : {_size(kg_dir / 'lancedb')}")
+    console.print(f"  Vectors     : {_size(kg_dir / 'vectors.sqlite')}")
     console.print(f"  Snapshots   : {snaps}")
     console.print()
 

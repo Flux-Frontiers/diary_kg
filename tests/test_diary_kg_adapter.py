@@ -3,7 +3,7 @@ test_diary_kg_adapter.py
 
 Unit tests for kg_rag.adapters.diary_adapter — DiaryKGAdapter.
 
-All tests mock ``diary_kg.kg.DiaryKG`` so no real DocKG or LanceDB is needed.
+All tests mock ``diary_kg.kg.DiaryKG`` so no real DocKG or vector store is needed.
 """
 
 from __future__ import annotations

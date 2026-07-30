@@ -432,7 +432,7 @@ class TestReindex:
         flat = result.output.replace("\n", "")
         assert "reindexed" in flat.lower()
         assert "graph.sqlite" in flat
-        assert "lancedb" in flat
+        assert "vectors.sqlite" in flat
 
     def test_reindex_corpus_not_found_exits_nonzero(self, tmp_path):
         mock_kg = _mock_kg()
@@ -444,7 +444,7 @@ class TestReindex:
 
     def test_reindex_unexpected_error_exits_nonzero(self, tmp_path):
         mock_kg = _mock_kg()
-        mock_kg.rebuild_index.side_effect = RuntimeError("lancedb exploded")
+        mock_kg.rebuild_index.side_effect = RuntimeError("vector index exploded")
         with patch("diary_kg.cli._kg", return_value=mock_kg):
             result = _runner().invoke(cli, ["reindex", str(tmp_path)])
         assert result.exit_code != 0

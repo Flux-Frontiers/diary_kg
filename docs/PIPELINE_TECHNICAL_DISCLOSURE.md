@@ -7,6 +7,17 @@
 **Repository:** https://github.com/Flux-Frontiers/diary_kg
 **Status:** Working implementation; validated on full 9-year corpus, consumer hardware
 
+> **Backend note (added 2026-07-30, diary-kg 0.94.0).** Every measurement below
+> was taken against the implementation as of this document's date, which used a
+> **LanceDB** vector index at `.diarykg/lancedb/`. DiaryKG has since retired
+> LanceDB for **sqlite-vec**, a single `.diarykg/vectors.sqlite` file using exact
+> rather than approximate search. The figures and stage descriptions are left as
+> measured — they are the record of the validated build — so treat the vector
+> index sections as historical. Nothing else in the pipeline changed: the
+> chunking, classification, temporal grounding and offline pre-computation
+> claims are unaffected, and the on-disk vector footprint is now substantially
+> smaller than the 102 MB reported here.
+
 ---
 
 ## 1. The Problem

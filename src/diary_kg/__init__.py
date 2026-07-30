@@ -2,7 +2,7 @@
 
 ``DiaryKG`` is the top-level class.  ``DiaryTransformer`` (in the sibling
 ``diary_transformer`` package) is the chunking engine; ``DiaryKG`` orchestrates
-it and manages the DocKG-backed storage (SQLite + LanceDB).
+it and manages the DocKG-backed storage (SQLite + a sqlite-vec vector store).
 
 Typical usage::
 

@@ -135,7 +135,7 @@ def main(argv: list | None = None) -> None:
 
     kg_dir = repo / DiaryKG.KG_DIR
     db = kg_dir / "graph.sqlite"
-    lancedb_dir = kg_dir / "lancedb"
+    vectors_path = kg_dir / "vectors.sqlite"
 
     if not db.exists():
         print(
@@ -148,7 +148,7 @@ def main(argv: list | None = None) -> None:
         f"DiaryKG MCP server starting\n"
         f"  repo     : {repo}\n"
         f"  db       : {db}\n"
-        f"  lancedb  : {lancedb_dir}\n"
+        f"  vectors  : {vectors_path}\n"
         f"  model    : {args.model}\n"
         f"  transport: {args.transport}",
         file=sys.stderr,

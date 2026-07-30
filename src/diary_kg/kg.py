@@ -4,7 +4,7 @@
 
 1. **Build**: ``DiaryTransformer.ingest_to_corpus()`` segments the source diary
    into ``.md`` chunk files under ``.diarykg/corpus/``, then ``DocKG`` indexes
-   the corpus into SQLite + LanceDB.
+   the corpus into SQLite + a sqlite-vec vector store.
 
 2. **Query / Pack**: ``DocKG`` provides semantic search; provenance is surfaced
    as the original source ``.txt`` (not the generated chunk file).
@@ -82,7 +82,7 @@ class DiaryKG:
         self._kg_dir = self.root / self.KG_DIR
         self._corpus_dir = self._kg_dir / "corpus"
         self._db_path = self._kg_dir / "graph.sqlite"
-        self._lancedb_dir = self._kg_dir / "lancedb"
+        self._vectors_path = self._kg_dir / "vectors.sqlite"
         self._config_path = self._kg_dir / "config.json"
         self._snapshot_dir = self._kg_dir / "snapshots"
 
@@ -108,7 +108,7 @@ class DiaryKG:
 
     def is_built(self) -> bool:
         """True if at least one database exists."""
-        return self._db_path.exists() or self._lancedb_dir.exists()
+        return self._db_path.exists() or self._vectors_path.exists()
 
     # ------------------------------------------------------------------
     # Config helpers
@@ -129,6 +129,53 @@ class DiaryKG:
         self._config_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
 
     # ------------------------------------------------------------------
+    # Vector store wiring
+    # ------------------------------------------------------------------
+
+    def _dockg_vector_kwargs(self) -> dict[str, Any]:
+        """Return the ``DocKG`` kwargs that pin this KG's vector store.
+
+        The backend is pinned to ``sqlite-vec`` rather than left on DocKG's
+        ``"auto"`` default: ``auto`` resolves per-store from what happens to be
+        on disk, so a leftover ``lancedb/`` directory would silently keep an
+        existing corpus on the retired backend.
+
+        ``vectors_path`` is passed explicitly even though DocKG would derive the
+        same sidecar, so the location this class reports (to ``diarykg status``
+        and to the KGRAG registry's ``KGEntry.vectors_path``) is the location
+        DocKG actually writes.
+
+        ``lancedb_dir`` is a pre-migration parameter name in ``kg_utils`` that
+        still takes a *directory*; DocKG forwards it to ``SemanticIndex`` for
+        metadata and for the lazy LanceDB fallback that an explicit sqlite-vec
+        backend never reaches.  Passing the vector file's parent mirrors
+        ``pycode_kg``'s ``SemanticIndex(vectors_path.parent, ...)`` and keeps
+        that metadata pointing inside ``.diarykg/``.
+
+        :return: Keyword arguments for :class:`~doc_kg.kg.DocKG`.
+        """
+        return {
+            "lancedb_dir": str(self._vectors_path.parent),
+            "vector_backend": "sqlite-vec",
+            "vectors_path": str(self._vectors_path),
+        }
+
+    def _dockg_cli_vector_args(self) -> list[str]:
+        """Return the ``dockg`` CLI flags matching :meth:`_dockg_vector_kwargs`.
+
+        Used by the subprocess fallback taken when ``doc_kg`` is installed as a
+        CLI but not importable in this interpreter.
+
+        :return: Argument list to splice into a ``dockg build`` invocation.
+        """
+        return [
+            "--vector-backend",
+            "sqlite-vec",
+            "--vectors-path",
+            str(self._vectors_path),
+        ]
+
+    # ------------------------------------------------------------------
     # Lazy DocKG loader
     # ------------------------------------------------------------------
 
@@ -146,8 +193,8 @@ class DiaryKG:
         self._dockg = DocKG(
             corpus_root=str(self._corpus_dir),
             db_path=str(self._db_path),
-            lancedb_dir=str(self._lancedb_dir),
             model=self._model,
+            **self._dockg_vector_kwargs(),
         )
         return self._dockg
 
@@ -184,7 +231,7 @@ class DiaryKG:
         """Run the full build pipeline: ingest → index.
 
         1. ``DiaryTransformer.ingest_to_corpus()`` → ``.diarykg/corpus/*.md``
-        2. ``dockg build`` → ``.diarykg/graph.sqlite`` + ``.diarykg/lancedb/``
+        2. ``dockg build`` → ``.diarykg/graph.sqlite`` + ``.diarykg/vectors.sqlite``
         3. (optional) ``diary_embedder`` → JSON embedding cache
 
         :param batch_size: Entries to sample (``0`` = all).
@@ -219,11 +266,11 @@ class DiaryKG:
         if wipe:
             import shutil  # pylint: disable=import-outside-toplevel
 
-            for target in (self._corpus_dir, self._lancedb_dir):
-                if target.exists():
-                    shutil.rmtree(target)
-            if self._db_path.exists():
-                self._db_path.unlink()
+            if self._corpus_dir.exists():
+                shutil.rmtree(self._corpus_dir)
+            for db_file in (self._db_path, self._vectors_path):
+                if db_file.exists():
+                    db_file.unlink()
             # Also wipe the DiaryTransformer chunk cache adjacent to the source file
             stem = src_path.stem
             for ext in ("_chunks.json", "_chunks.pkl"):
@@ -272,9 +319,9 @@ class DiaryKG:
             dockg = DocKG(
                 corpus_root=str(self._corpus_dir),
                 db_path=str(self._db_path),
-                lancedb_dir=str(self._lancedb_dir),
                 model=self._model,
                 embedder=shared_embedder,
+                **self._dockg_vector_kwargs(),
             )
             dockg.build(wipe=True)
             self._dockg = dockg
@@ -288,8 +335,7 @@ class DiaryKG:
                     str(self._corpus_dir),
                     "--sqlite",
                     str(self._db_path),
-                    "--lancedb",
-                    str(self._lancedb_dir),
+                    *self._dockg_cli_vector_args(),
                     "--no-similar",
                 ],
                 check=True,
@@ -322,7 +368,7 @@ class DiaryKG:
         """Re-run DocKG indexing on the existing corpus, skipping ingest.
 
         Use this when the corpus ``.md`` files are already up-to-date but the
-        LanceDB / SQLite index needs to be rebuilt — e.g. after changing the
+        vector / SQLite index needs to be rebuilt — e.g. after changing the
         embedding model or fixing an index-build bug.
 
         :raises FileNotFoundError: If the corpus directory doesn't exist.
@@ -333,12 +379,9 @@ class DiaryKG:
             )
 
         # Wipe only the index, keep corpus files.
-        import shutil  # pylint: disable=import-outside-toplevel
-
-        if self._lancedb_dir.exists():
-            shutil.rmtree(self._lancedb_dir)
-        if self._db_path.exists():
-            self._db_path.unlink()
+        for db_file in (self._db_path, self._vectors_path):
+            if db_file.exists():
+                db_file.unlink()
         self._dockg = None
 
         print(f"Building DocKG index for {self._corpus_dir}...")
@@ -348,8 +391,8 @@ class DiaryKG:
             dockg = DocKG(
                 corpus_root=str(self._corpus_dir),
                 db_path=str(self._db_path),
-                lancedb_dir=str(self._lancedb_dir),
                 model=self._model,
+                **self._dockg_vector_kwargs(),
             )
             dockg.build(wipe=True, discover_similar=False)
             self._dockg = dockg
@@ -364,8 +407,7 @@ class DiaryKG:
                     str(self._corpus_dir),
                     "--sqlite",
                     str(self._db_path),
-                    "--lancedb",
-                    str(self._lancedb_dir),
+                    *self._dockg_cli_vector_args(),
                     "--no-similar",
                 ],
                 check=True,

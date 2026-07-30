@@ -11,14 +11,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+### Removed
+
+### Fixed
+
+## [0.94.0] - 2026-07-30
+
+Retires LanceDB as DiaryKG's vector store in favour of sqlite-vec — Phase 1 of
+the fleet migration tracked in `pycode_kg/MIGRATION-sqlite-vec.md`.
+
+**Breaking:** the vector artifact moves from the `.diarykg/lancedb/` *directory*
+to a single `.diarykg/vectors.sqlite` *file*. Existing corpora are not converted
+in place; rebuild with `diarykg reindex` (corpus `.md` files are reused, so no
+re-ingest is needed). A leftover `lancedb/` directory is now inert and no longer
+counts towards `DiaryKG.is_built()` — delete it to reclaim the space.
+
+### Added
+
+- **`vectors.sqlite` is the vector store.** `DiaryKG` pins DocKG's backend to
+  `sqlite-vec` at all three construction sites rather than leaving it on the
+  `"auto"` default. `auto` resolves per-store from what is on disk, so a stale
+  `lancedb/` directory would have silently kept an existing corpus on the
+  retired backend — the trap that makes a repo look migrated in code while
+  still running LanceDB.
+
+- **`KGEntry.vectors_path`** (`diary_kg.primitives`), mirroring
+  `kg_rag.primitives.KGEntry` field-for-field. `diary-transformer build` now
+  registers this instead of `lancedb_path`. `lancedb_path` is retained and
+  documented as deprecated so pre-0.94.0 registry entries still load.
+
+- **Migration guard tests** (`TestVectorStoreWiring`) asserting the backend is
+  pinned rather than inferred, that `vectors_path` is passed explicitly, and
+  that the CLI fallback emits `--vectors-path` and never `--lancedb`.
+
+### Changed
+
+- **`DiaryKG._lancedb_dir` → `_vectors_path`**, and the DocKG kwargs are
+  centralised in `_dockg_vector_kwargs()` / `_dockg_cli_vector_args()` so the
+  three construction sites and two subprocess fallbacks cannot drift apart.
+
+  DocKG's `lancedb_dir` parameter is still passed — it is a pre-migration name
+  in `kg_utils` that takes a *directory*, forwarded to `SemanticIndex` for
+  metadata and for a lazy LanceDB fallback that an explicit sqlite-vec backend
+  never reaches. It receives the vector file's parent (`.diarykg/`), mirroring
+  `pycode_kg`'s `SemanticIndex(vectors_path.parent, ...)`. It is not renamed:
+  the identifier is real and still load-bearing upstream.
+
+- **`dockg` subprocess fallbacks pass `--vector-backend sqlite-vec
+  --vectors-path`** instead of `--lancedb`. `diary-transformer build` pins the
+  backend the same way, so its outcome no longer depends on whether a
+  `lancedb/` directory happens to exist in the target corpus.
+
+- **CLI labels report the real artifact.** `diarykg build`, `diarykg reindex`
+  and `diarykg status` printed a `LanceDB :` path label while writing
+  `vectors.sqlite`; they now print `Vectors :`. The `diarykg-mcp` startup banner
+  likewise reports `vectors` rather than `lancedb`. (Filed as a cosmetic item in
+  the KGRAG TODO.)
+
+- **`doc-kg` floor lifted to `>=0.18.2` and installed with `[sqlite-vec]`.**
+  0.18.2 is the release that added `DocKG(vectors_path=...)` and the
+  `--vectors-path` CLI option this package now passes. The extra is *not*
+  optional here: doc-kg ships the `sqlite_vec` runtime opt-in, so pinning the
+  backend without it would fail when the index is opened.
+
+- **`wipe` semantics.** `DiaryKG.build(wipe=True)` and `rebuild_index()` unlink
+  the `vectors.sqlite` file instead of `rmtree`-ing a directory.
+
+### Removed
+
+- **Direct `lancedb>=0.29.0` dependency**, and `lancedb` from the package
+  keywords.
+
+  Note this does **not** yet remove LanceDB from an install: `doc-kg` still
+  hard-requires it (its Phase 4), and `kgmodule-utils[semantic]` still carries
+  it, so it continues to arrive transitively. Dropping the direct dependency is
+  still correct — it just will not shrink the venv until those land.
+
+### Fixed
+
 - **`kgmodule-utils` floor lifted to `>=0.9.0`**; lock regenerated. The floor
   had drifted a release behind the published version, so a fresh install could
   resolve an older shared core than the one this package is tested against.
   Suite green against 0.9.0 (205 passed).
-
-### Removed
-
-### Fixed
 
 ## [0.93.4] - 2026-07-29
 
