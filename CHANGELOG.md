@@ -19,12 +19,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Two classifier defects, both found while running the sqlite-vec parity control
 added in 0.95.0. Neither was cosmetic — both wrote bad data into chunk
-frontmatter.
+frontmatter. Alongside them, the `doc-kg` 0.20.0 floor finally drops LanceDB out
+of the install.
 
 **Minor rather than patch:** category names change, so the `category`/`topics`
 frontmatter differs on rebuild and retrieval output can shift. Existing corpora
 are not byte-comparable across this release; rebuild rather than diff against an
 older one.
+
+### Changed
+
+- **`doc-kg` floor lifted to `>=0.20.0`, and the `[sqlite-vec]` extra dropped
+  from the requirement.** doc-kg 0.20.0 promotes `sqlite-vec` to a core
+  dependency, so the extra is now a no-op — `doc-kg[sqlite-vec]` and `doc-kg`
+  resolve to the same install. The requirement is written plainly as
+  `doc-kg>=0.20.0`. The 0.94.0 rationale for pinning the extra (doc-kg shipped
+  the `sqlite_vec` runtime opt-in, so the pinned backend failed at index-open
+  time without it) no longer applies.
+
+### Removed
+
+- **LanceDB is out of the dependency tree.** 0.95.0 noted that no change
+  confined to this repo could remove it, because `doc-kg` declared
+  `lancedb>=0.29.0` as a *core* dependency. doc-kg 0.20.0 moves it behind a
+  `lancedb` extra, which DiaryKG does not request — so relocking drops
+  `lancedb` and its subtree (`lance-namespace`,
+  `lance-namespace-urllib3-client`, `cachetools`, `decorator`, `deprecation`)
+  from `poetry.lock` entirely. This is doc_kg's Phase 4 landing; the retirement
+  begun in 0.94.0 is complete.
+
+  Existing virtualenvs keep the stale wheels until they are re-synced — run
+  `poetry install --sync` (or rebuild the venv) to actually reclaim the space.
 
 ### Fixed
 

@@ -1,7 +1,7 @@
 # pyproject.toml — DiaryKG package configuration (PEP 621)
 #
 # Author: Eric G. Suchanek, PhD
-# Last Revision: 2026-07-29
+# Last Revision: 2026-07-31
 #
 # Build system : Poetry 2.x with PEP 621 [project] table
 #
@@ -75,12 +75,10 @@ classifiers = [
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "click>=8.1.0,<9",
-    # [sqlite-vec] is required, not optional: DiaryKG pins DocKG's vector
-    # backend to sqlite-vec, and doc-kg ships the `sqlite_vec` runtime as an
-    # opt-in extra. Without it the pinned backend fails at index-open time.
-    # Floor is 0.18.2 — the release that added `DocKG(vectors_path=...)` and
-    # the `--vectors-path` CLI option this package now passes.
-    "doc-kg[sqlite-vec]>=0.18.2",
+    # Floor is 0.20.0: that release promotes `sqlite-vec` to a core doc-kg
+    # dependency (so the old `[sqlite-vec]` extra is now a no-op) and moves
+    # `lancedb` behind an extra we do not request, keeping it out of the tree.
+    "doc-kg>=0.20.0",
     "kgmodule-utils>=0.9.0",
     # Upper-bounded: mcp 2.0 removed the bundled `mcp.server.fastmcp` module
     # (FastMCP was split out into the standalone `fastmcp` package) and rebuilt
