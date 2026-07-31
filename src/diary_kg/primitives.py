@@ -40,18 +40,16 @@ class KGEntry:
     :param is_built: ``True`` when the underlying DB files exist and are
                      non-empty.
     :param sqlite_path: Optional explicit SQLite database path.
-    :param lancedb_path: Optional explicit LanceDB directory path.
-                         **Deprecated** — DiaryKG no longer writes a LanceDB
-                         store.  Retained so entries registered before 0.94.0
-                         still load; mirrors ``kg_rag.primitives.KGEntry``,
-                         where the column stays load-bearing until every KG kind
-                         in the fleet reports a ``vectors_path``.
     :param vectors_path: Optional explicit path to the sqlite-vec vector store
-                         *file* (``.diarykg/vectors.sqlite``).  This is the
-                         vector store DiaryKG builds as of 0.94.0.
+                         *file* (``.diarykg/vectors.sqlite``) — the only vector
+                         store DiaryKG builds.
 
-    Field order mirrors ``kg_rag.primitives.KGEntry`` so the two stay readable
-    side by side.
+    .. note::
+       ``lancedb_path`` was removed in 0.95.0 with no deprecation period.
+       DiaryKG has not written a LanceDB store since 0.94.0, and this class is
+       DiaryKG's own registry record, not the federated one — construct
+       ``kg_rag.primitives.KGEntry`` directly if you need the column that still
+       spans both backends for un-migrated KG kinds.
     """
 
     name: str
@@ -60,7 +58,6 @@ class KGEntry:
     metadata: dict[str, Any] = field(default_factory=dict)
     is_built: bool = False
     sqlite_path: Path | None = None
-    lancedb_path: Path | None = None
     vectors_path: Path | None = None
 
 

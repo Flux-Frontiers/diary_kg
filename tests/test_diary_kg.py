@@ -77,8 +77,9 @@ class TestVectorStoreWiring:
     """DocKG must be pinned to sqlite-vec at an explicit, reported path.
 
     Left on DocKG's ``"auto"`` default the backend resolves from whatever is on
-    disk, so a stale ``lancedb/`` directory would silently keep a corpus on the
-    retired backend.  These tests fail if that pin is ever dropped.
+    disk, so a directory left over from a pre-0.94.0 build would silently pull a
+    corpus back onto the retired backend.  These tests fail if that pin is ever
+    dropped.
     """
 
     def test_vectors_path_is_kg_dir_sidecar(self, tmp_kg_root):
@@ -93,16 +94,15 @@ class TestVectorStoreWiring:
         kg = DiaryKG(tmp_kg_root)
         assert kg._dockg_vector_kwargs()["vectors_path"] == str(kg._vectors_path)
 
-    def test_lancedb_dir_kwarg_is_the_vector_file_parent(self, tmp_kg_root):
-        """``lancedb_dir`` is a kg_utils leftover taking a *directory*.
+    def test_no_retired_backend_kwargs(self, tmp_kg_root):
+        """DiaryKG passes nothing naming the retired backend (0.95.0).
 
-        DocKG forwards it to ``SemanticIndex`` for metadata and its lazy LanceDB
-        fallback.  It must point inside ``.diarykg/`` — never at a path whose
-        deletion would take the corpus with it.
+        Only the pin and the store path go to DocKG; its own retired-backend
+        parameter is left at its default, which a pinned backend never reads.
         """
-        kg = DiaryKG(tmp_kg_root)
-        kwargs = kg._dockg_vector_kwargs()
-        assert kwargs["lancedb_dir"] == str(tmp_kg_root / ".diarykg")
+        kwargs = DiaryKG(tmp_kg_root)._dockg_vector_kwargs()
+        assert set(kwargs) == {"vector_backend", "vectors_path"}
+        assert not any("lance" in k.lower() for k in kwargs)
 
     def test_cli_args_pin_backend_and_path(self, tmp_kg_root):
         kg = DiaryKG(tmp_kg_root)

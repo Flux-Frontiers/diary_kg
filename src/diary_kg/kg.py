@@ -135,27 +135,25 @@ class DiaryKG:
     def _dockg_vector_kwargs(self) -> dict[str, Any]:
         """Return the ``DocKG`` kwargs that pin this KG's vector store.
 
-        The backend is pinned to ``sqlite-vec`` rather than left on DocKG's
-        ``"auto"`` default: ``auto`` resolves per-store from what happens to be
-        on disk, so a leftover ``lancedb/`` directory would silently keep an
-        existing corpus on the retired backend.
+        The backend is pinned rather than left on DocKG's ``"auto"`` default:
+        ``auto`` resolves per-store from what happens to be on disk, so a
+        directory left over from a pre-0.94.0 build would silently pull an
+        existing corpus back onto the retired backend.
 
         ``vectors_path`` is passed explicitly even though DocKG would derive the
         same sidecar, so the location this class reports (to ``diarykg status``
         and to the KGRAG registry's ``KGEntry.vectors_path``) is the location
         DocKG actually writes.
 
-        ``lancedb_dir`` is a pre-migration parameter name in ``kg_utils`` that
-        still takes a *directory*; DocKG forwards it to ``SemanticIndex`` for
-        metadata and for the lazy LanceDB fallback that an explicit sqlite-vec
-        backend never reaches.  Passing the vector file's parent mirrors
-        ``pycode_kg``'s ``SemanticIndex(vectors_path.parent, ...)`` and keeps
-        that metadata pointing inside ``.diarykg/``.
+        DocKG's own retired-backend parameter is deliberately **not** passed.
+        It is only forwarded to ``SemanticIndex`` for metadata and for a lazy
+        fallback that an explicitly pinned backend never reaches, so leaving it
+        at DocKG's default is inert here — nothing reads it, and nothing creates
+        the directory it names.
 
         :return: Keyword arguments for :class:`~doc_kg.kg.DocKG`.
         """
         return {
-            "lancedb_dir": str(self._vectors_path.parent),
             "vector_backend": "sqlite-vec",
             "vectors_path": str(self._vectors_path),
         }

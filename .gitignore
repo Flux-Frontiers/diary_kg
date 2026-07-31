@@ -249,8 +249,6 @@ commit.txt
 **/.filetreekg/*.db
 **/.filetreekg/models
 
-**/.diarykg/lancedb/
-**/.diarykg/lancedb-*
 **/.diarykg/*.sqlite
 **/.diarykg/*.sqlite-shm
 **/.diarykg/*.sqlite-wal
