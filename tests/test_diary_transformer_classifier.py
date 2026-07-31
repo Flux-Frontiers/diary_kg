@@ -13,6 +13,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from diary_transformer.classifier import (
+    _NON_TOPICAL_TERMS,
+    _generate_category_name,
     classify_chunk,
     classify_chunk_hybrid,
     discover_semantic_categories,
@@ -225,3 +227,65 @@ class TestCategoryDiscoveryIsDeterministic:
         assert discover_semantic_categories(
             self.CHUNKS, n_categories=3
         ) == discover_semantic_categories(self.CHUNKS, n_categories=3, seed=_DEFAULT_CLUSTER_SEED)
+
+
+# ---------------------------------------------------------------------------
+# Category naming quality
+# ---------------------------------------------------------------------------
+
+
+class TestCategoryNaming:
+    """Names must be topical, not honorifics or narrative filler.
+
+    Falling back blindly to ``top_terms[0]`` produced labels like ``mr``,
+    ``lord``, ``bed`` and ``day``. Those are not cosmetic: ``classify_chunk``
+    routes any chunk missing its keyword rules to ``categories[0]``, so a
+    garbage first category is written into the ``category`` frontmatter of a
+    large share of the corpus.
+    """
+
+    def test_curated_mapping_wins(self):
+        assert _generate_category_name(["office", "ledger"]) == "work"
+
+    def test_honorifics_are_skipped(self):
+        assert _generate_category_name(["mr", "lord", "sir", "shipping"]) == "shipping"
+
+    def test_narrative_filler_is_skipped(self):
+        assert _generate_category_name(["day", "bed", "went", "theatre"]) == "theatre"
+
+    def test_short_terms_are_skipped(self):
+        assert _generate_category_name(["wm", "ye", "navy"]) == "navy"
+
+    def test_all_useless_falls_back_to_general(self):
+        assert _generate_category_name(["mr", "sir", "day", "bed"]) == "general"
+
+    def test_multiword_terms_are_underscored(self):
+        assert _generate_category_name(["naval stores"]) == "naval_stores"
+
+    def test_mapping_beats_an_earlier_informative_term(self):
+        """A curated mapping outranks position, so labels stay stable."""
+        assert _generate_category_name(["shipping", "church"]) == "spiritual"
+
+
+class TestCategoriesAreDeduplicated:
+    """Distinct clusters mapping to one label must not appear twice.
+
+    ``classify_chunk`` resolves a label with
+    ``next(c for c in categories if label in c)``, so a duplicate is
+    unreachable and its cluster slot is wasted. A real run returned
+    ``domestic`` and ``lord`` twice each.
+    """
+
+    CHUNKS = TestCategoryDiscoveryIsDeterministic.CHUNKS
+
+    def test_no_duplicates_returned(self):
+        cats = discover_semantic_categories(self.CHUNKS, n_categories=6)
+        assert len(cats) == len(set(cats))
+
+    def test_order_is_preserved(self):
+        cats = discover_semantic_categories(self.CHUNKS, n_categories=6)
+        assert cats == list(dict.fromkeys(cats))
+
+    def test_no_honorific_or_filler_labels(self):
+        cats = discover_semantic_categories(self.CHUNKS, n_categories=6)
+        assert not (set(cats) & _NON_TOPICAL_TERMS), cats
