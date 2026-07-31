@@ -15,6 +15,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.96.0] - 2026-07-31
+
+Two classifier defects, both found while running the sqlite-vec parity control
+added in 0.95.0. Neither was cosmetic — both wrote bad data into chunk
+frontmatter.
+
+**Minor rather than patch:** category names change, so the `category`/`topics`
+frontmatter differs on rebuild and retrieval output can shift. Existing corpora
+are not byte-comparable across this release; rebuild rather than diff against an
+older one.
+
+### Fixed
+
 - **Category discovery was nondeterministic, making builds unreproducible.**
   `discover_semantic_categories()` clustered with `KMeans(random_state=None)`,
   which re-initialises randomly on every call. The discovered categories — and
