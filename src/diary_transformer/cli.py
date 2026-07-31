@@ -4,7 +4,7 @@ Entry points::
 
     diary-transformer transform <input> <output>   # pipe-delimited chunk file
     diary-transformer ingest    <input> <corpus>   # DocKG-compatible .md corpus
-    diary-transformer build     <corpus>           # index corpus → SQLite + LanceDB
+    diary-transformer build     <corpus>           # index corpus → SQLite + sqlite-vec
 """
 
 from __future__ import annotations
@@ -321,7 +321,10 @@ def _build_dockg(corpus_dir: str, update: bool, kg_name, registry) -> None:
     """Shared implementation for build and build-update commands."""
     corpus = Path(corpus_dir).resolve()
 
-    cmd = ["dockg", "build", "--repo", str(corpus)]
+    # Pin the vector backend rather than leaving DocKG on "auto": auto resolves
+    # from whatever is on disk, so a leftover lancedb/ directory in the corpus
+    # would keep this build on the retired backend.
+    cmd = ["dockg", "build", "--repo", str(corpus), "--vector-backend", "sqlite-vec"]
     if update:
         cmd.append("--update")
 
@@ -343,13 +346,13 @@ def _build_dockg(corpus_dir: str, update: bool, kg_name, registry) -> None:
     # Locate built DB paths
     db_dir = corpus / ".dockg"
     sqlite_path = db_dir / "graph.sqlite"
-    lancedb_path = db_dir / "lancedb"
+    vectors_path = db_dir / "vectors.sqlite"
 
     console.print("\n[green]✓ DocKG build complete[/green]")
     if sqlite_path.exists():
         console.print(f"  SQLite  : {sqlite_path}")
-    if lancedb_path.exists():
-        console.print(f"  LanceDB : {lancedb_path}")
+    if vectors_path.exists():
+        console.print(f"  Vectors : {vectors_path}")
 
     # ---- Step 2: optional kgrag registration ----
     if kg_name:
@@ -366,7 +369,7 @@ def _build_dockg(corpus_dir: str, update: bool, kg_name, registry) -> None:
                 repo_path=corpus,
                 venv_path=corpus / ".venv",
                 sqlite_path=sqlite_path if sqlite_path.exists() else None,
-                lancedb_path=lancedb_path if lancedb_path.exists() else None,
+                vectors_path=vectors_path if vectors_path.exists() else None,
                 tags=[date.today().isoformat()],
             )
 

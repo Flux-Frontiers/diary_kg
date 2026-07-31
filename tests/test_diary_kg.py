@@ -54,11 +54,62 @@ class TestIsBuilt:
         kg = DiaryKG(built_kg_root)
         assert kg.is_built() is True
 
-    def test_lancedb_only_returns_true(self, tmp_kg_root):
-        lancedb_dir = tmp_kg_root / ".diarykg" / "lancedb"
-        lancedb_dir.mkdir(parents=True)
+    def test_vectors_only_returns_true(self, tmp_kg_root):
+        kg_dir = tmp_kg_root / ".diarykg"
+        kg_dir.mkdir(parents=True)
+        (kg_dir / "vectors.sqlite").touch()
         kg = DiaryKG(tmp_kg_root)
         assert kg.is_built() is True
+
+    def test_stale_lancedb_dir_is_not_built(self, tmp_kg_root):
+        """A leftover pre-0.94.0 LanceDB store no longer counts as built."""
+        (tmp_kg_root / ".diarykg" / "lancedb").mkdir(parents=True)
+        kg = DiaryKG(tmp_kg_root)
+        assert kg.is_built() is False
+
+
+# ---------------------------------------------------------------------------
+# Vector store wiring — guards the sqlite-vec migration (0.94.0)
+# ---------------------------------------------------------------------------
+
+
+class TestVectorStoreWiring:
+    """DocKG must be pinned to sqlite-vec at an explicit, reported path.
+
+    Left on DocKG's ``"auto"`` default the backend resolves from whatever is on
+    disk, so a stale ``lancedb/`` directory would silently keep a corpus on the
+    retired backend.  These tests fail if that pin is ever dropped.
+    """
+
+    def test_vectors_path_is_kg_dir_sidecar(self, tmp_kg_root):
+        kg = DiaryKG(tmp_kg_root)
+        assert kg._vectors_path == tmp_kg_root / ".diarykg" / "vectors.sqlite"
+
+    def test_backend_is_pinned_not_auto(self, tmp_kg_root):
+        kwargs = DiaryKG(tmp_kg_root)._dockg_vector_kwargs()
+        assert kwargs["vector_backend"] == "sqlite-vec"
+
+    def test_vectors_path_passed_explicitly(self, tmp_kg_root):
+        kg = DiaryKG(tmp_kg_root)
+        assert kg._dockg_vector_kwargs()["vectors_path"] == str(kg._vectors_path)
+
+    def test_lancedb_dir_kwarg_is_the_vector_file_parent(self, tmp_kg_root):
+        """``lancedb_dir`` is a kg_utils leftover taking a *directory*.
+
+        DocKG forwards it to ``SemanticIndex`` for metadata and its lazy LanceDB
+        fallback.  It must point inside ``.diarykg/`` — never at a path whose
+        deletion would take the corpus with it.
+        """
+        kg = DiaryKG(tmp_kg_root)
+        kwargs = kg._dockg_vector_kwargs()
+        assert kwargs["lancedb_dir"] == str(tmp_kg_root / ".diarykg")
+
+    def test_cli_args_pin_backend_and_path(self, tmp_kg_root):
+        kg = DiaryKG(tmp_kg_root)
+        args = kg._dockg_cli_vector_args()
+        assert "--lancedb" not in args
+        assert args[args.index("--vector-backend") + 1] == "sqlite-vec"
+        assert args[args.index("--vectors-path") + 1] == str(kg._vectors_path)
 
 
 # ---------------------------------------------------------------------------

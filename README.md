@@ -17,14 +17,14 @@
 
 ## Overview
 
-DiaryKG ingests plain-text diary or journal files and produces a hybrid SQLite + LanceDB knowledge graph that supports natural-language querying, source-grounded snippet packs for LLM context, temporal analysis, and topic/context classification.
+DiaryKG ingests plain-text diary or journal files and produces a hybrid SQLite + sqlite-vec knowledge graph that supports natural-language querying, source-grounded snippet packs for LLM context, temporal analysis, and topic/context classification.
 
 It was built around the **Samuel Pepys diary** (1660–1669, 7,282 entries) but is general-purpose — any structured plain-text diary or journal file is supported.
 
 The system is organized as two cooperating Python packages:
 
 - **`diary_transformer`** — spaCy NLP enrichment, topic classification, sentence-group chunking, diversity sampling. Turns a raw diary text file into one Markdown chunk-file per entry, with full provenance metadata.
-- **`diary_kg`** — orchestrates the chunking pipeline, builds the DocKG-backed SQLite graph + LanceDB vector index over the chunked corpus, and exposes the query / pack / analyze / snapshot APIs and an MCP server.
+- **`diary_kg`** — orchestrates the chunking pipeline, builds the DocKG-backed SQLite graph + sqlite-vec vector index over the chunked corpus, and exposes the query / pack / analyze / snapshot APIs and an MCP server.
 
 ### Architecture
 
@@ -39,7 +39,7 @@ DiaryTransformer          spaCy NLP enrichment, topic classification,
 Corpus (.md files)        one file per chunk, full provenance metadata
   .diarykg/corpus/
        │
-       ├──▶ DocKG build   SQLite graph + LanceDB vector index
+       ├──▶ DocKG build   SQLite graph + sqlite-vec vector index
        │     (doc-kg)     BAAI/bge-small-en-v1.5 (384-d, normalized)
        │
        └──▶ DiaryKG APIs  query(), pack(), analyze(), snapshot_save()
@@ -52,7 +52,7 @@ Corpus (.md files)        one file per chunk, full provenance metadata
   config.json         build parameters
   corpus/             one .md chunk file per diary entry
   graph.sqlite        SQLite knowledge graph (DocKG)
-  lancedb/            LanceDB vector index (384-d HNSW)
+  vectors.sqlite      sqlite-vec vector index (384-d, exact search)
   snapshots/          point-in-time metrics snapshots
 ```
 
@@ -93,8 +93,9 @@ pip install "diary-kg[viz]"
 # With 3D visualization extras (PyVista, PyQt5, etc. — heavy dependencies)
 pip install "diary-kg[viz3d]"
 
-# With KG integration deps (pycode-kg, doc-kg)
-pip install "diary-kg[kgdeps]"
+# Cross-KG siblings are installed manually — never imported by diary_kg,
+# and declaring them here made every lock reconcile their transformers pins.
+pip install pycode-kg
 
 # Everything
 pip install "diary-kg[all]"
@@ -105,7 +106,6 @@ pip install "diary-kg[all]"
 ```bash
 poetry add diary-kg
 poetry add "diary-kg[viz]"
-poetry add "diary-kg[kgdeps]"
 ```
 
 ### Local development
@@ -126,8 +126,8 @@ The `diarykg` console script is the primary entry point. The MCP server ships as
 
 | Command | Purpose |
 |---|---|
-| `diarykg build` | Full pipeline: ingest diary → chunk → index into SQLite + LanceDB |
-| `diarykg reindex` | Rebuild the LanceDB + SQLite index from the existing corpus (skips ingest) |
+| `diarykg build` | Full pipeline: ingest diary → chunk → index into SQLite + sqlite-vec |
+| `diarykg reindex` | Rebuild the sqlite-vec + SQLite index from the existing corpus (skips ingest) |
 | `diarykg query <QUERY>` | Hybrid semantic + graph search; returns ranked hits |
 | `diarykg pack <QUERY>` | Source-grounded Markdown snippet pack for LLM context |
 | `diarykg analyze` | Generate a Markdown analysis report for the corpus |
@@ -323,16 +323,15 @@ diary_kg/
 
 ## Dependencies
 
-- `doc-kg ≥ 0.12.0` — hybrid semantic + structural document knowledge graph
+- `doc-kg[sqlite-vec] ≥ 0.18.2` — hybrid semantic + structural document knowledge graph
 - `kgmodule-utils ≥ 0.2.3` — shared embedding, model cache, and snapshot utilities
 - `spacy ≥ 3.8` with `en_core_web_sm` model
 - `sentence-transformers ≥ 5.4`
-- `lancedb ≥ 0.29`
 - `transformers ≥ 4.57`
 - `mcp ≥ 1.0` — Model Context Protocol SDK
 - `rich ≥ 14.3` — terminal output and progress bars
 
-Optional extras (`viz`, `viz3d`, `kgdeps`, `dev`) are documented in [pyproject.toml](pyproject.toml).
+Optional extras (`viz`, `viz3d`, `dev`) are documented in [pyproject.toml](pyproject.toml).
 
 ---
 
