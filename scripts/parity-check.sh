@@ -249,31 +249,48 @@ import sqlite3, sys
 from pathlib import Path
 
 def chunks(root):
+    """Map chunk id -> text. Comparing IDS ALONE IS NOT ENOUGH.
+
+    Measured 2026-07-31: two builds produced identical id sets (1657 == 1657,
+    symmetric difference 0) while 57 of those chunks — 3.4% — held DIFFERENT
+    TEXT. The chunker can move a boundary without changing the split count, so
+    the id survives and the content underneath it does not. An id-only check
+    reports "corpora identical" and every downstream difference then gets
+    blamed on the backend.
+    """
     db = Path(root) / ".diarykg" / "graph.sqlite"
-    return {r[0] for r in sqlite3.connect(db).execute(
-        "SELECT id FROM nodes WHERE kind='chunk'")}
+    return dict(sqlite3.connect(db).execute(
+        "SELECT id, text FROM nodes WHERE kind='chunk'"))
 
 c, m = chunks(sys.argv[1]), chunks(sys.argv[2])
-only_c, only_m = sorted(c - m), sorted(m - c)
+only_c, only_m = sorted(set(c) - set(m)), sorted(set(m) - set(c))
+retext = sorted(k for k in c if k in m and c[k] != m[k])
 
 print(f"control chunk nodes  : {len(c)}")
 print(f"migrated chunk nodes : {len(m)}")
+print(f"same id, other text  : {len(retext)}")
 
-if not (only_c or only_m):
-    print("corpora identical — any diff below is attributable to the backend")
+if not (only_c or only_m or retext):
+    print("corpora identical in id AND text — the diff below is the backend")
     sys.exit(0)
 
 print()
-print("!! CORPORA DIFFER — the two runs did not index the same chunks.")
-for label, ids in (("only in control", only_c), ("only in migrated", only_m)):
+print("!! CORPORA DIFFER — the two runs did not index the same text.")
+for label, ids in (("only in control", only_c), ("only in migrated", only_m),
+                   ("same id, DIFFERENT TEXT", retext)):
     if ids:
         print(f"   {label} ({len(ids)}): {', '.join(ids[:5])}"
               + (" …" if len(ids) > 5 else ""))
 print()
 print("   This is DocKG chunker nondeterminism, NOT a vector-backend defect.")
-print("   Any ranking difference involving these node ids is a corpus")
-print("   difference. Re-run to confirm the set shifts between runs; treat")
-print("   only differences on SHARED node ids as backend evidence.")
+print("   A chunk whose text differs has a different embedding and a different")
+print("   BM25 rank, so its score moves on the 1e-2 scale — indistinguishable")
+print("   from a backend regression unless you check the text.")
+print()
+print("   Treat ONLY differences on chunks identical in id and text as backend")
+print("   evidence. On the 2026-07-31 run that subset agreed to 7.45e-07 —")
+print("   6.2x float32 epsilon — across 718 pairs, while all 10 outliers fell")
+print("   on divergent-text chunks. Perfect separation.")
 PY
 
 if diff -u "$CONTROL_OUT" "$AFTER_OUT" > "$WORK/parity.diff"; then
