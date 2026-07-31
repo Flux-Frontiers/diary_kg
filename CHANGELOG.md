@@ -15,6 +15,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.96.0] - 2026-07-31
+
+Two classifier defects, both found while running the sqlite-vec parity control
+added in 0.95.0. Neither was cosmetic — both wrote bad data into chunk
+frontmatter.
+
+**Minor rather than patch:** category names change, so the `category`/`topics`
+frontmatter differs on rebuild and retrieval output can shift. Existing corpora
+are not byte-comparable across this release; rebuild rather than diff against an
+older one.
+
+### Fixed
+
+- **Category discovery was nondeterministic, making builds unreproducible.**
+  `discover_semantic_categories()` clustered with `KMeans(random_state=None)`,
+  which re-initialises randomly on every call. The discovered categories — and
+  therefore the `category`/`topics` frontmatter of *every* chunk file — differed
+  between builds of an identical corpus.
+
+  Measured: **86 of 818 chunk files (10.5%)** changed content across two
+  back-to-back ingests of the same source. Because the frontmatter is part of
+  the `.md` body DocKG indexes, this propagated downstream into different chunk
+  boundaries, embeddings and BM25 ranks — and so into different query results.
+
+  `random_state` now falls back to a fixed constant; an explicit `seed` still
+  wins. Verified: **0 of 818** files differ after the fix.
+
+  Note the contrast with `features.py`'s diversity sampler, which also clusters
+  but generates *and reports* a seed when none is supplied, so those runs stay
+  reproducible after the fact. Category discovery reported nothing, so an
+  affected build could never be reproduced. It fits a model over the whole chunk
+  set rather than making a sampling decision, so its randomness served no
+  caller.
+
+  Found while running the sqlite-vec parity control, where it first presented as
+  a vector-backend regression and was then misattributed to DocKG's chunker —
+  see Flux-Frontiers/doc_kg#16, corrected. DocKG was faithfully chunking
+  different input.
+
+- **Discovered category names were often garbage, and it reached the data.**
+  `_generate_category_name()` fell back to `top_terms[0]` whenever no curated
+  mapping matched, so honorifics and narrative filler became category labels. A
+  real run produced:
+
+  ```
+  spiritual, mr, domestic, social, lord, domestic, day, lord, bed, sir
+  ```
+
+  Four useless labels (`mr`, `lord`, `day`, `bed`, `sir`) and two duplicated
+  ones. This was **not cosmetic**: `classify_chunk()` routes any chunk that
+  misses its keyword rules to `categories[0]`, so a garbage first category was
+  written into the `category` frontmatter of a large share of the corpus.
+
+  Naming now prefers the curated mapping, then the first *informative* term —
+  skipping known honorifics/address forms and generic temporal or narrative
+  filler, and requiring at least 4 characters — and returns `"general"` when
+  nothing is usable. The candidate window widened from 5 to 12 terms so a
+  cluster dominated by honorifics still has something to fall back on. Only the
+  *name* is affected; clustering is untouched.
+
+  Same corpus after the fix: `spiritual, pepys_court, domestic, work, social`.
+
+- **Duplicate category names are now deduplicated.** Several terms share a
+  mapping, so distinct clusters resolved to the same label. A duplicate is
+  unreachable — `classify_chunk` resolves via
+  `next(c for c in categories if label in c)` — so its cluster slot was silently
+  wasted. Deduplication preserves discovery order, and when clusters collapse
+  the count is reported rather than hidden.
+
+  On the Pepys corpus, 10 clusters yield 5 distinct categories: `_TERM_MAPPINGS`
+  resolves many terms onto a handful of labels, so extra clusters cannot receive
+  distinct names. Deduplication surfaces that rather than causing it.
+
 ## [0.95.0] - 2026-07-31
 
 Removes DiaryKG's remaining LanceDB surface. **No deprecation period** — 0.94.0

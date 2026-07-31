@@ -13,6 +13,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from diary_transformer.classifier import (
+    _NON_TOPICAL_TERMS,
+    _generate_category_name,
     classify_chunk,
     classify_chunk_hybrid,
     discover_semantic_categories,
@@ -172,3 +174,118 @@ class TestExtractContext:
         nlp.return_value = doc
         result = extract_context("The weather was fine today", nlp)
         assert result == "General"
+
+
+# ---------------------------------------------------------------------------
+# Reproducibility of category discovery
+# ---------------------------------------------------------------------------
+
+
+class TestCategoryDiscoveryIsDeterministic:
+    """Category discovery must not vary between runs.
+
+    ``KMeans(random_state=None)`` re-initialised randomly on every call, so the
+    discovered categories — and hence the ``category``/``topics`` frontmatter of
+    every chunk file — differed between builds of an identical corpus. Measured
+    at 86 of 818 chunk files (10.5%) changing content across two back-to-back
+    ingests, which propagated downstream into different chunk boundaries,
+    embeddings and BM25 ranks, and made any A/B comparison of the corpus
+    meaningless.
+    """
+
+    CHUNKS = [
+        "Up betimes and to the office, where we sat all the morning on Navy business.",
+        "Dined at home with my wife, and after dinner to the theatre to see a play.",
+        "To church this morning, where a very dull sermon from the young parson.",
+        "My head aching mightily, so home early and to bed without supper.",
+        "Received letters from my Lord touching the fleet and the victualling.",
+        "Walked in the garden with Sir William, discoursing of the Dutch war.",
+        "Paid my bills and cast up my accounts, finding myself worth two hundred pound.",
+        "Music and singing after supper, my wife playing upon the lute.",
+        "A great fire seen from the bridge, much talk of it in the city.",
+        "Sick and abed all day, physic taken, and my wife very tender with me.",
+        "At the office all afternoon upon the contract for masts and timber.",
+        "Supper with my cousin, who told me news of the King's return.",
+    ]
+
+    def test_unseeded_calls_agree(self):
+        """Two default calls must return the same categories."""
+        a = discover_semantic_categories(self.CHUNKS, n_categories=3)
+        b = discover_semantic_categories(self.CHUNKS, n_categories=3)
+        assert a == b
+
+    def test_explicit_seed_still_honoured(self):
+        """An explicit seed must still control clustering."""
+        a = discover_semantic_categories(self.CHUNKS, n_categories=3, seed=7)
+        b = discover_semantic_categories(self.CHUNKS, n_categories=3, seed=7)
+        assert a == b
+
+    def test_seed_none_matches_the_documented_default(self):
+        """seed=None must behave as the fixed default, not as randomness."""
+        from diary_transformer.classifier import _DEFAULT_CLUSTER_SEED
+
+        assert discover_semantic_categories(
+            self.CHUNKS, n_categories=3
+        ) == discover_semantic_categories(self.CHUNKS, n_categories=3, seed=_DEFAULT_CLUSTER_SEED)
+
+
+# ---------------------------------------------------------------------------
+# Category naming quality
+# ---------------------------------------------------------------------------
+
+
+class TestCategoryNaming:
+    """Names must be topical, not honorifics or narrative filler.
+
+    Falling back blindly to ``top_terms[0]`` produced labels like ``mr``,
+    ``lord``, ``bed`` and ``day``. Those are not cosmetic: ``classify_chunk``
+    routes any chunk missing its keyword rules to ``categories[0]``, so a
+    garbage first category is written into the ``category`` frontmatter of a
+    large share of the corpus.
+    """
+
+    def test_curated_mapping_wins(self):
+        assert _generate_category_name(["office", "ledger"]) == "work"
+
+    def test_honorifics_are_skipped(self):
+        assert _generate_category_name(["mr", "lord", "sir", "shipping"]) == "shipping"
+
+    def test_narrative_filler_is_skipped(self):
+        assert _generate_category_name(["day", "bed", "went", "theatre"]) == "theatre"
+
+    def test_short_terms_are_skipped(self):
+        assert _generate_category_name(["wm", "ye", "navy"]) == "navy"
+
+    def test_all_useless_falls_back_to_general(self):
+        assert _generate_category_name(["mr", "sir", "day", "bed"]) == "general"
+
+    def test_multiword_terms_are_underscored(self):
+        assert _generate_category_name(["naval stores"]) == "naval_stores"
+
+    def test_mapping_beats_an_earlier_informative_term(self):
+        """A curated mapping outranks position, so labels stay stable."""
+        assert _generate_category_name(["shipping", "church"]) == "spiritual"
+
+
+class TestCategoriesAreDeduplicated:
+    """Distinct clusters mapping to one label must not appear twice.
+
+    ``classify_chunk`` resolves a label with
+    ``next(c for c in categories if label in c)``, so a duplicate is
+    unreachable and its cluster slot is wasted. A real run returned
+    ``domestic`` and ``lord`` twice each.
+    """
+
+    CHUNKS = TestCategoryDiscoveryIsDeterministic.CHUNKS
+
+    def test_no_duplicates_returned(self):
+        cats = discover_semantic_categories(self.CHUNKS, n_categories=6)
+        assert len(cats) == len(set(cats))
+
+    def test_order_is_preserved(self):
+        cats = discover_semantic_categories(self.CHUNKS, n_categories=6)
+        assert cats == list(dict.fromkeys(cats))
+
+    def test_no_honorific_or_filler_labels(self):
+        cats = discover_semantic_categories(self.CHUNKS, n_categories=6)
+        assert not (set(cats) & _NON_TOPICAL_TERMS), cats
