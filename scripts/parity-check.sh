@@ -233,6 +233,49 @@ capture "$REPO_ROOT" "$AFTER_OUT"
 # --------------------------------------------------------------------------
 say "5/5  Comparing"
 # --------------------------------------------------------------------------
+# Before blaming the backend, check the two runs indexed the same corpus.
+#
+# DocKG's semantic chunker is NOT reproducible: two builds with identical code,
+# identical backend and identical input can split a borderline file differently
+# (measured 2026-07-31 — 1656 vs 1657 chunks, differing on
+# entry_0226_chunk_0.md). A chunk that exists in one run and not the other has
+# different text, so a different embedding and a different score — which shows
+# up in the diff looking exactly like a backend regression.
+#
+# Without this step that misattribution is very easy to make, and it points at
+# the wrong repo entirely.
+python3 - "$CONTROL_TREE" "$REPO_ROOT" <<'PY'
+import sqlite3, sys
+from pathlib import Path
+
+def chunks(root):
+    db = Path(root) / ".diarykg" / "graph.sqlite"
+    return {r[0] for r in sqlite3.connect(db).execute(
+        "SELECT id FROM nodes WHERE kind='chunk'")}
+
+c, m = chunks(sys.argv[1]), chunks(sys.argv[2])
+only_c, only_m = sorted(c - m), sorted(m - c)
+
+print(f"control chunk nodes  : {len(c)}")
+print(f"migrated chunk nodes : {len(m)}")
+
+if not (only_c or only_m):
+    print("corpora identical — any diff below is attributable to the backend")
+    sys.exit(0)
+
+print()
+print("!! CORPORA DIFFER — the two runs did not index the same chunks.")
+for label, ids in (("only in control", only_c), ("only in migrated", only_m)):
+    if ids:
+        print(f"   {label} ({len(ids)}): {', '.join(ids[:5])}"
+              + (" …" if len(ids) > 5 else ""))
+print()
+print("   This is DocKG chunker nondeterminism, NOT a vector-backend defect.")
+print("   Any ranking difference involving these node ids is a corpus")
+print("   difference. Re-run to confirm the set shifts between runs; treat")
+print("   only differences on SHARED node ids as backend evidence.")
+PY
+
 if diff -u "$CONTROL_OUT" "$AFTER_OUT" > "$WORK/parity.diff"; then
   echo
   echo "PARITY CONFIRMED — identical ranking and scores across ${#QUERIES[@]} queries."
@@ -246,12 +289,18 @@ echo
 head -80 "$WORK/parity.diff"
 echo
 cat <<'EOF'
-Do not dismiss this, and do not ship on it.
+Do not dismiss this, and do not ship on it. Read the corpus comparison above
+first — if the corpora differ, differences on those node ids are chunker
+nondeterminism and prove nothing about the backend.
 
-  * Scores differ but ranking matches → a distance-metric mismatch. Expected
-    for ftree_kg (squared-L2 vs cosine); NOT expected here, since both backends
-    in this stack already query with cosine. If you see it, that finding was
-    wrong and needs re-checking before anything merges.
+  * Scores differ only in the 6th-7th decimal, ranking identical → float32
+    accumulation-order noise between two vector engines. Benign. Measured
+    2026-07-31 at max 5.66e-07 (~4.75x float32 epsilon, ~9.4e-07 relative).
+
+  * Scores differ by roughly a FACTOR OF TWO → a genuine distance-metric
+    mismatch (squared-L2 vs cosine), the ftree_kg failure. NOT expected here,
+    since both backends in this stack already query with cosine, so seeing it
+    means that finding was wrong. Do not merge until it is understood.
 
   * Results look BETTER after migrating → suspect the control, not the code.
     That is exactly how agent_kg's 24%-incomplete index disguised itself.
