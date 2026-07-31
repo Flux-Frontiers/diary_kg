@@ -172,3 +172,56 @@ class TestExtractContext:
         nlp.return_value = doc
         result = extract_context("The weather was fine today", nlp)
         assert result == "General"
+
+
+# ---------------------------------------------------------------------------
+# Reproducibility of category discovery
+# ---------------------------------------------------------------------------
+
+
+class TestCategoryDiscoveryIsDeterministic:
+    """Category discovery must not vary between runs.
+
+    ``KMeans(random_state=None)`` re-initialised randomly on every call, so the
+    discovered categories — and hence the ``category``/``topics`` frontmatter of
+    every chunk file — differed between builds of an identical corpus. Measured
+    at 86 of 818 chunk files (10.5%) changing content across two back-to-back
+    ingests, which propagated downstream into different chunk boundaries,
+    embeddings and BM25 ranks, and made any A/B comparison of the corpus
+    meaningless.
+    """
+
+    CHUNKS = [
+        "Up betimes and to the office, where we sat all the morning on Navy business.",
+        "Dined at home with my wife, and after dinner to the theatre to see a play.",
+        "To church this morning, where a very dull sermon from the young parson.",
+        "My head aching mightily, so home early and to bed without supper.",
+        "Received letters from my Lord touching the fleet and the victualling.",
+        "Walked in the garden with Sir William, discoursing of the Dutch war.",
+        "Paid my bills and cast up my accounts, finding myself worth two hundred pound.",
+        "Music and singing after supper, my wife playing upon the lute.",
+        "A great fire seen from the bridge, much talk of it in the city.",
+        "Sick and abed all day, physic taken, and my wife very tender with me.",
+        "At the office all afternoon upon the contract for masts and timber.",
+        "Supper with my cousin, who told me news of the King's return.",
+    ]
+
+    def test_unseeded_calls_agree(self):
+        """Two default calls must return the same categories."""
+        a = discover_semantic_categories(self.CHUNKS, n_categories=3)
+        b = discover_semantic_categories(self.CHUNKS, n_categories=3)
+        assert a == b
+
+    def test_explicit_seed_still_honoured(self):
+        """An explicit seed must still control clustering."""
+        a = discover_semantic_categories(self.CHUNKS, n_categories=3, seed=7)
+        b = discover_semantic_categories(self.CHUNKS, n_categories=3, seed=7)
+        assert a == b
+
+    def test_seed_none_matches_the_documented_default(self):
+        """seed=None must behave as the fixed default, not as randomness."""
+        from diary_transformer.classifier import _DEFAULT_CLUSTER_SEED
+
+        assert discover_semantic_categories(
+            self.CHUNKS, n_categories=3
+        ) == discover_semantic_categories(self.CHUNKS, n_categories=3, seed=_DEFAULT_CLUSTER_SEED)

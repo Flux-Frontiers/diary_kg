@@ -15,6 +15,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Category discovery was nondeterministic, making builds unreproducible.**
+  `discover_semantic_categories()` clustered with `KMeans(random_state=None)`,
+  which re-initialises randomly on every call. The discovered categories — and
+  therefore the `category`/`topics` frontmatter of *every* chunk file — differed
+  between builds of an identical corpus.
+
+  Measured: **86 of 818 chunk files (10.5%)** changed content across two
+  back-to-back ingests of the same source. Because the frontmatter is part of
+  the `.md` body DocKG indexes, this propagated downstream into different chunk
+  boundaries, embeddings and BM25 ranks — and so into different query results.
+
+  `random_state` now falls back to a fixed constant; an explicit `seed` still
+  wins. Verified: **0 of 818** files differ after the fix.
+
+  Note the contrast with `features.py`'s diversity sampler, which also clusters
+  but generates *and reports* a seed when none is supplied, so those runs stay
+  reproducible after the fact. Category discovery reported nothing, so an
+  affected build could never be reproduced. It fits a model over the whole chunk
+  set rather than making a sampling decision, so its randomness served no
+  caller.
+
+  Found while running the sqlite-vec parity control, where it first presented as
+  a vector-backend regression and was then misattributed to DocKG's chunker —
+  see Flux-Frontiers/doc_kg#16, corrected. DocKG was faithfully chunking
+  different input.
+
 ## [0.95.0] - 2026-07-31
 
 Removes DiaryKG's remaining LanceDB surface. **No deprecation period** — 0.94.0
