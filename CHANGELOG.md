@@ -15,6 +15,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.95.0] - 2026-07-31
+
+Removes DiaryKG's remaining LanceDB surface. **No deprecation period** — 0.94.0
+already stopped writing a LanceDB store, and this drops the vestigial API that
+still named one.
+
+### Removed
+
+- **`KGEntry.lancedb_path`** (`diary_kg.primitives`). Passing it is now a
+  `TypeError` rather than a silently-ignored argument. This class is DiaryKG's
+  *own* registry record; `kg_rag.primitives.KGEntry` still carries the column
+  that spans both backends for un-migrated KG kinds, so construct that directly
+  if you need it.
+
+- **The retired-backend kwarg passed to `DocKG`.** 0.94.0 still forwarded it,
+  set to the vector file's parent, to keep `SemanticIndex`'s metadata pointing
+  inside `.diarykg/`. It is only read for that metadata and for a lazy fallback
+  an explicitly pinned backend never reaches, so leaving it at DocKG's default
+  is inert — nothing reads it and nothing creates the directory it names.
+  `_dockg_vector_kwargs()` is now exactly the pin plus the store path.
+
+- **`.gitignore` rules for `.diarykg/lancedb/`.** Rules for `.dockg/`,
+  `.pycodekg/` and `.filetreekg/` are untouched: those are other KGs' stores
+  inside this repo, and `.dockg` remains LanceDB-capable until doc_kg's Phase 4.
+
+### Changed
+
+- Prose and test names no longer describe the retired backend as a live option;
+  the guard that a pre-0.94.0 store directory does **not** satisfy `is_built()`
+  is kept, since it asserts that legacy state is ignored.
+
+### Note on the installed package
+
+This does **not** remove `lancedb` from a `pip install diary-kg`, and no change
+confined to this repo can. `doc-kg` declares `lancedb>=0.29.0` as a **core**
+dependency, and DiaryKG depends on doc-kg, so the wheel still lands in every
+environment. `kgmodule-utils[semantic]` carries it too, though DiaryKG installs
+that without extras.
+
+Retiring it from the venv is doc_kg's Phase 4 — the one repo where both backends
+are already implemented, and the sole remaining blocker on this axis.
+
 ## [0.94.0] - 2026-07-30
 
 Retires LanceDB as DiaryKG's vector store in favour of sqlite-vec — Phase 1 of
