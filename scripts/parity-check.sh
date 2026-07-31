@@ -64,13 +64,22 @@ QUERIES=(
 
 cleanup() {
   if [[ "$KEEP" -eq 1 ]]; then
+    echo
     echo "artifacts kept in $WORK"
+    echo "the control worktree stays REGISTERED in this repo until you run:"
+    echo "    git -C '$REPO_ROOT' worktree remove --force '$CONTROL_TREE'"
+    echo "    git -C '$REPO_ROOT' worktree prune && rm -rf '$WORK'"
   else
     git -C "$REPO_ROOT" worktree remove --force "$CONTROL_TREE" 2>/dev/null || true
+    git -C "$REPO_ROOT" worktree prune 2>/dev/null || true
     rm -rf "$WORK"
   fi
 }
-trap cleanup EXIT
+# INT/TERM as well as EXIT: an interrupted or killed run would otherwise leave a
+# worktree registered in .git/worktrees pointing at a /tmp path. Observed after
+# killing a long --full run — two stale registrations accumulated, and `git
+# worktree list` keeps reporting them long after /tmp is cleared.
+trap cleanup EXIT INT TERM
 
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
