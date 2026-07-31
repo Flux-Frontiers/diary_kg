@@ -140,7 +140,18 @@ capture() {
   : > "$out"
   for q in "${QUERIES[@]}"; do
     echo "### QUERY: $q" >> "$out"
-    (cd "$root" && diarykg query "$q" -k 8 --json) >> "$out"
+    (cd "$root" && "$REPO_ROOT/.venv/bin/diarykg" query "$q" -k 8 --json) >> "$out"
+    echo >> "$out"
+  done
+}
+
+capture_pre() {
+  # Same queries, pre-migration code, still pinned to LanceDB.
+  local root="$1" out="$2"
+  : > "$out"
+  for q in "${QUERIES[@]}"; do
+    echo "### QUERY: $q" >> "$out"
+    (cd "$root" && "${PRE_PY[@]}" query "$q" -k 8 --json) >> "$out"
     echo >> "$out"
   done
 }
@@ -153,31 +164,69 @@ say "1/5  Building the CONTROL from pre-migration code ($PRE_MIGRATION_REF)"
 git -C "$REPO_ROOT" worktree add --detach "$CONTROL_TREE" "$PRE_MIGRATION_REF"
 cp -r "$REPO_ROOT/pepys" "$CONTROL_TREE/pepys" 2>/dev/null || true
 
-echo "Installing pre-migration diary-kg (needs lancedb)..."
-echo "NB: if doc-kg 0.20.0 is already published, lancedb is no longer a core"
-echo "    dependency there — run: pip install 'doc-kg[lancedb]' in that venv."
-python3 -m venv "$WORK/venv-pre"
-"$WORK/venv-pre/bin/pip" install -q -e "$CONTROL_TREE"
+# Run the OLD source against the CURRENT venv rather than building a second
+# one. The venv is ~5.6 GB (torch dominates), and none of the heavy
+# dependencies differ across the migration — only diary_kg's own code does, and
+# PYTHONPATH takes precedence over site-packages. Requires `lancedb` to be
+# importable; it still arrives via doc-kg <0.20.0, but once doc-kg 0.20.0 is
+# published you must add it explicitly:
+#     .venv/bin/pip install lancedb
+PRE_PY=("env" "PYTHONPATH=$CONTROL_TREE/src" "$REPO_ROOT/.venv/bin/python"
+        "-c" "from diary_kg.cli import main; main()")
+
+if ! "$REPO_ROOT/.venv/bin/python" -c "import lancedb" 2>/dev/null; then
+  echo "ABORT: lancedb is not importable in $REPO_ROOT/.venv" >&2
+  echo "The control must be built on LanceDB. Install it:" >&2
+  echo "    $REPO_ROOT/.venv/bin/pip install lancedb" >&2
+  exit 1
+fi
+
+# CRITICAL: force LanceDB for the control.
+#
+# Pre-migration diary_kg passes no vector_backend, so DocKG uses "auto" — and
+# on a fresh build with both stores deleted, "auto" resolves to *sqlite-vec*,
+# not LanceDB. Without this the "control" would be sqlite-vec, the comparison
+# would be sqlite-vec against sqlite-vec, and the check would pass no matter
+# what the migration broke. This is the plan's "auto hides the migration" trap
+# in its most dangerous form: as a tautology dressed up as a green result.
+export DOCKG_VECTOR_BACKEND=lancedb
 
 rm -rf "$CONTROL_TREE/.diarykg/lancedb" "$CONTROL_TREE/.diarykg/vectors.sqlite"
-PATH="$WORK/venv-pre/bin:$PATH" \
-  bash -c "cd '$CONTROL_TREE' && diarykg build --source '$SOURCE'"
+(cd "$CONTROL_TREE" && "${PRE_PY[@]}" build --source "$SOURCE")
+
+# Assert the control really is LanceDB. If auto silently won anyway, every
+# downstream number is meaningless.
+if [[ ! -d "$CONTROL_TREE/.diarykg/lancedb" ]]; then
+  echo "ABORT: control build produced no .diarykg/lancedb — it fell back to" >&2
+  echo "sqlite-vec, so the comparison would be sqlite-vec vs sqlite-vec and" >&2
+  echo "would pass regardless of correctness." >&2
+  exit 1
+fi
+if [[ -f "$CONTROL_TREE/.diarykg/vectors.sqlite" ]]; then
+  echo "ABORT: control build wrote vectors.sqlite; it is not a LanceDB control." >&2
+  exit 1
+fi
+echo "control confirmed on LanceDB (.diarykg/lancedb present, no vectors.sqlite)"
 
 # --------------------------------------------------------------------------
 say "2/5  Reconciling the control index against SQLite (Learning #8)"
 # --------------------------------------------------------------------------
-PATH="$WORK/venv-pre/bin:$PATH" check_drift "$CONTROL_TREE" "control"
+check_drift "$CONTROL_TREE" "control"
 
 # --------------------------------------------------------------------------
 say "3/5  Capturing control query output"
 # --------------------------------------------------------------------------
-PATH="$WORK/venv-pre/bin:$PATH" capture "$CONTROL_TREE" "$CONTROL_OUT"
+capture_pre "$CONTROL_TREE" "$CONTROL_OUT"
 
 # --------------------------------------------------------------------------
 say "4/5  Rebuilding with CURRENT code on sqlite-vec"
 # --------------------------------------------------------------------------
+unset DOCKG_VECTOR_BACKEND
 rm -rf "$REPO_ROOT/.diarykg/lancedb" "$REPO_ROOT/.diarykg/vectors.sqlite"
-(cd "$REPO_ROOT" && diarykg build --source "$SOURCE")
+(cd "$REPO_ROOT" && "$REPO_ROOT/.venv/bin/diarykg" build --source "$SOURCE")
+if [[ ! -f "$REPO_ROOT/.diarykg/vectors.sqlite" ]]; then
+  echo "ABORT: migrated build produced no vectors.sqlite" >&2; exit 1
+fi
 check_drift "$REPO_ROOT" "migrated"
 capture "$REPO_ROOT" "$AFTER_OUT"
 
