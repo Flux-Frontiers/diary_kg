@@ -177,4 +177,6 @@ def grow_skeleton(
     if pts.size == 0:
         raise ValueError("no chunk positions to grow a skeleton through")
 
-    return grow_tree(pts, np.asarray(root if root is not None else [0.0, 0.0, 0.0], dtype=float), key=key)
+    return grow_tree(
+        pts, np.asarray(root if root is not None else [0.0, 0.0, 0.0], dtype=float), key=key
+    )

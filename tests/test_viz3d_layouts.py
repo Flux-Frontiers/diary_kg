@@ -11,6 +11,7 @@ rendering is a mistake worth designing against rather than discovering.
 from __future__ import annotations
 
 import sqlite3
+import subprocess
 import sys
 from pathlib import Path
 
@@ -100,8 +101,23 @@ def undated_db(tmp_path: Path) -> Path:
 
 
 def test_no_pyvista_imported_by_the_layouts() -> None:
-    """Phase 1 is headless: importing the layouts must not pull PyVista in."""
-    assert "pyvista" not in sys.modules
+    """
+    Phase 1 is headless: importing the layouts must not pull PyVista in.
+
+    Checked in a subprocess rather than against this process's ``sys.modules``.
+    A global assertion here would be order-dependent and dishonest — the scene
+    suite imports pyvista legitimately, so whether this passed would depend on
+    which test file ran first, not on what the layouts import.
+    """
+    probe = (
+        "import sys\n"
+        "import diary_kg.layout_tree, diary_kg.layout_temporal, diary_kg.loader\n"
+        "print('LOADED' if 'pyvista' in sys.modules else 'CLEAN')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True, check=True
+    )
+    assert result.stdout.strip() == "CLEAN", "importing the layouts pulled PyVista in"
 
 
 def test_load_diary_graph_reads_nodes_and_edges(dated_db: Path) -> None:
