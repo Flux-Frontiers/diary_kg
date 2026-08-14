@@ -5,15 +5,15 @@ Every test here renders with ``pv.OFF_SCREEN`` and no Qt import anywhere in the
 chain. Two failures from this fleet are designed against explicitly:
 
 - ``_waverider``'s suite segfaults on a headless machine because a module-scope
-  call renders during *collection*. Nothing here renders at import time, and the
-  probe that proves rendering works lives inside a test body.
+  call renders during *collection*. Nothing here renders at import time; the
+  capability probe in ``_render`` renders in a child process, so even that
+  cannot abort this session.
 - ``gutenberg_kg`` learned to skip its pyvista suites at collection, because CI
   installs an extra set that has no pyvista. Same here, via ``importorskip``.
 """
 
 from __future__ import annotations
 
-import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -26,14 +26,19 @@ pytest.importorskip(
 )
 pv = pytest.importorskip("pyvista", reason="viz3d-render extra not installed")
 
+from ._render import can_render  # noqa: E402
+
 # An installed pyvista is not enough. This VTK build has no OSMesa or EGL
-# fallback, so constructing a Plotter without a display does not raise — it
-# aborts the interpreter, and a fatal abort takes the whole session down,
-# unrelated tests included. `importorskip` cannot help: pyvista imports fine.
-# Gate on a real display and let `xvfb-run -a pytest` provide one.
+# fallback, so constructing a Plotter without a working GL context does not
+# raise — it aborts the interpreter, and a fatal abort takes the whole session
+# down, unrelated tests included. `importorskip` cannot help: pyvista imports
+# fine. Probe the real thing in a subprocess rather than gating on `DISPLAY`,
+# which only correlates with rendering: an xvfb server without GLX, or a stale
+# `DISPLAY`, passes the proxy and aborts anyway. `xvfb-run -a pytest` still
+# works — the probe simply confirms it took.
 pytestmark = pytest.mark.skipif(
-    not os.environ.get("DISPLAY"),
-    reason="rendering needs a display; run under `xvfb-run -a`",
+    not can_render(),
+    reason="pyvista off-screen rendering unavailable; try `xvfb-run -a pytest`",
 )
 
 from diary_kg.loader import load_diary_graph, load_entry_times  # noqa: E402
