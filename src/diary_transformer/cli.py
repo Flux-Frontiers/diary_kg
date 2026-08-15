@@ -355,6 +355,10 @@ def _build_dockg(corpus_dir: str, update: bool, kg_name, registry) -> None:
         console.print(f"  Vectors : {vectors_path}")
 
     # ---- Step 2: optional kgrag registration ----
+    # kg-rag is deliberately NOT declared as a dependency, not even an extra:
+    # kg_rag depends on diary_kg, so declaring it back would make poetry
+    # reconcile both transformers pins on every lock. The import is lazy and the
+    # ImportError below is the supported path when it is absent.
     if kg_name:
         try:
             from datetime import date  # pylint: disable=import-outside-toplevel
