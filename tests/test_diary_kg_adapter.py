@@ -1,7 +1,10 @@
 """
 test_diary_kg_adapter.py
 
-Unit tests for kg_rag.adapters.diary_adapter — DiaryKGAdapter.
+Unit tests for diary_kg.module.DiaryKGAdapter — the adapter kg_rag consumes.
+
+Everything under test is diary_kg's own; kg_rag is neither imported nor
+installed here. The name survives from when the adapter lived in kg_rag.
 
 All tests mock ``diary_kg.kg.DiaryKG`` so no real DocKG or vector store is needed.
 """

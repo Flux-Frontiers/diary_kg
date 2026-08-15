@@ -97,8 +97,8 @@ pip install "diary-kg[viz3d]"
 # and declaring them here made every lock reconcile their transformers pins.
 pip install pycode-kg
 
-# Everything
-pip install "diary-kg[all]"
+# Every user-facing feature (dev tooling is a Poetry group, not an extra)
+pip install "diary-kg[viz,viz3d]"
 ```
 
 ### Poetry project
@@ -113,8 +113,7 @@ poetry add "diary-kg[viz]"
 ```bash
 git clone https://github.com/Flux-Frontiers/diary_kg.git
 cd diary_kg
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+poetry install --with dev
 poetry run pytest
 ```
 
@@ -338,8 +337,8 @@ Optional extras (`viz`, `viz3d`, `dev`) are documented in [pyproject.toml](pypro
 ## Development
 
 ```bash
-# Install with dev tools
-pip install -e ".[dev]"
+# Install with dev tools (a Poetry group, so pip cannot install it)
+poetry install --with dev
 
 # Run the test suite
 pytest                          # uses pytest.ini (testpaths = tests/)
