@@ -1,60 +1,61 @@
-# Release Notes — v0.96.0
+# Release Notes — v0.97.0
 
-> Released: 2026-07-31
+> Released: 2026-08-15
 
-DiaryKG's vector store is now SQLite end to end, and LanceDB is gone from the install. On
-the way there, the sqlite-vec parity control that verified the migration turned up two
-classifier defects that had been quietly writing bad data into chunk frontmatter — both are
-fixed here. **Rebuild your corpus after upgrading:** category names change, so frontmatter
-and retrieval results shift.
-
-This is the first tagged release since v0.93.4. The 0.94.0 and 0.95.0 changelog entries
-describe steps of the same migration that were never cut as their own releases, so everything
-below arrives together.
+DiaryKG gets a 3-D view of a diary, built in two phases so the fragile part stays isolated:
+pure geometry first, then a renderer-agnostic scene that opens no window and imports no Qt.
+Alongside it, the package stops shipping its own dev tooling in the wheel. Nothing in the
+build or query path changed — corpora built under 0.96.0 remain valid and no rebuild is
+required.
 
 ## What changed
 
-**The vector store is `vectors.sqlite`.** DiaryKG pins DocKG's backend to `sqlite-vec` and
-writes a single SQLite file inside `.diarykg/` instead of a LanceDB directory. `KGEntry`
-carries `vectors_path`; the LanceDB-era `lancedb_path` argument was removed outright, with no
-deprecation period, and passing it is now a `TypeError`. Anything that constructed a DiaryKG
-`KGEntry` with that keyword needs updating — `kg_rag.primitives.KGEntry` still carries the
-column spanning both backends if you need it for an un-migrated KG kind.
+**A diary now has a shape.** `loader.py` reads a `.diarykg` graph into the shared layout
+vocabulary from `kgmodule-utils`, and two layouts interpret it differently on purpose. The
+tree layout keeps gutenberg_kg's grammar with time standing in for chapters — trunk, one
+limb per calendar year, entry clusters, chunk leaves — with limbs ascending in period order
+so the tree reads bottom-to-top the way a life does. The temporal layout is the analytical
+counterpart the tree cannot be: Z scales by *date* rather than by index, so a year Pepys
+wrote little shows up as an actual gap rather than being compressed away. Neither module
+imports PyVista, which is what makes the whole layer testable on a headless machine.
 
-**LanceDB actually leaves the environment.** Pinning the backend was never enough on its own:
-`doc-kg` declared `lancedb` as a core dependency, so the wheel landed in every install
-regardless. The `doc-kg>=0.20.0` floor moves it behind an optional extra that DiaryKG does not
-request, which drops `lancedb` and its entire subtree from the lock file. Existing
-virtualenvs keep the stale wheels until re-synced, so run `poetry install --sync` to reclaim
-the space. The same doc-kg release promotes `sqlite-vec` to a core dependency, which is why
-the requirement is now a plain `doc-kg>=0.20.0` rather than `doc-kg[sqlite-vec]`.
+**One scene, two consumers.** `scene.py` builds actors into a `pv.Plotter` the caller
+creates and owns — no window, no event loop, no Qt. That split is the point: the same
+composition serves an interactive viewer and a headless quilt renderer, so the eventual
+`diarykg quilt` costs almost nothing instead of being a second implementation. Tree mode
+sweeps the organic skeleton into wood with leaf glyphs; manifold mode draws points and can
+show `SIMILAR_TO` edges, because a 1667 entry echoing 1665 is a long diagonal the tree
+cannot express by construction. Edges of one relation collapse into a single line-set actor,
+so a diary with thousands of entries doesn't stall the renderer with thousands of them.
 
-**Builds are reproducible again.** Category discovery clustered with
-`KMeans(random_state=None)`, so an identical corpus produced different categories on every
-build. Measured against the Pepys corpus, 86 of 818 chunk files (10.5%) differed between
-back-to-back ingests of the same source — and because that frontmatter is part of the body
-DocKG indexes, the divergence propagated into chunk boundaries, embeddings, BM25 ranks and
-ultimately query results. The seed now falls back to a fixed constant; 0 of 818 files differ
-after the fix. This first presented as a vector-backend regression during the parity control
-and was briefly misattributed to DocKG's chunker.
+**Headless testing that survives a missing GPU.** Without a display, this VTK build does not
+raise — it aborts the interpreter, and a fatal abort takes unrelated tests down with it.
+`DISPLAY` only *correlates* with the ability to render: an xvfb server without GLX or a
+container forwarding X with no GL driver both set it and abort anyway. The suite now probes
+the capability directly with a minimal off-screen render in a child process, so a crash
+costs one subprocess rather than the session. `xvfb-run -a pytest` behaves exactly as before.
 
-**Category names are no longer garbage.** When no curated mapping matched, the namer fell back
-to the single top term, so honorifics and narrative filler became labels — a real run produced
-`mr`, `lord`, `day`, `bed` and `sir` among its categories, with duplicates. That mattered
-beyond appearances: any chunk missing its keyword rules is routed to the first category, so a
-junk label was written into a large share of the corpus. Naming now prefers the curated
-mapping, then the first genuinely informative term, and falls back to `general`; duplicates
-are deduplicated rather than silently occupying an unreachable cluster slot.
+**The wheel is verified, not assumed.** A new CI job builds the wheel, installs it into a
+clean virtualenv with no source tree in sight, and loads every console-script entry point.
+The existing lint, type-check and test jobs all run against `src/` via `pythonpath`, which
+makes them structurally incapable of noticing when the artifact itself is broken.
+
+**Dev tooling left the wheel.** It moved from a `dev` extra to an optional Poetry group, so
+it can no longer be pip-installed and no longer appears in the published metadata. The `all`
+aggregate extra retired with it — it re-listed every dev tool by name, which kept them
+advertised in the wheel no matter where the dependencies actually lived.
 
 ## Upgrading
 
-Rebuild. Category names and chunk frontmatter both change, so an existing corpus is not
-byte-comparable with one built by an earlier version — rebuild rather than diff against it.
-Delete the old `.diarykg/lancedb/` directory if one is still lying around; nothing reads it,
-and a pre-0.94.0 store directory deliberately does not satisfy `is_built()`.
+`pip install --upgrade diary-kg`. No rebuild, no migration, no API change.
 
-If you construct `diary_kg.primitives.KGEntry` yourself, replace `lancedb_path` with
-`vectors_path`. Otherwise there are no API changes and no new configuration to set.
+Two install commands changed. `pip install -e ".[dev]"` and `pip install -e ".[all]"` no
+longer exist — use `poetry install --with dev` for tooling, and ask for the feature extras
+you want by name (`viz`, `viz3d`). Anything scripted against the old extras needs updating.
+
+The 3-D layouts require `kgmodule-utils >= 0.13.2` (the floor now enforces it) and the
+`viz3d` extra for rendering: `pip install "diary-kg[viz3d]"`. On a headless machine, run the
+visualization tests under `xvfb-run -a`; without one they skip cleanly rather than crashing.
 
 ---
 

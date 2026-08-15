@@ -7,13 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.97.0] - 2026-08-15
+
+The 3-D visualization stack lands in two phases — geometry first, then a
+renderer-agnostic scene — and diary_kg stops shipping its dev tooling in the
+wheel. Nothing in the build or query path changes: corpora built under 0.96.0
+are still valid, and no rebuild is required.
+
 ### Added
+
+- **`viz3d` Phase 1 — the diary loader and both layouts, with no rendering.**
+  `loader.py` reads a `.diarykg` graph into the shared `LayoutNode`/`LayoutEdge`
+  vocabulary from `kg_utils.viz3d.layout` and recovers the chronology the
+  layouts stand on. The date lift is the fiddly part: DiaryKG populates
+  `timestamp` only on `kind='chunk'` rows, so an entry — a `document` row with a
+  null timestamp — takes its date from the chunks it contains. A graph built
+  before that enrichment pass has no column at all, which is handled rather
+  than raised. `layout_tree.py` keeps gutenberg_kg's grammar with time in place
+  of chapters: trunk → period limb (one per calendar year) → entry cluster →
+  chunk leaves, limbs ascending with period order so the tree reads
+  bottom-to-top as a life does. `layout_temporal.py` is the analytical
+  counterpart: Z scales by date rather than by index, so a silent stretch in the
+  diary shows up as a gap. Neither module imports PyVista, so the whole phase is
+  testable headlessly.
+- **`viz3d` Phase 2 — `scene.py`, a Qt-free scene builder for both modes.** It
+  builds actors into a `pv.Plotter` the caller creates and owns: no window, no
+  event loop, no Qt import. One composition therefore serves an interactive
+  viewer and a headless renderer alike. Tree mode grows the organic skeleton
+  from `kg_utils.viz3d.organic` through the chunk positions and sweeps it into
+  wood with leaf glyphs for foliage; manifold mode draws points and no wood, and
+  can draw `SIMILAR_TO` edges — a 1667 entry echoing 1665 is the long diagonal
+  the tree cannot express by construction. Edges of one relation become a single
+  line-set actor, so a diary with thousands of entries does not add thousands of
+  actors.
+- **`tests/test_sdk_contract.py`** asserts the `kgmodule-utils` symbols the
+  layouts and scene import, and fails with the fix in the message — naming the
+  installed version and the floor that works — instead of leaving an
+  `ImportError` to be decoded. It also reports when the SDK resolves to a source
+  checkout rather than an installed wheel. This exists because 0.12.0 was
+  published without the organic engine the floor implied.
+- **CI now verifies the built wheel, not just the source tree.** An "Installed
+  CLI" job builds the wheel, installs it into a clean virtualenv with no source
+  tree present, and loads every console-script entry point. `lint`, `type-check`
+  and `test` all run against `src/` via `pythonpath`, which makes them
+  structurally incapable of noticing a broken artifact.
 
 ### Changed
 
+- **Dev tooling moved from a `dev` extra to an optional Poetry group**
+  (`poetry install --with dev`), so it can no longer be pip-installed and no
+  longer ships in the wheel. Verified against the wheel's `METADATA` rather than
+  the manifest: `Provides-Extra: viz, viz3d` and no dev tool in `Requires-Dist`.
+- **Dependency floors brought current**: `doc-kg>=0.21.2`,
+  `kgmodule-utils>=0.13.2` (0.12.1 is the release that actually contains the
+  organic tree engine; 0.13.1 is skipped over, since it made
+  `SnapshotManager.repo_root` read-only and broke subclasses that assign it),
+  `pytest>=9.0.3` for GHSA-6w46-j5rx-g56g, and `ruff` capped at `<0.16` so a
+  lock regeneration cannot turn into a linter upgrade.
+- The ruff pre-commit hook was pinned at v0.15.13 while the lock resolved
+  0.15.22, so the hook and `poetry run ruff` could disagree on formatting.
+- Per-file `Last Revision:` headers retired, per the fleet standard adopted
+  2026-08-15. `git log -1 --format=%cd -- <file>` is exact and free; the hand-
+  maintained field was wrong in 71% of fleet files carrying it.
+
 ### Removed
 
+- **The `all` aggregate extra.** It re-listed every dev tool by name, so the
+  wheel advertised them as installable regardless of where the dev dependencies
+  actually lived. Ask for the feature extras you want (`viz`, `viz3d`).
+- The `dev` extra — see the Poetry group above.
+
 ### Fixed
+
+- **The viz3d test suite gates on the ability to render, not on `DISPLAY`.**
+  Without a display this VTK build does not fail, it aborts the interpreter, and
+  a fatal abort takes the whole session down — unrelated tests included.
+  `DISPLAY` only correlates with the ability to render: an xvfb server without
+  GLX, a stale variable pointing at a dead socket, or a container forwarding X
+  with no GL driver all set it and abort anyway. `tests/_render.can_render` now
+  performs a minimal off-screen render in a child process and reads the exit
+  code, so a crash costs one subprocess instead of the suite. The result is
+  cached, so it spawns once per session.
+- `test_no_pyvista_imported_by_the_layouts` asserted `"pyvista" not in
+  sys.modules`, a global condition the scene suite legitimately violates; it
+  passed only by luck of file ordering. It now probes in a subprocess, which is
+  what it always meant to check.
 
 ## [0.96.0] - 2026-07-31
 
