@@ -138,7 +138,6 @@ ty = ">=0.0.44"
 pdoc = ">=14.0.0"
 pillow = ">=10.0.0"
 pre-commit = ">=4.5.1"
-pylint = ">=4.0.5"
 pytest = ">=9.0.3"
 pytest-cov = ">=5.0.0"
 ruff = ">=0.4.0,<0.16"
@@ -190,19 +189,6 @@ filterwarnings = [
     "ignore::sklearn.exceptions.ConvergenceWarning",
 ]
 
-[tool.pylint.messages_control]
-disable = ["all"]
-enable = [
-    "broad-exception-caught",   # W0718
-    "cell-var-from-loop",       # W0640
-    "cyclic-import",            # R0401
-    "import-outside-toplevel",  # C0415
-    "undefined-variable",       # E0602
-]
-
-# ---------------------------------------------------------------------------
-# PyCodeKG / DocKG index configuration
-# ---------------------------------------------------------------------------
 [tool.pycodekg]
 exclude = ["tests"]
 include = ["src"]
