@@ -256,6 +256,17 @@ commit.txt
 **/.diarykg/models
 **/.diarykg/corpus
 
+# DiaryKG snapshots are NOT tracked, unlike .dockg/.pycodekg/.filetreekg here.
+# Those three index this repo, so their metrics move with its releases and are
+# worth sharing. .diarykg indexes the Pepys corpus -- external data whose state
+# changes independently of any diary-kg release, and which every user of this
+# tool holds a different copy of. Snapshotting it into the repo records one
+# machine's corpus build, not a property of the project.
+# See kgrag_priv/docs/SNAPSHOT_STRATEGY.md, "What a snapshot is *of*".
+# config.json is deliberately still tracked: it is the build recipe
+# (source file, chunking strategy), not a measurement.
+**/.diarykg/snapshots/
+
 # Agent scratch dirs (Claude Code / Codex)
 .agents/
 .codex/
