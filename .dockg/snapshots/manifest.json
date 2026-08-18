@@ -213,7 +213,7 @@
       "version": "0.91.1",
       "file": "84c96fab0b29fd714ab70593929605fc9123f53d.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4483,
         "total_edges": 34117,
         "node_counts": {
@@ -255,7 +255,7 @@
       "version": "0.8.1",
       "file": "e37f87b29d0ec522fd33f2b735c302c63e4c7cfa.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4483,
         "total_edges": 34117,
         "node_counts": {
@@ -297,7 +297,7 @@
       "version": "0.12.0",
       "file": "1c3c126567beb6038835eaf3ac246b7aaa2404bb.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4499,
         "total_edges": 40294,
         "node_counts": {
@@ -339,7 +339,7 @@
       "version": "0.12.0",
       "file": "fa0598d6077e48ca8f492710990396adf7a38f3e.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4494,
         "total_edges": 40256,
         "node_counts": {
@@ -381,7 +381,7 @@
       "version": "0.12.0",
       "file": "ab03e08f152b203582f9082864663c512ed0e575.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4494,
         "total_edges": 40308,
         "node_counts": {
@@ -423,7 +423,7 @@
       "version": "0.12.3",
       "file": "d089fc4875b5d91a3569eacb0fd53cf624d2d3e1.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4508,
         "total_edges": 40550,
         "node_counts": {
@@ -465,7 +465,7 @@
       "version": "0.12.3",
       "file": "af4b4e42f5da635ab9684171cda9a9b2acda24f0.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4597,
         "total_edges": 41245,
         "node_counts": {
@@ -508,7 +508,7 @@
       "version": "0.12.3",
       "file": "9989a5e18b3c882d5960e93ffc6c53604d33c8fe.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4596,
         "total_edges": 41245,
         "node_counts": {
@@ -551,7 +551,7 @@
       "version": "0.12.2",
       "file": "b9c4fb4425d62c1cfd0e4e3b4fa903589ab866bc.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4152,
         "total_edges": 37395,
         "node_counts": {
@@ -594,7 +594,7 @@
       "version": "0.92.3",
       "file": "4b24e38376a330434ab1404bb1597165b6ab77ce.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4150,
         "total_edges": 37409,
         "node_counts": {
@@ -637,7 +637,7 @@
       "version": "0.92.4",
       "file": "b0d421e54217f355b96cfbbd3a471cc007e2256a.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 4153,
         "total_edges": 37417,
         "node_counts": {
@@ -680,7 +680,7 @@
       "version": "0.92.7",
       "file": "2b760c037a74d185539fb28db578a3adb181cf2d.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 1854,
         "total_edges": 12321,
         "node_counts": {
@@ -723,7 +723,7 @@
       "version": "0.92.7",
       "file": "b530c0998bf537fbc17fc3beb805da40c5129e52.json",
       "metrics": {
-        "db_path": "/Users/egs/repos/diary_kg/.dockg/graph.sqlite",
+        "db_path": ".dockg/graph.sqlite",
         "total_nodes": 1859,
         "total_edges": 12343,
         "node_counts": {
