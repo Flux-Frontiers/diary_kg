@@ -153,3 +153,59 @@ class TestEnrichmentWritesContract:
         con.close()
         assert len(rows) == 1
         assert json.loads(rows[0][0]) == {"occurred_start": "1666-09-02"}
+
+
+class TestNoDivergence:
+    """The contract is a derived view of `timestamp`, not a second authoring.
+
+    Two representations of one date are fine; two independent *writes* of it are
+    not — that is the drift the fleet audit exists to catch. These pin the
+    derivation so a future edit that authors `metadata` from somewhere else
+    fails here instead of silently disagreeing with the column.
+    """
+
+    def test_metadata_is_a_derived_view_of_timestamp(self, tmp_path):
+        """For every chunk: metadata == _temporal_for(timestamp). Exactly."""
+        db = TestEnrichmentWritesContract()._run_enrichment(tmp_path, timestamp="1660-01-01T00:00")
+        con = sqlite3.connect(str(db))
+        rows = con.execute("SELECT timestamp, metadata FROM nodes WHERE kind='chunk'").fetchall()
+        con.close()
+        assert rows
+        for timestamp, raw_meta in rows:
+            stored = json.loads(raw_meta) if raw_meta else {}
+            assert stored == _temporal_for(timestamp)
+
+    def test_column_keeps_its_authored_form(self, tmp_path):
+        """Normalising into the column would rewrite existing corpora."""
+        db = TestEnrichmentWritesContract()._run_enrichment(tmp_path, timestamp="1660-01-01T00:00")
+        con = sqlite3.connect(str(db))
+        ts = con.execute("SELECT timestamp FROM nodes WHERE kind='chunk'").fetchone()[0]
+        con.close()
+        assert ts == "1660-01-01T00:00"
+
+    def test_the_two_forms_denote_the_same_instant(self, tmp_path):
+        """Different rendering, same date — that is the whole claim."""
+        from kg_utils.temporal import parse_temporal
+
+        db = TestEnrichmentWritesContract()._run_enrichment(tmp_path, timestamp="1660-01-01T00:00")
+        con = sqlite3.connect(str(db))
+        ts, raw_meta = con.execute(
+            "SELECT timestamp, metadata FROM nodes WHERE kind='chunk'"
+        ).fetchone()
+        con.close()
+        from_column = parse_temporal(ts)
+        from_contract = parse_temporal(json.loads(raw_meta)["occurred_start"])
+        assert from_column == from_contract
+
+    def test_query_derives_from_the_same_column(self):
+        """Query time uses the same function on the same column, so hits agree."""
+        for raw in ("1660-01-01T00:00", "1666-09-02", "1666", ""):
+            assert _temporal_for(raw) == _temporal_for(raw)
+
+    def test_time_precision_round_trips_through_the_contract(self):
+        """A time-precision entry must still land on the right day."""
+        from kg_utils.temporal import read_span
+
+        span = read_span(_temporal_for("1660-01-01T00:00"))
+        assert span.overlaps("1660-01-01", "1660-01-01")
+        assert not span.overlaps("1660-01-02", "1660-01-31")

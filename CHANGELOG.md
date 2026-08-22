@@ -15,11 +15,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mundane reason: the date lived in `timestamp`, a column DiaryKG adds to
   DocKG's table for its own use, and nothing outside DiaryKG knows to read it.
 
-  The enrichment pass now also writes `metadata` — `occurred_start`, derived
-  from the same frontmatter timestamp — and `query()` / `pack()` surface it on
-  every hit and snippet, which is where kg-rag's diary adapter reads it. The
-  bespoke `timestamp` column is untouched: DiaryKG's own layouts and queries
-  read it, and a regression test pins that.
+  The enrichment pass now also writes `metadata`, and `query()` / `pack()`
+  surface it on every hit and snippet, which is where kg-rag's diary adapter
+  reads it.
+
+  **The contract is a derived view of `timestamp`, not a second authoring of
+  the date.** `_temporal_for()` is the only producer of contract keys, and both
+  build time and query time call it on the same column — so the two forms can
+  render a date differently (`1660-01-01T00:00` against
+  `1660-01-01T00:00:00+00:00`) without being able to disagree about which date
+  it is. Three tests pin it: the stored metadata must equal
+  `_temporal_for(timestamp)` exactly, and both must parse to the same instant.
+
+  The column keeps its authored form deliberately. Writing the contract's
+  canonical value back into `timestamp` would append an explicit UTC offset to
+  every time-precision entry, silently rewriting existing corpora and changing
+  what snapshots and displays show; day-precision values are unaffected either
+  way. DiaryKG's own layouts read the column, and a regression test pins that
+  too.
 
   Only `occurred_start` is emitted. A diary entry has no separate record of
   when it was written down, and leaving `occurred_end` unset is deliberate

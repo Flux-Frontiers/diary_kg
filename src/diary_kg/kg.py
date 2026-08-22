@@ -48,7 +48,20 @@ def _parse_frontmatter(text: str) -> dict[str, str]:
 
 
 def _temporal_for(timestamp: str | None) -> dict[str, str]:
-    """Map a diary frontmatter ``timestamp`` onto the shared temporal contract.
+    """Map a diary ``timestamp`` onto the shared temporal contract.
+
+    **This is the only way DiaryKG produces contract keys.** The ``timestamp``
+    column is the authored value; the contract is a derived view of it, computed
+    by this function at build time and again at query time. Nothing writes the
+    two from separate sources, so they can render the same date differently —
+    ``1660-01-01T00:00`` against ``1660-01-01T00:00:00+00:00`` — without being
+    able to disagree about which date it is.
+
+    Keeping the column's raw form is deliberate. The contract's canonical form
+    adds an explicit UTC offset to time-precision values, and writing that back
+    into ``timestamp`` would silently rewrite every such entry in an existing
+    corpus, changing what snapshots and displays show. Day-precision values are
+    unaffected either way.
 
     A diary entry's date is when it *occurred*; DiaryKG has no separate record
     of when it was written down, so only ``occurred_start`` is emitted. Leaving
@@ -566,7 +579,14 @@ class DiaryKG:
                 fm = _parse_frontmatter(md_path.read_text(encoding="utf-8"))
                 if not fm:
                     continue
-                temporal = _temporal_for(fm.get("timestamp"))
+                # `timestamp` is the authored value; `metadata` is a derived view
+                # of it, never written from a separate source. Query time derives
+                # it the same way, from the same column, via the same function —
+                # so the two can express the same date differently but cannot
+                # disagree about it. `test_metadata_is_a_derived_view_of_timestamp`
+                # pins that.
+                raw_timestamp = fm.get("timestamp")
+                temporal = _temporal_for(raw_timestamp)
                 con.execute(
                     """
                     UPDATE nodes
@@ -575,7 +595,7 @@ class DiaryKG:
                      WHERE kind='chunk' AND file_path=?
                     """,
                     (
-                        fm.get("timestamp"),
+                        raw_timestamp,
                         fm.get("category"),
                         fm.get("context"),
                         fm.get("source_file"),
