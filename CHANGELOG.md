@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **DiaryKG writes the shared `kg_utils.temporal` contract, so a federated
+  query can finally scope it by time.** A diary is the fleet's most obviously
+  dated corpus, and it was unreachable by a time-scoped cross-KG query for a
+  mundane reason: the date lived in `timestamp`, a column DiaryKG adds to
+  DocKG's table for its own use, and nothing outside DiaryKG knows to read it.
+
+  The enrichment pass now also writes `metadata` — `occurred_start`, derived
+  from the same frontmatter timestamp — and `query()` / `pack()` surface it on
+  every hit and snippet, which is where kg-rag's diary adapter reads it. The
+  bespoke `timestamp` column is untouched: DiaryKG's own layouts and queries
+  read it, and a regression test pins that.
+
+  Only `occurred_start` is emitted. A diary entry has no separate record of
+  when it was written down, and leaving `occurred_end` unset is deliberate
+  rather than lossy: the contract reads an absent end as "as wide as the
+  precision implies", so an entry dated to a day covers that day and one dated
+  only by year covers the year.
+
+  An unparseable frontmatter timestamp yields no contract keys instead of
+  raising — one malformed date must not fail a corpus build — and the raw
+  `timestamp` value is still stored verbatim.
+
+  **No rebuild is required.** The contract is derived at query time from the
+  `timestamp` column that existing graphs already carry, and the enrichment
+  pass adds its own `metadata` column defensively, so an existing `.diarykg`
+  database starts answering time-scoped queries as soon as the code updates.
+
+  Requires `kgmodule-utils>=0.18.0`; the floor moves with it.
+
 ## [0.97.0] - 2026-08-15
 
 The 3-D visualization stack lands in two phases — geometry first, then a

@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 from kg_utils.embed import DEFAULT_MODEL as DEFAULT_MODEL
 from kg_utils.embed import KNOWN_MODELS
 from kg_utils.embedder import wrap_embedder
+from kg_utils.temporal import temporal_metadata
 
 _FM_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
@@ -44,6 +45,29 @@ def _parse_frontmatter(text: str) -> dict[str, str]:
             k, _, v = line.partition(": ")
             result[k.strip()] = v.strip()
     return result
+
+
+def _temporal_for(timestamp: str | None) -> dict[str, str]:
+    """Map a diary frontmatter ``timestamp`` onto the shared temporal contract.
+
+    A diary entry's date is when it *occurred*; DiaryKG has no separate record
+    of when it was written down, so only ``occurred_start`` is emitted. Leaving
+    ``occurred_end`` unset is deliberate rather than lossy — the contract reads
+    an absent end as "as wide as the precision implies", so an entry dated to a
+    day covers that whole day and one dated only by year covers the year.
+
+    An unparseable timestamp yields ``{}`` rather than raising: one malformed
+    frontmatter date must not fail a corpus build.
+
+    :param timestamp: Frontmatter timestamp text, possibly empty or absent.
+    :return: The temporal contract keys, or ``{}`` if there is no usable date.
+    """
+    if not timestamp:
+        return {}
+    try:
+        return temporal_metadata(occurred_start=timestamp)
+    except (ValueError, TypeError):
+        return {}
 
 
 # Reciprocal-rank-fusion constant for blending dense (vector) + lexical (BM25)
@@ -511,6 +535,13 @@ class DiaryKG:
         ``diary_source_file`` to the DocKG ``nodes`` table (idempotent), then
         populates them from each corpus chunk's ``.md`` frontmatter.
 
+        Also writes ``metadata`` — the shared :mod:`kg_utils.temporal` contract,
+        derived from the same frontmatter timestamp. The bespoke ``timestamp``
+        column stays exactly as it was, because DiaryKG's own layouts and
+        queries read it; the contract is written alongside so that a *federated*
+        query can scope this KG by time without knowing DiaryKG's private column
+        names.
+
         :return: Number of chunk rows updated.
         """
         import sqlite3  # pylint: disable=import-outside-toplevel
@@ -524,7 +555,7 @@ class DiaryKG:
 
         n_updated = 0
         with sqlite3.connect(str(self._db_path)) as con:
-            for col in ("timestamp", "category", "context", "diary_source_file"):
+            for col in ("timestamp", "category", "context", "diary_source_file", "metadata"):
                 try:
                     con.execute(f"ALTER TABLE nodes ADD COLUMN {col} TEXT")
                 except sqlite3.OperationalError:
@@ -535,10 +566,12 @@ class DiaryKG:
                 fm = _parse_frontmatter(md_path.read_text(encoding="utf-8"))
                 if not fm:
                     continue
+                temporal = _temporal_for(fm.get("timestamp"))
                 con.execute(
                     """
                     UPDATE nodes
-                       SET timestamp=?, category=?, context=?, diary_source_file=?
+                       SET timestamp=?, category=?, context=?, diary_source_file=?,
+                           metadata=?
                      WHERE kind='chunk' AND file_path=?
                     """,
                     (
@@ -546,6 +579,7 @@ class DiaryKG:
                         fm.get("category"),
                         fm.get("context"),
                         fm.get("source_file"),
+                        (json.dumps(temporal, ensure_ascii=False) if temporal else None),
                         md_path.name,
                     ),
                 )
@@ -612,6 +646,8 @@ class DiaryKG:
         :param k: Number of results to return.
         :return: List of result dicts with keys: ``score``, ``summary``,
             ``source_file``, ``timestamp``, ``category``, ``context``,
+            ``metadata`` (the shared temporal contract, for federated
+            time-scoped queries),
             ``node_id``.
         """
         import sqlite3  # pylint: disable=import-outside-toplevel
@@ -645,6 +681,7 @@ class DiaryKG:
                         "timestamp": timestamp or "",
                         "category": category or "",
                         "context": context or "",
+                        "metadata": _temporal_for(timestamp),
                     }
                 )
         return hits
@@ -655,7 +692,8 @@ class DiaryKG:
         :param q: Natural-language query string.
         :param k: Number of snippets.
         :return: List of snippet dicts with keys: ``content``, ``source_file``,
-            ``timestamp``, ``score``, ``node_id``.
+            ``timestamp``, ``score``, ``node_id``, and ``metadata`` carrying the
+            shared temporal contract.
         """
         import sqlite3  # pylint: disable=import-outside-toplevel
 
@@ -686,6 +724,7 @@ class DiaryKG:
                         "content": text or "",
                         "source_file": diary_sf or sf or file_path or "",
                         "timestamp": timestamp or "",
+                        "metadata": _temporal_for(timestamp),
                     }
                 )
         return snippets
