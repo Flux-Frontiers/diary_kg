@@ -77,7 +77,7 @@ dependencies = [
     # Floor is 0.20.0: that release promotes `sqlite-vec` to a core doc-kg
     # dependency (so the old `[sqlite-vec]` extra is now a no-op) and moves
     # `lancedb` behind an extra we do not request, keeping it out of the tree.
-    "doc-kg>=0.21.2",
+    "doc-kg>=0.22.0",
     # 0.18.0: DiaryKG writes the shared kg_utils.temporal contract alongside its
     # own `timestamp` column, so a federated query can scope this KG by time
     # without knowing DiaryKG's private column names.
