@@ -78,6 +78,9 @@ dependencies = [
     # dependency (so the old `[sqlite-vec]` extra is now a no-op) and moves
     # `lancedb` behind an extra we do not request, keeping it out of the tree.
     "doc-kg>=0.22.0",
+    # 0.18.0: DiaryKG writes the shared kg_utils.temporal contract alongside its
+    # own `timestamp` column, so a federated query can scope this KG by time
+    # without knowing DiaryKG's private column names.
     "kgmodule-utils>=0.18.0",
     # Upper-bounded: mcp 2.0 removed the bundled `mcp.server.fastmcp` module
     # (FastMCP was split out into the standalone `fastmcp` package) and rebuilt
