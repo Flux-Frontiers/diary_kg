@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`DiaryKG.close()`, so callers can release the SQLite connection.** `DiaryKG`
+  holds a lazily constructed `DocKG` in `self._dockg` and exposed no way to let
+  it go, which left every caller leaking one connection per instance with no fix
+  available on their side. `gutenberg_kg`'s `build_diary_index()` builds one
+  `DiaryKG` per diary on every corpus build and hit exactly that.
+
+  `close()` delegates to `DocKG.close()`, guarding the case where the `DocKG`
+  was never constructed, and drops the reference before closing so a second call
+  is a no-op. It does not end the object's life: a later `query()`, `pack()` or
+  `stats()` rebuilds the `DocKG` on demand. `__enter__` / `__exit__` are added
+  alongside it, matching `DocKG`.
+
 - **DiaryKG writes the shared `kg_utils.temporal` contract, so a federated
   query can finally scope it by time.** A diary is the fleet's most obviously
   dated corpus, and it was unreachable by a time-scoped cross-KG query for a
@@ -50,6 +62,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   database starts answering time-scoped queries as soon as the code updates.
 
   Requires `kgmodule-utils>=0.18.0`; the floor moves with it.
+
+### Fixed
+
+- **`build(wipe=True)` and `rebuild_index()` now close the old `DocKG` before
+  deleting its files.** Both used to unlink `graph.sqlite` and `vectors.sqlite`
+  and then drop `self._dockg` on the floor. An open connection to a deleted file
+  keeps the old database alive behind the new one, so a rebuild in a process
+  that had already queried was holding two.
 
 ## [0.97.0] - 2026-08-15
 

@@ -8,6 +8,7 @@ stats) mock the internal _dockg attribute.
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -377,3 +378,90 @@ class TestFusedChunkSeeds:
 
         assert [i for i, _ in fused] == ["c0", "c1", "c2"]
         assert fused[0][1] == pytest.approx(0.70)  # 1 - 0.30
+
+
+# ---------------------------------------------------------------------------
+# DiaryKG.close() / context manager
+# ---------------------------------------------------------------------------
+
+
+class TestClose:
+    def test_closes_the_loaded_dockg(self, tmp_kg_root):
+        kg = DiaryKG(tmp_kg_root)
+        mock_dockg = MagicMock()
+        kg._dockg = mock_dockg
+
+        kg.close()
+
+        mock_dockg.close.assert_called_once_with()
+        assert kg._dockg is None
+
+    def test_without_a_loaded_dockg_is_a_no_op(self, tmp_kg_root):
+        kg = DiaryKG(tmp_kg_root)
+        kg.close()  # never constructed; must not raise
+        assert kg._dockg is None
+
+    def test_second_call_does_not_close_twice(self, tmp_kg_root):
+        kg = DiaryKG(tmp_kg_root)
+        mock_dockg = MagicMock()
+        kg._dockg = mock_dockg
+
+        kg.close()
+        kg.close()
+
+        mock_dockg.close.assert_called_once_with()
+
+    def test_reloads_on_next_use(self, built_kg_root):
+        """Closing releases the connection; it is not the end of the object."""
+        kg = DiaryKG(built_kg_root)
+        kg._dockg = MagicMock()
+        kg.close()
+
+        with patch("doc_kg.kg.DocKG") as mock_cls:
+            reloaded = kg._load_dockg()
+
+        assert reloaded is mock_cls.return_value
+        assert kg._dockg is reloaded
+
+    def test_context_manager_closes_on_exit(self, tmp_kg_root):
+        mock_dockg = MagicMock()
+        with DiaryKG(tmp_kg_root) as kg:
+            kg._dockg = mock_dockg
+            assert isinstance(kg, DiaryKG)
+
+        mock_dockg.close.assert_called_once_with()
+
+    def test_context_manager_closes_when_the_body_raises(self, tmp_kg_root):
+        mock_dockg = MagicMock()
+        with pytest.raises(RuntimeError):
+            with DiaryKG(tmp_kg_root) as kg:
+                kg._dockg = mock_dockg
+                raise RuntimeError("boom")
+
+        mock_dockg.close.assert_called_once_with()
+
+    def test_rebuild_index_closes_before_unlinking(self, built_kg_root):
+        """The old connection must be released before its files are deleted."""
+        kg = DiaryKG(built_kg_root)
+        mock_dockg = MagicMock()
+        db_path = kg._kg_dir / "graph.sqlite"
+        order: list[str] = []
+        mock_dockg.close.side_effect = lambda: order.append("close")
+        kg._dockg = mock_dockg
+
+        real_unlink = Path.unlink
+
+        def tracking_unlink(self, *args, **kwargs):
+            if self == db_path:
+                order.append("unlink")
+            return real_unlink(self, *args, **kwargs)
+
+        with (
+            patch.object(Path, "unlink", tracking_unlink),
+            patch("doc_kg.kg.DocKG"),
+            patch.object(DiaryKG, "_inject_topic_edges", return_value=0),
+            patch.object(DiaryKG, "_enrich_metadata", return_value=0),
+        ):
+            kg.rebuild_index()
+
+        assert order == ["close", "unlink"]

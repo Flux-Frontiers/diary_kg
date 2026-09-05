@@ -301,6 +301,9 @@ class DiaryKG:
         if wipe:
             import shutil  # pylint: disable=import-outside-toplevel
 
+            # Close before unlinking: an open connection to a deleted file keeps
+            # the old database alive behind the new one.
+            self.close()
             if self._corpus_dir.exists():
                 shutil.rmtree(self._corpus_dir)
             for db_file in (self._db_path, self._vectors_path):
@@ -313,7 +316,6 @@ class DiaryKG:
                 if cache_file.exists():
                     cache_file.unlink()
                     print(f"Wiped chunk cache: {cache_file}")
-            self._dockg = None
             print("Wiped existing corpus + databases.")
 
         self._corpus_dir.mkdir(parents=True, exist_ok=True)
@@ -413,11 +415,12 @@ class DiaryKG:
                 f"Corpus not found: {self._corpus_dir}. Run 'diarykg build' first."
             )
 
-        # Wipe only the index, keep corpus files.
+        # Wipe only the index, keep corpus files.  Close first: an open
+        # connection to a deleted file keeps the old index alive behind the new.
+        self.close()
         for db_file in (self._db_path, self._vectors_path):
             if db_file.exists():
                 db_file.unlink()
-        self._dockg = None
 
         print(f"Building DocKG index for {self._corpus_dir}...")
         try:
@@ -930,3 +933,25 @@ class DiaryKG:
         :return: Dict with ``a``, ``b``, ``delta``, ``topic_counts_delta``.
         """
         return self._snapshot_mgr().diff_snapshots(key_a, key_b)
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
+    def close(self) -> None:
+        """Release the lazily constructed :class:`DocKG` and its SQLite connection.
+
+        Safe to call when no ``DocKG`` was ever constructed, and safe to call
+        twice: the reference is dropped before the close, so a second call is a
+        no-op.  A later :meth:`query`, :meth:`pack` or :meth:`stats` rebuilds
+        the ``DocKG`` on demand, so closing does not end the object's life.
+        """
+        dockg, self._dockg = self._dockg, None
+        if dockg is not None:
+            dockg.close()
+
+    def __enter__(self) -> DiaryKG:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
