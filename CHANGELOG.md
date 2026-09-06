@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.0] - 2026-09-06
+
 ### Added
 
 - **`capture_diary()` takes `key=` and `subject=`.** Without them this repo had
@@ -14,22 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   base's UTC-timestamp default, which is correct for a corpus and wrong for a
   release. `subject` records what was measured (`corpus:pepys`,
   `repo:diary-kg`) separately from `version`, which names the measuring tool.
-
-### Changed
-
-- **Floors raised to `doc-kg>=0.24.1` and `kgmodule-utils>=0.19.0`.**
-  0.19.0 is where snapshots stopped keying on a git tree hash read before
-  `git add` stages them. The doc-kg floor skips 0.24.0 deliberately: that
-  release shipped the key scheme with a `save_snapshot` that dropped
-  `snapshot_key`/`subject`/`tool` on the way to disk, so every snapshot it
-  wrote fell back to a tree-hash key. 0.24.1 is the fix.
-
-  Three tests asserted the old coupling by looking a snapshot up under its
-  mocked tree hash; they now pass the key explicitly. A fourth asserted
-  `snap.key == "testhash"` and now asserts the tree hash is kept as provenance
-  while the key is a timestamp.
-
-### Added
 
 - **`DiaryKG.close()`, so callers can release the SQLite connection.** `DiaryKG`
   holds a lazily constructed `DocKG` in `self._dockg` and exposed no way to let
@@ -84,6 +70,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   database starts answering time-scoped queries as soon as the code updates.
 
   Requires `kgmodule-utils>=0.18.0`; the floor moves with it.
+
+### Changed
+
+- **Floors raised to `doc-kg>=0.24.1` and `kgmodule-utils>=0.19.0`.**
+  0.19.0 is where snapshots stopped keying on a git tree hash read before
+  `git add` stages them. The doc-kg floor skips 0.24.0 deliberately: that
+  release shipped the key scheme with a `save_snapshot` that dropped
+  `snapshot_key`/`subject`/`tool` on the way to disk, so every snapshot it
+  wrote fell back to a tree-hash key. 0.24.1 is the fix.
+
+  Three tests asserted the old coupling by looking a snapshot up under its
+  mocked tree hash; they now pass the key explicitly. A fourth asserted
+  `snap.key == "testhash"` and now asserts the tree hash is kept as provenance
+  while the key is a timestamp.
 
 ### Fixed
 
