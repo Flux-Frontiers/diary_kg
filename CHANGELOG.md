@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`release.yml` now matches the rest of the fleet: it publishes to PyPI.**
+  This repo carried the older 47-line workflow that built a wheel and created a
+  GitHub Release but stopped there, so every PyPI upload had to be done by hand
+  -- which is why diary-kg sat at 0.97.0 on PyPI with no automation behind it.
+  The workflow now stashes the built artifacts and hands them to a `publish` job
+  using PyPI trusted publishing, so the index and the GitHub Release carry
+  byte-identical files. Action pins come up to the fleet's current versions.
+
 ## [0.98.0] - 2026-09-06
 
 ### Added
