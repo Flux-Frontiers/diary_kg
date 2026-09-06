@@ -272,7 +272,11 @@ class TestCapture:
         assert snap.metrics["total_nodes"] == 20
         assert snap.metrics.get("label") == "test capture"
         assert snap.metrics.get("source_file") == "pepys.txt"
-        assert snap.key == "testhash"
+        # The tree hash is provenance, not the key. With no key supplied the
+        # base assigns a UTC timestamp, which is the right answer for a corpus.
+        assert snap.tree_hash == "testhash"
+        assert snap.key != "testhash"
+        datetime.fromisoformat(snap.key)
 
     def test_capture_sets_vs_previous_when_prior_exists(self, tmp_path):
         mgr = _make_mgr(tmp_path)

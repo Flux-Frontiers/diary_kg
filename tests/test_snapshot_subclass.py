@@ -56,7 +56,9 @@ def test_capture_returns_snapshot(
         patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
     ):
-        snap = mgr.capture_diary(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
+        snap = mgr.capture_diary(
+            version="1.0.0", info=sample_info, db_stats=sample_db_stats, key="hash001"
+        )
 
     assert isinstance(snap, Snapshot)
     assert isinstance(snap.metrics, dict)
@@ -69,7 +71,9 @@ def test_metrics_dict_access(
         patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
     ):
-        snap = mgr.capture_diary(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
+        snap = mgr.capture_diary(
+            version="1.0.0", info=sample_info, db_stats=sample_db_stats, key="hash001"
+        )
 
     assert snap.metrics["chunk_count"] == 200
     assert snap.metrics["entry_count"] == 42
@@ -85,7 +89,9 @@ def test_save_and_load_preserves_metrics(
         patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
     ):
-        snap = mgr.capture_diary(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
+        snap = mgr.capture_diary(
+            version="1.0.0", info=sample_info, db_stats=sample_db_stats, key="hash001"
+        )
     mgr.save_snapshot(snap)
 
     loaded = mgr.load_snapshot("hash001")
@@ -103,7 +109,9 @@ def test_delta_backfilled_on_load(
         patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash001"),
     ):
-        snap_a = mgr.capture_diary(version="1.0.0", info=sample_info, db_stats=sample_db_stats)
+        snap_a = mgr.capture_diary(
+            version="1.0.0", info=sample_info, db_stats=sample_db_stats, key="hash001"
+        )
     mgr.save_snapshot(snap_a)
 
     info_b = dict(sample_info, chunk_count=220, entry_count=45)
@@ -111,7 +119,9 @@ def test_delta_backfilled_on_load(
         patch.object(DiarySnapshotManager, "_get_current_branch", return_value="main"),
         patch.object(DiarySnapshotManager, "_get_current_tree_hash", return_value="hash002"),
     ):
-        snap_b = mgr.capture_diary(version="1.0.1", info=info_b, db_stats=sample_db_stats)
+        snap_b = mgr.capture_diary(
+            version="1.0.1", info=info_b, db_stats=sample_db_stats, key="hash002"
+        )
     mgr.save_snapshot(snap_b)
 
     loaded = mgr.load_snapshot("hash002")

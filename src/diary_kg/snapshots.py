@@ -48,6 +48,8 @@ class DiarySnapshotManager(SnapshotManager):
         tree_hash: str = "",
         label: str | None = None,
         source_file: str | None = None,
+        key: str = "",
+        subject: str = "",
     ) -> Snapshot:
         """Capture a snapshot from current DiaryKG state.
 
@@ -59,9 +61,17 @@ class DiarySnapshotManager(SnapshotManager):
         :param info: Output of ``DiaryKG.info()``.
         :param db_stats: Output of ``DiaryKG.stats()`` (node/edge counts).
         :param branch: Git branch; auto-detected if ``None``.
-        :param tree_hash: Git tree hash; auto-detected if empty.
+        :param tree_hash: Git tree hash, recorded as provenance; auto-detected
+            if empty. It is not the snapshot's key -- it is read before
+            ``git add`` stages the snapshot, so it names a tree never committed.
         :param label: Optional human-readable label.
         :param source_file: Source diary file label.
+        :param key: Snapshot identifier. Pass the release tag when snapshotting
+            the repo at a release; omit it for a diary corpus, which has no tag,
+            and the base assigns a UTC timestamp.
+        :param subject: What was measured, e.g. ``corpus:pepys`` or
+            ``repo:diary-kg``. Recorded separately from ``version``, which names
+            the measuring tool.
         :return: New :class:`~kg_utils.snapshots.Snapshot` instance (not yet saved).
         """
         node_count = db_stats.get("node_count", 0)
@@ -93,6 +103,8 @@ class DiarySnapshotManager(SnapshotManager):
             branch=branch,
             graph_stats_dict=metrics,
             tree_hash=tree_hash,
+            key=key,
+            subject=subject,
         )
 
     # ------------------------------------------------------------------
