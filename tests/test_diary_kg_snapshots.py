@@ -278,7 +278,22 @@ class TestCapture:
         assert snap.key != "testhash"
         datetime.fromisoformat(snap.key)
 
-    def test_capture_sets_vs_previous_when_prior_exists(self, tmp_path):
+    def test_vs_previous_is_resolved_on_read_not_at_capture(self, tmp_path):
+        """The delta is computed by the read path, not frozen into the file.
+
+        This class used to override get_previous() to resolve an unsaved key to
+        the most recently *saved* snapshot, so capture() could fill vs_previous
+        and persist it. That was removed in 0.99.0. Two reasons: nothing reads
+        vs_previous from raw JSON -- every consumer goes through
+        load_snapshot() -- and a persisted value can go stale. "Most recently
+        saved" is not "chronologically previous", so a snapshot that arrives out
+        of order leaves the stored delta wrong, and because load_snapshot only
+        backfills when vs_previous is None, a stored value permanently
+        suppresses the correction.
+
+        Capture now leaves it None and load_snapshot fills it through
+        _compute_delta_from_metrics, which keeps the diary-specific fields.
+        """
         mgr = _make_mgr(tmp_path)
         first = _snapshot(
             tree_hash="first", chunk_count=5, timestamp=datetime(2024, 1, 1, tzinfo=UTC).isoformat()
@@ -301,9 +316,37 @@ class TestCapture:
             db_stats=db_stats,
             branch="main",
             tree_hash="second",
+            key="v0.2.0",
         )
-        assert snap.vs_previous is not None
-        assert snap.vs_previous["chunks"] == 5  # 10 - 5
+        # Unsaved key: the base cannot resolve a predecessor yet.
+        assert snap.vs_previous is None
+        mgr.save_snapshot(snap)
+
+        reloaded = mgr.load_snapshot("v0.2.0")
+        assert reloaded is not None
+        assert reloaded.vs_previous is not None
+        assert reloaded.vs_previous["chunks"] == 5  # 10 - 5
+        assert reloaded.vs_previous["entries"] == 0
+
+    def test_a_late_arriving_snapshot_corrects_the_previous_delta(self, tmp_path):
+        """The read path recomputes; a persisted delta could not.
+
+        B is captured after A, then C lands between them chronologically. B's
+        true predecessor becomes C, and the delta reported for B follows.
+        """
+        mgr = _make_mgr(tmp_path)
+
+        def save(key, ts, chunks):
+            snap = _snapshot(chunk_count=chunks, timestamp=ts)
+            snap.snapshot_key = key
+            mgr.save_snapshot(snap, force=True)
+
+        save("A", datetime(2024, 1, 1, tzinfo=UTC).isoformat(), 10)
+        save("B", datetime(2024, 3, 1, tzinfo=UTC).isoformat(), 30)
+        assert mgr.load_snapshot("B").vs_previous["chunks"] == 20  # vs A
+
+        save("C", datetime(2024, 2, 1, tzinfo=UTC).isoformat(), 20)
+        assert mgr.load_snapshot("B").vs_previous["chunks"] == 10  # now vs C
 
     def test_capture_non_int_node_count_treated_as_zero(self, tmp_path):
         mgr = _make_mgr(tmp_path)
@@ -316,3 +359,100 @@ class TestCapture:
         )
         assert snap.metrics["total_nodes"] == 0
         assert snap.metrics["total_edges"] == 0
+
+
+# ---------------------------------------------------------------------------
+# The deleted overrides: each behaviour now comes from a base extension point
+#
+# 0.99.0 removed __init__ and diff_snapshots from this module. get_previous
+# stays; see its docstring. These tests pin what the deleted overrides did.
+# ---------------------------------------------------------------------------
+
+
+class TestBaseExtensionPoints:
+    def test_package_name_comes_from_the_class_attribute(self, tmp_path: Path) -> None:
+        """Replaces the deleted __init__, whose only job was this string.
+
+        Against kgmodule-utils < 0.20.0 the base has no package_name class
+        attribute, so every snapshot's tool field would read "kg-utils".
+        """
+        assert DiarySnapshotManager.package_name == "diary-kg"
+        assert _make_mgr(tmp_path).package_name == "diary-kg"
+
+    def test_save_and_reload_persists_key_subject_and_tool(self, tmp_path: Path) -> None:
+        """The round trip this repo had no test for at all.
+
+        key, subject, tool and tool_version are the four fields a hand-written
+        save_snapshot copy dropped in the sibling packages. Assert them from
+        the file on disk, then again after a reload.
+        """
+        import json
+
+        mgr = _make_mgr(tmp_path)
+        snap = Snapshot(
+            branch="main",
+            timestamp=datetime.now(UTC).isoformat(),
+            version="9.9.9",
+            metrics=_make_metrics(),
+            tree_hash="e" * 40,
+            snapshot_key="v9.9.9",
+            subject="corpus:pepys",
+            tool="diary-kg",
+            tool_version="9.9.9",
+        )
+        saved = mgr.save_snapshot(snap)
+        assert saved is not None and saved.name == "v9.9.9.json"
+
+        on_disk = json.loads(saved.read_text(encoding="utf-8"))
+        assert on_disk["key"] == "v9.9.9"
+        assert on_disk["subject"] == "corpus:pepys"
+        assert on_disk["tree_hash"] == "e" * 40
+        assert on_disk["tool"] == "diary-kg"
+        assert on_disk["tool_version"] == "9.9.9"
+
+        reloaded = mgr.load_snapshot("v9.9.9")
+        assert reloaded is not None
+        assert reloaded.key == "v9.9.9"
+        assert reloaded.subject == "corpus:pepys"
+        assert reloaded.tool == "diary-kg"
+
+    def test_diff_carries_topic_counts_delta(self, tmp_path: Path) -> None:
+        """Replaces the deleted diff_snapshots: only changed topics appear.
+
+        The override also re-loaded both snapshots to build this; the base
+        reads the metrics it already has.
+        """
+        mgr = _make_mgr(tmp_path)
+        for key, topics in (
+            ("d_a", {"work": 4, "same": 2, "gone": 3}),
+            ("d_b", {"work": 9, "same": 2, "new": 1}),
+        ):
+            snap = Snapshot(
+                branch="main",
+                timestamp=datetime.now(UTC).isoformat(),
+                version="0.1.0",
+                metrics=_make_metrics(topic_counts=topics),
+                snapshot_key=key,
+            )
+            mgr.save_snapshot(snap, force=True)
+
+        result = mgr.diff_snapshots("d_a", "d_b")
+        assert result["topic_counts_delta"] == {"work": 5, "gone": -3, "new": 1}
+
+    def test_diff_carries_timestamp_and_issues_delta(self, tmp_path: Path) -> None:
+        """Both now come from the base rather than a module override."""
+        mgr = _make_mgr(tmp_path)
+        for key, issues in (("d_a", ["kept", "gone"]), ("d_b", ["kept", "new"])):
+            snap = Snapshot(
+                branch="main",
+                timestamp=datetime.now(UTC).isoformat(),
+                version="0.1.0",
+                metrics=_make_metrics(),
+                issues=issues,
+                snapshot_key=key,
+            )
+            mgr.save_snapshot(snap, force=True)
+
+        result = mgr.diff_snapshots("d_a", "d_b")
+        assert result["a"]["timestamp"] and result["b"]["timestamp"]
+        assert result["issues_delta"] == {"introduced": ["new"], "resolved": ["gone"]}

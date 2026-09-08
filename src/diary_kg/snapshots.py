@@ -32,8 +32,14 @@ from kg_utils.snapshots import Snapshot, SnapshotManager
 class DiarySnapshotManager(SnapshotManager):
     """Manages DiaryKG snapshot storage, retrieval, and comparison."""
 
-    def __init__(self, snapshots_dir: Path | str) -> None:
-        super().__init__(snapshots_dir, package_name="diary-kg")
+    #: Version detection reads this; the base records it as the snapshot's
+    #: ``tool``. Replaces an ``__init__`` that only forwarded to ``super()``.
+    package_name = "diary-kg"
+
+    #: ``diff_snapshots`` emits ``topic_counts_delta`` from this, holding only
+    #: the topics whose count actually changed. Replaces an override that
+    #: hand-rolled the same loop and re-loaded both snapshots to do it.
+    dict_metric_deltas = ("topic_counts",)
 
     # ------------------------------------------------------------------
     # Capture
@@ -142,59 +148,3 @@ class DiarySnapshotManager(SnapshotManager):
             "nodes": new_m.get("total_nodes", 0) - old_m.get("total_nodes", 0),
             "edges": new_m.get("total_edges", 0) - old_m.get("total_edges", 0),
         }
-
-    # ------------------------------------------------------------------
-    # Previous snapshot — fall back to most recent when key is unsaved
-    # ------------------------------------------------------------------
-
-    def get_previous(self, key: str) -> Snapshot | None:
-        """Return the snapshot immediately before this one (by timestamp).
-
-        If *key* is not yet in the manifest (unsaved snapshot), falls back to
-        the most recently saved snapshot so deltas are still computed.
-        """
-        manifest = self.load_manifest()
-        current_ts = next((s["timestamp"] for s in manifest.snapshots if s.get("key") == key), None)
-        if not current_ts:
-            if not manifest.snapshots:
-                return None
-            latest = max(manifest.snapshots, key=lambda x: x["timestamp"])
-            return self.load_snapshot(latest["key"])
-        prev_entry = None
-        for s in sorted(manifest.snapshots, key=lambda x: x["timestamp"], reverse=True):
-            if s["timestamp"] < current_ts:
-                prev_entry = s
-                break
-        return self.load_snapshot(prev_entry["key"]) if prev_entry else None
-
-    # ------------------------------------------------------------------
-    # Diff — add topic_counts_delta
-    # ------------------------------------------------------------------
-
-    def diff_snapshots(self, key_a: str, key_b: str) -> dict[str, Any]:
-        """Compare two snapshots side-by-side, including topic distribution delta.
-
-        :param key_a: Earlier snapshot key.
-        :param key_b: Later snapshot key.
-        :return: Dict with ``a``, ``b``, ``delta``, ``topic_counts_delta`` keys.
-        """
-        result = super().diff_snapshots(key_a, key_b)
-        if "error" in result:
-            return result
-
-        snap_a = self.load_snapshot(key_a)
-        snap_b = self.load_snapshot(key_b)
-        if snap_a and snap_b:
-            topics_a: dict[str, int] = (
-                snap_a.metrics.get("topic_counts", {}) if isinstance(snap_a.metrics, dict) else {}
-            )
-            topics_b: dict[str, int] = (
-                snap_b.metrics.get("topic_counts", {}) if isinstance(snap_b.metrics, dict) else {}
-            )
-            all_topics = set(topics_a) | set(topics_b)
-            result["topic_counts_delta"] = {
-                t: topics_b.get(t, 0) - topics_a.get(t, 0)
-                for t in all_topics
-                if topics_b.get(t, 0) != topics_a.get(t, 0)
-            }
-        return result
