@@ -87,7 +87,12 @@ dependencies = [
     # 0.19.0: snapshots key on a supplied release tag or timestamp rather than
     # a git tree hash read before `git add` stages them. This repo's snapshots
     # go through the shared base, so the scheme arrives with the floor.
-    "kgmodule-utils>=0.19.0",
+    # 0.20.0 is a hard requirement, not a preference: snapshots.py has no
+    # __init__ or diff_snapshots of its own any more. It configures the base
+    # through the package_name and dict_metric_deltas class attributes, neither
+    # of which exists before 0.20.0. Against 0.19.x the manager reports itself
+    # as "kg-utils" and loses topic_counts_delta from every diff.
+    "kgmodule-utils>=0.20.0",
     # Upper-bounded: mcp 2.0 removed the bundled `mcp.server.fastmcp` module
     # (FastMCP was split out into the standalone `fastmcp` package) and rebuilt
     # mcp.server around new submodules. src/diary_kg/mcp_server.py imports

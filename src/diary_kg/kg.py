@@ -879,16 +879,35 @@ class DiaryKG:
 
         return DiarySnapshotManager(self._snapshot_dir)
 
-    def snapshot_save(self, version: str = "0.1.0", label: str | None = None) -> dict[str, Any]:
+    def snapshot_save(
+        self,
+        version: str = "0.1.0",
+        label: str | None = None,
+        *,
+        key: str = "",
+        subject: str = "",
+    ) -> dict[str, Any]:
         """Capture a point-in-time snapshot of corpus metrics.
 
-        Key is the git tree hash (``HEAD^{tree}``).  Metrics include
-        chunk/entry/node/edge counts, temporal span, and topic/context
-        distributions.  Deltas vs previous and baseline are computed
-        automatically.
+        Metrics include chunk/entry/node/edge counts, temporal span, and
+        topic/context distributions. Deltas vs previous and baseline are
+        computed automatically.
 
-        :param version: Version label for this snapshot.
+        The key is *not* the git tree hash. That hash is read before ``git
+        add`` stages the snapshot, so it names a tree that is never committed
+        and cannot be resolved afterwards; it is recorded as provenance only.
+        Pass ``key`` to file the snapshot under a release tag, or omit it and
+        get a UTC timestamp, which is the right answer for a corpus that has
+        no tag. ``capture_diary`` has accepted a key since 0.98.0, but nothing
+        passed one, so every snapshot this package wrote was timestamp-keyed
+        regardless of the version supplied.
+
+        :param version: Version label recorded on the snapshot. Names the
+            measuring tool, not the corpus, so it is not used as the key.
         :param label: Optional human-readable description.
+        :param key: Snapshot identifier; a release tag, or empty for a
+            timestamp.
+        :param subject: What was measured, e.g. ``corpus:pepys``.
         :return: Saved snapshot as a dict.
         :raises RuntimeError: If the KG is not built.
         :raises ValueError: If chunk_count is 0.
@@ -901,7 +920,14 @@ class DiaryKG:
         info["chunk_size"] = config.get("chunk_size", 512)
         db_stats = self.stats()
         mgr = self._snapshot_mgr()
-        snap = mgr.capture_diary(version=version, info=info, db_stats=db_stats, label=label)
+        snap = mgr.capture_diary(
+            version=version,
+            info=info,
+            db_stats=db_stats,
+            label=label,
+            key=key,
+            subject=subject,
+        )
         mgr.save_snapshot(snap)
         return snap.to_dict()
 
