@@ -7,7 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.99.0] - 2026-09-08
+
+### Fixed
+
+- **`diarykg snapshot save -v <tag>` now files the snapshot under the tag.** The
+  command accepted the tag and keyed the snapshot on a UTC timestamp anyway, so
+  every snapshot this package has written was timestamp-keyed regardless of the
+  version supplied. `capture_diary()` has taken a `key` since 0.98.0, but
+  `DiaryKG.snapshot_save()` never passed one, so `--version` reached the snapshot
+  as the version field and never as the key. The docstring still described the
+  key as the git tree hash, which stopped being true at kgmodule-utils 0.19.0.
+
+  `DiaryKG.snapshot_save()` takes `key` and `subject` and forwards both. The CLI
+  passes the tag as the key only when you give `-v` explicitly, because the
+  default value is the literal `0.1.0`, which names the measuring tool rather
+  than the corpus and must not become a key; click's parameter source separates
+  the two cases. A corpus with no tag still gets a timestamp, which is the
+  correct key for it. `snapshot save` also gains `--subject`, for parity with the
+  other fleet modules.
+
+  This is the same defect as ftree_kg's and genealogy_kg's, in a repo the fleet
+  had recorded as fixed: the 0.98.0 change added the parameter and stopped there.
+  Driving the CLI end to end against a real corpus found it; the test suite
+  passed throughout. Two regression tests pin both directions.
+
 ### Changed
+
+- **The snapshot manager configures the base class instead of overriding it.**
+  `__init__` and `diff_snapshots` are replaced by the kgmodule-utils 0.20.0
+  extension points: a `package_name` class attribute, and
+  `dict_metric_deltas = ("topic_counts",)`. The base result now carries
+  `timestamp` and `issues_delta` directly. The old override reloaded both
+  snapshots to build the topic delta, where the base reads metrics it already
+  holds. `capture_diary()` and `_compute_delta_from_metrics()` stay, because they
+  are domain API.
+
+- **The kgmodule-utils floor moves to `>=0.20.0`.** This is a hard requirement
+  rather than a preference: against 0.19.x the manager reports itself as
+  `kg-utils` and drops `topic_counts_delta` from every diff.
 
 - **`release.yml` now matches the rest of the fleet: it publishes to PyPI.**
   This repo carried the older 47-line workflow that built a wheel and created a
@@ -16,6 +54,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The workflow now stashes the built artifacts and hands them to a `publish` job
   using PyPI trusted publishing, so the index and the GitHub Release carry
   byte-identical files. Action pins come up to the fleet's current versions.
+
+### Removed
+
+- **`DiarySnapshotManager.get_previous()`.** It resolved an unsaved key to the
+  most recently saved snapshot so that `capture()` could fill `vs_previous` and
+  persist it into the snapshot file. Nothing read it: every consumer in this repo
+  and the other eight reaches `vs_previous` through `load_snapshot()`, which
+  computes the delta through `_compute_delta_from_metrics()` as of
+  kgmodule-utils 0.19.1. A persisted value could also be wrong and block its own
+  correction, because "most recently saved" is not "chronologically previous",
+  and `load_snapshot()` backfills only when `vs_previous` is `None`.
 
 ## [0.98.0] - 2026-09-06
 

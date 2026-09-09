@@ -1,51 +1,70 @@
-# Release Notes — v0.98.0
+# Release Notes -- v0.99.0
 
-> Released: 2026-09-06
+> Released: 2026-09-08
 
-Two changes, both about resources and identity: `DiaryKG` can finally be closed,
-and its snapshots can finally be named. Neither is visible in normal querying,
-and both were invisible failures until something downstream tripped over them.
+`diarykg snapshot save -v <tag>` accepted a release tag and filed the snapshot
+under a UTC timestamp anyway. Every snapshot this package has written was
+timestamp-keyed, whatever version you gave it. That is fixed, the snapshot
+manager now sits on the kgmodule-utils 0.20.0 extension points instead of
+overriding them, and releases reach PyPI without a manual upload.
 
 ## What changed
 
-**`DiaryKG.close()`, and the context manager to go with it.** `DiaryKG` holds a
-lazily constructed `DocKG` and had no way to release it, so every caller leaked
-one SQLite connection per instance with nothing it could do about it from its own
-side. `gutenberg_kg` builds one `DiaryKG` per diary on every corpus build and hit
-exactly that. `close()` delegates to `DocKG.close()`, guards the case where the
-`DocKG` was never constructed, and drops the reference before closing so calling
-it twice is a no-op — and it does not end the object's life, since a later
-`query()`, `pack()` or `stats()` rebuilds on demand.
+**The release tag reaches the snapshot key.** The plumbing was in place and
+nothing connected it. `capture_diary()` has taken a `key` since 0.98.0, but
+`DiaryKG.snapshot_save()` never passed one, so `--version` arrived as the
+snapshot's version field and never as its key. `snapshot_save()` now takes `key`
+and `subject` and forwards both, and the CLI passes the tag as the key only when
+you give `-v` explicitly. The flag's default is the literal `0.1.0`, which names
+the measuring tool rather than the corpus and must not become a key; click's
+parameter source tells the two cases apart. A corpus carries no tag, so omitting
+`-v` still produces a timestamp, which is the correct key for it. `snapshot save`
+also gains `--subject`, matching the other fleet modules.
 
-`build(wipe=True)` and `rebuild_index()` also close before unlinking now, rather
-than after. An open connection to a deleted file keeps the old database alive
-behind the new one, so a rebuild in a process that had already queried was
-quietly holding two.
+The fleet had this repo recorded as fixed. The 0.98.0 change added the parameter
+and stopped, and the test suite passed the whole time; driving the CLI end to end
+against a real corpus is what surfaced it. Two regression tests now pin both
+directions.
 
-**Snapshots can be keyed on a release tag.** `capture_diary()` takes `key` and
-`subject`. Until now there was no way to say what a snapshot was of: every diary
-snapshot took the base's UTC-timestamp default, which is the right answer for a
-corpus and the wrong one for a release, with no way to choose. `subject` records
-what was measured — `corpus:pepys`, `repo:diary-kg` — separately from `version`,
-which names the measuring tool rather than the thing measured.
+**The snapshot manager configures the base class instead of overriding it.**
+kgmodule-utils 0.20.0 exposes the two things `DiarySnapshotManager` had
+reimplemented: a `package_name` class attribute replaces `__init__`, and
+`dict_metric_deltas = ("topic_counts",)` replaces `diff_snapshots`, with
+`timestamp` and `issues_delta` arriving in the base result. The override also
+reloaded both snapshot files to build the topic delta, where the base computes it
+from metrics it already holds. `capture_diary()` and `_compute_delta_from_metrics()`
+stay, because they are domain API rather than boilerplate.
 
-**Dependency floors move to `doc-kg>=0.24.1` and `kgmodule-utils>=0.19.0`.**
-0.19.0 is where snapshots stopped keying on a git tree hash that was read before
-`git add` staged them, so the hash named a tree that was never committed. The
-doc-kg floor skips 0.24.0 deliberately rather than by accident of timing: that
-release shipped the new key scheme with a `save_snapshot` that dropped the key on
-the way to disk, so every snapshot it wrote fell back to a tree hash anyway.
+`get_previous()` is gone with them. It resolved an unsaved key to the most
+recently saved snapshot so that `capture()` could persist `vs_previous` into the
+file, and nothing read the result: every consumer in this repo and the other
+eight reaches `vs_previous` through `load_snapshot()`, which computes the delta
+on read. The persisted value was also a liability, because "most recently saved"
+is not "chronologically previous". A snapshot arriving out of order left the
+stored delta stale, and `load_snapshot()` backfills only when `vs_previous` is
+`None`, so a wrong stored value suppressed the recompute that would have
+corrected it.
+
+**Releases publish to PyPI.** This repo still carried the older 47-line workflow,
+which built a wheel and created a GitHub Release but stopped there, so every
+upload to the index was manual. That is why diary-kg sat at 0.97.0 on PyPI. The
+workflow now stashes the built artifacts and hands them to a `publish` job over
+trusted publishing, so the index and the GitHub Release carry byte-identical
+files.
 
 ## Upgrading
 
-Nothing to migrate, and no rebuild required. Existing snapshots keep their keys
-and stay addressable.
+No rebuild. The changes are confined to snapshots and packaging, and existing
+`.diarykg` databases are untouched.
 
-Two things are worth adopting rather than required. Callers holding a `DiaryKG`
-for the life of a process should now close it — `with DiaryKG(...) as kg:` is the
-short form. And anyone snapshotting at a release should pass the tag explicitly,
-`capture_diary(..., key="v0.98.0")`, because an omitted key still means "this is
-a corpus, timestamp it".
+The kgmodule-utils floor moves to `>=0.20.0`, and this one is a hard requirement:
+against 0.19.x the manager reports itself as `kg-utils` and drops
+`topic_counts_delta` from every diff. Reinstall with
+`poetry install --with dev --all-extras` to pick it up.
+
+Snapshots written before this release keep their timestamp keys. Nothing rewrites
+them, and the delta between two of them is computed on read, so they continue to
+diff correctly against tag-keyed snapshots taken from here on.
 
 ---
 
