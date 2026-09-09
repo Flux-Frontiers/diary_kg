@@ -456,3 +456,61 @@ class TestBaseExtensionPoints:
         result = mgr.diff_snapshots("d_a", "d_b")
         assert result["a"]["timestamp"] and result["b"]["timestamp"]
         assert result["issues_delta"] == {"introduced": ["new"], "resolved": ["gone"]}
+
+
+class TestSnapshotKeyFromVersion:
+    """``snapshot save -v TAG`` must file the snapshot under TAG.
+
+    ``capture_diary`` accepted a ``key`` from 0.98.0, but ``DiaryKG.
+    snapshot_save`` never passed one, so every snapshot this package wrote was
+    keyed on a UTC timestamp no matter what version was supplied -- the same
+    defect found in ftree_kg and genealogy_kg, in a repo the fleet had recorded
+    as fixed.
+    """
+
+    def test_explicit_key_becomes_the_snapshot_key(self, tmp_path):
+        mgr = _make_mgr(tmp_path)
+        snap = mgr.capture_diary(
+            version="1.0.0",
+            info={
+                "chunk_count": 10,
+                "entry_count": 5,
+                "topic_counts": {},
+                "context_counts": {},
+                "temporal_span": None,
+                "chunking_strategy": "",
+                "chunk_size": 512,
+            },
+            db_stats={"node_count": 20, "edge_count": 0},
+            branch="main",
+            tree_hash="f" * 40,
+            key="v1.0.0",
+            subject="corpus:pepys",
+        )
+        assert snap.key == "v1.0.0"
+        assert snap.subject == "corpus:pepys"
+        assert snap.tree_hash == "f" * 40
+
+        saved = mgr.save_snapshot(snap)
+        assert saved is not None and saved.name == "v1.0.0.json"
+
+    def test_omitted_key_is_a_timestamp_not_the_tree_hash(self, tmp_path):
+        """A corpus has no release tag; a timestamp is the right key for it."""
+        mgr = _make_mgr(tmp_path)
+        snap = mgr.capture_diary(
+            version="1.0.0",
+            info={
+                "chunk_count": 10,
+                "entry_count": 5,
+                "topic_counts": {},
+                "context_counts": {},
+                "temporal_span": None,
+                "chunking_strategy": "",
+                "chunk_size": 512,
+            },
+            db_stats={"node_count": 20, "edge_count": 0},
+            branch="main",
+            tree_hash="f" * 40,
+        )
+        assert snap.key != "f" * 40
+        datetime.fromisoformat(snap.key)

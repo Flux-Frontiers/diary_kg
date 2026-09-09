@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 import click
+from click.core import ParameterSource
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -421,7 +422,10 @@ def snapshot():
     "--version", "-v", default="0.1.0", show_default=True, help="Version string for this snapshot."
 )
 @click.option("--label", "-l", default=None, help="Human-readable label for this snapshot.")
-def snapshot_save(root, version, label):
+@click.option(
+    "--subject", default="", help="What was measured, e.g. 'corpus:pepys' or 'repo:diary-kg'."
+)
+def snapshot_save(root, version, label, subject):
     """Capture a snapshot of current corpus metrics.
 
     \b
@@ -439,8 +443,16 @@ def snapshot_save(root, version, label):
         diarykg snapshot save /projects/pepys -v 0.92.2
     """
     kg = _kg(root)
+    # An explicitly passed -v is a release tag and becomes the key. The
+    # default is the measuring tool's placeholder and must not be: a corpus
+    # with no tag is keyed on a UTC timestamp instead.
+    ctx = click.get_current_context(silent=True)
+    source = ctx.get_parameter_source("version") if ctx is not None else None
+    explicit = source is not None and source is not ParameterSource.DEFAULT
     try:
-        snap = kg.snapshot_save(version=version, label=label)
+        snap = kg.snapshot_save(
+            version=version, label=label, key=version if explicit else "", subject=subject
+        )
     except RuntimeError as exc:
         console.print(f"[red]Error:[/red] {exc}")
         sys.exit(1)
