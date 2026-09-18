@@ -322,8 +322,8 @@ diary_kg/
 
 ## Dependencies
 
-- `doc-kg[sqlite-vec] ≥ 0.18.2` — hybrid semantic + structural document knowledge graph
-- `kgmodule-utils ≥ 0.2.3` — shared embedding, model cache, and snapshot utilities
+- `doc-kg[sqlite-vec] ≥ 0.26.0` — hybrid semantic + structural document knowledge graph
+- `kgmodule-utils ≥ 0.22.0` — shared embedding, model cache, and snapshot utilities
 - `spacy ≥ 3.8` with `en_core_web_sm` model
 - `sentence-transformers ≥ 5.4`
 - `transformers ≥ 4.57`

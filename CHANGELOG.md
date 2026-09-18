@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`kgmodule-utils` floor raised to `>=0.22.0`** (was `>=0.20.0`) and
+  `doc-kg` to `>=0.26.0` (was `>=0.24.1`), for the fleet's current releases.
+  Nothing in this repo depends on either specifically; this is a currency
+  bump.
+
 ## [0.99.0] - 2026-09-08
 
 ### Fixed
