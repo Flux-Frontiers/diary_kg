@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `doc-kg` to `>=0.26.0` (was `>=0.24.1`), for the fleet's current releases.
   Nothing in this repo depends on either specifically; this is a currency
   bump.
+- **`ruff` floor raised from `>=0.4.0` to `>=0.15`**, inside the existing
+  `<0.16` cap (`kgrag_priv` sweep item 49, tier 1). Every fleet lock already
+  installs 0.15, so the old floor meant nothing. `mcp` moves to 1.30.0 in the
+  lock.
+- **`mcp` floor raised from `>=1.0.0` to `>=1.3.0`**, keeping the `<2` cap
+  (`kgrag_priv` sweep item 47). `diarykg-mcp` passes `instructions=` to
+  `FastMCP`, which 1.3.0 is the first release to accept, and
+  `mcp.server.fastmcp` does not exist at all below 1.2.0. The lock already
+  resolved far above it, so the floor was wrong rather than the environment.
 
 ## [0.99.0] - 2026-09-08
 
