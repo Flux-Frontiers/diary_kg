@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Fleet dependency floors raised and relocked** (`kgrag_priv` sweep item 46):
+  `kgmodule-utils` to `>=0.23.0`, `doc-kg` to `>=0.27.0`. The three packages released on 2026-09-20 and put
+  every consumer's lock behind them within hours; this is the routine
+  currency bump that follows.
+
 - **`.mcp.json`'s `dockg` server runs the global tool** rather than a path
   into this machine's `.venv` (`kgrag_priv` sweep item 50, phase 1). `dockg`
   is a tool this repo runs but never imports, so it is installed once with
