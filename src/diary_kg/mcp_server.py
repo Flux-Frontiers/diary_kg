@@ -22,6 +22,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -38,6 +40,21 @@ def _get_kg() -> DiaryKG:
     return _kg
 
 
+@asynccontextmanager
+async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
+    """Close the graph's SQLite connection(s) when the server shuts down.
+
+    ``main()`` sets the module-level ``_kg`` before ``mcp.run()`` calls into
+    this, and both the stdio and SSE transports route through the same
+    underlying ``Server.run()``, so this fires on either one.
+    """
+    try:
+        yield
+    finally:
+        if _kg is not None:
+            _kg.close()
+
+
 mcp = FastMCP(
     "diarykg",
     instructions=(
@@ -45,6 +62,7 @@ mcp = FastMCP(
         "Use these tools to search diary entries, retrieve source text, and "
         "inspect corpus statistics."
     ),
+    lifespan=_lifespan,
 )
 
 
