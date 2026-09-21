@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`.mcp.json`'s `dockg` server runs the global tool** rather than a path
+  into this machine's `.venv` (`kgrag_priv` sweep item 50, phase 1). `dockg`
+  is a tool this repo runs but never imports, so it is installed once with
+  `uv tool` and resolved from `PATH`; the absolute path was also not
+  portable to any other machine.
+
 - **`kgmodule-utils` floor raised to `>=0.22.0`** (was `>=0.20.0`) and
   `doc-kg` to `>=0.26.0` (was `>=0.24.1`), for the fleet's current releases.
   Nothing in this repo depends on either specifically; this is a currency
