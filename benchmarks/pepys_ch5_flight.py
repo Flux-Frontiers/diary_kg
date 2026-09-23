@@ -40,9 +40,6 @@ Usage
 from __future__ import annotations
 
 import argparse
-
-# Direct import of turtleND
-import importlib.util as _ilu
 import json
 import math
 import sys
@@ -53,15 +50,7 @@ from pathlib import Path
 import numpy as np
 from rich.console import Console
 from rich.table import Table
-
-_tnd_path = str(
-    Path(__file__).resolve().parent.parent.parent / "proteusPy" / "proteusPy" / "turtleND.py"
-)
-_spec = _ilu.spec_from_file_location("turtleND", _tnd_path)
-assert _spec is not None and _spec.loader is not None, f"Cannot load turtleND from {_tnd_path}"
-_tnd_mod = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(_tnd_mod)  # type: ignore[union-attr]
-TurtleND = _tnd_mod.TurtleND
+from turtlend import TurtleND
 
 console = Console()
 

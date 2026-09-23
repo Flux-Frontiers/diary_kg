@@ -50,17 +50,13 @@ Usage
 
 Requirements
 ------------
-  numpy, scikit-learn, matplotlib, rich  (all in proteusPy env).
+  numpy, scikit-learn, matplotlib, rich, turtlend  (all in proteusPy env).
   A pre-computed embedding cache JSON from pepys_manifold_explorer.py.
 """
 
 from __future__ import annotations
 
 import argparse
-
-# Direct import of turtleND to avoid pulling in heavy optional deps (pyvista etc.)
-# via proteusPy.__init__.  We load the module file directly.
-import importlib.util as _ilu  # noqa: E402
 import json
 import math
 import sys
@@ -73,14 +69,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from rich.console import Console
 from rich.table import Table
-
-_tnd_path = str(
-    Path(__file__).resolve().parent.parent.parent / "proteusPy" / "proteusPy" / "turtleND.py"
-)
-_spec = _ilu.spec_from_file_location("turtleND", _tnd_path)
-_tnd_mod = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(_tnd_mod)
-TurtleND = _tnd_mod.TurtleND
+from turtlend import TurtleND
 
 console = Console()
 
