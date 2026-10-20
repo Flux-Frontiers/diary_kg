@@ -1093,21 +1093,20 @@ files = [
 
 [[package]]
 name = "doc-kg"
-version = "0.27.0"
+version = "0.28.0"
 description = "A tool to build a semantically searchable knowledge graph from markdown and text documents"
 optional = false
 python-versions = "<3.14,>=3.12"
 groups = ["main"]
 files = [
-    {file = "doc_kg-0.27.0-py3-none-any.whl", hash = "sha256:9dd5b43a18c888f993545bc1c34099929cdf702bc94a3006499bf397c6c0cd00"},
-    {file = "doc_kg-0.27.0.tar.gz", hash = "sha256:6cf9e8805fe768c936135cc7fd3b9efec7221167432375fc94839edfc55a868d"},
+    {file = "doc_kg-0.28.0-py3-none-any.whl", hash = "sha256:6aff8b095c5d51a37d4053ea65476b91f70af1fc72ef96d7601fe4365e58d2da"},
+    {file = "doc_kg-0.28.0.tar.gz", hash = "sha256:b108c55402497d7463593f3e48a08053951a14fd80b333679ea84b5aaff070f7"},
 ]
 
 [package.dependencies]
 click = ">=8.1.0,<9"
-kgmodule-utils = {version = ">=0.23.0", extras = ["semantic"]}
+kgmodule-utils = {version = ">=0.27.0", extras = ["pdf", "semantic"]}
 mcp = ">=1.3.0,<2"
-pymupdf4llm = ">=0.0.17"
 pyyaml = ">=6.0.0"
 rich = ">=14.3.3,<15"
 tqdm = ">=4.60"
@@ -1700,18 +1699,19 @@ referencing = ">=0.31.0"
 
 [[package]]
 name = "kgmodule-utils"
-version = "0.23.0"
+version = "0.27.0"
 description = "Shared types, graph store, semantic index, and pipeline base for the KGModule SDK"
 optional = false
 python-versions = "<3.14,>=3.12"
 groups = ["main"]
 files = [
-    {file = "kgmodule_utils-0.23.0-py3-none-any.whl", hash = "sha256:f0ec8050f33fb0d71b4d1ca3fa8148627118df2201b53da0737f00622f35f97c"},
-    {file = "kgmodule_utils-0.23.0.tar.gz", hash = "sha256:264a137efdcf36265172f7c223816ef1c2e0697dc6dc7e35606f5835dc1a379d"},
+    {file = "kgmodule_utils-0.27.0-py3-none-any.whl", hash = "sha256:39da894124aae271b669726545d29f3342b40c5569a2174648ee4e8366a7d2a1"},
+    {file = "kgmodule_utils-0.27.0.tar.gz", hash = "sha256:eb43fba63ce918697be2f1207a2b1e943859c457c6563067da39fe08a1e6db91"},
 ]
 
 [package.dependencies]
 numpy = {version = ">=1.24.0", optional = true, markers = "extra == \"semantic\""}
+pymupdf4llm = {version = ">=1.28.2", optional = true, markers = "extra == \"pdf\""}
 rich = {version = ">=13.0.0,<15.0.0", optional = true, markers = "extra == \"semantic\""}
 sentence-transformers = {version = ">=5.4.1", optional = true, markers = "extra == \"semantic\""}
 sqlite-vec = {version = "0.1.9", optional = true, markers = "extra == \"semantic\""}
@@ -1719,15 +1719,16 @@ torch = {version = ">=2.5.1", optional = true, markers = "extra == \"semantic\""
 transformers = {version = ">=5.5.0,<6", optional = true, markers = "extra == \"semantic\""}
 
 [package.extras]
-ingest = ["firecrawl-anydoc (>=0.1.9)"]
+ingest = ["firecrawl-anydoc (>=0.1.9)", "pymupdf4llm (>=1.28.2)"]
 lancedb = ["lancedb (>=0.19.0)"]
+pdf = ["pymupdf4llm (>=1.28.2)"]
 semantic = ["numpy (>=1.24.0)", "rich (>=13.0.0,<15.0.0)", "sentence-transformers (>=5.4.1)", "sqlite-vec (==0.1.9)", "torch (>=2.5.1)", "transformers (>=5.5.0,<6)"]
 sqlite-vec = ["sqlite-vec (==0.1.9)"]
 synthesis = ["httpx (>=0.27.0)", "openai (>=1.30.0)", "pillow (>=10.0.0)"]
 synthesis-mflux = ["httpx (>=0.27.0)", "mflux (>=0.9.0)", "openai (>=1.30.0)", "pillow (>=10.0.0)"]
 viz = ["pyvis (>=0.3.2)"]
 viz3d = ["numpy (>=1.24.0)"]
-viz3d-qt = ["PyQt5 (>=5.15.0)", "numpy (>=1.24.0)", "pyvista (>=0.44.0)", "quiltwright (>=0.15.0)"]
+viz3d-qt = ["PyQt5 (>=5.15.0)", "numpy (>=1.24.0)", "pyvista (>=0.44.0)", "quiltwright (>=0.16.0)"]
 viz3d-render = ["numpy (>=1.24.0)", "pyvista (>=0.44.0)"]
 
 [[package]]
