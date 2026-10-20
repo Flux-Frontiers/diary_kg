@@ -1,30 +1,24 @@
-# Release Notes -- v0.100.0
+# Release Notes -- v0.100.1
 
-> Released: 2026-09-21
+> Released: 2026-10-20
 
-DiaryKG's MCP server now closes the corpus database when it shuts down instead
-of leaving the handle to process exit. Nothing else changes: no index rebuild,
-no migration, no CLI change.
+### Fixed
 
-## What changed
+- **PDF ingest on a fresh install.** The lock moves to kgmodule-utils 0.27.1
+  and doc-kg 0.28.1. kgmodule-utils 0.27.0's `[pdf]` extra declared
+  `pymupdf4llm>=1.28.2`, which now resolves to the empty pymupdf4llm 2.0
+  placeholder and installs no PDF code; 0.27.1 declares `pymupdf>=2.0`,
+  whose wheel ships the `pymupdf4llm` module. Floors are unchanged.
 
-**The MCP server closes the graph on shutdown.** `diarykg-mcp` wires an
-`asynccontextmanager` into `FastMCP(lifespan=...)`, so the underlying SQLite
-connection is released when the server stops. One hook covers both the stdio
-and SSE transports, because both route through the same underlying
-`Server.run()`.
+### Changed
 
-DiaryKG holds its handle indirectly, through the DocKG it constructs on demand,
-so the shutdown path closes that and drops the reference. A later query simply
-rebuilds it, which means closing does not end the object's usable life.
-
-This is the resource-cleanup pattern the fleet standardised on, verified here
-against a real server run rather than a stubbed `close`.
-
-## Upgrading
-
-Nothing to do. If you run `diarykg-mcp` inside a long-lived process, it now
-leaves no database handle behind when it stops.
+- **Dependencies refreshed to clear 21 Dependabot alerts**: pyjwt 2.15.1,
+  urllib3 2.8.0, virtualenv 21.14.11 (dev), all transitive.
+- **Fleet packages relocked** to kgmodule-utils 0.27.0 and doc-kg 0.28.0
+  before the 0.27.1 fix above.
+- **Benchmarks import `TurtleND` from `turtlend`** instead of loading
+  `turtleND.py` by path from a sibling proteusPy checkout (#33). diary_kg's
+  own dependencies are unchanged.
 
 ---
 
