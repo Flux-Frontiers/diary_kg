@@ -30,6 +30,7 @@ from kg_utils.embed import DEFAULT_MODEL as DEFAULT_MODEL
 from kg_utils.embed import KNOWN_MODELS
 from kg_utils.embedder import wrap_embedder
 from kg_utils.temporal import temporal_metadata
+from kg_utils.validation import MAX_HOP, MAX_MAX_NODES, bounded_int
 
 _FM_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
@@ -102,6 +103,10 @@ class DiaryKG:
     :param source_file: Relative path to the diary ``.txt`` source inside
         *root*.  Required for the first ``build()``; subsequent calls read it
         from ``config.json`` when omitted.
+    :param model: Sentence-transformer model name or alias.
+    :param db_path: SQLite graph; ``None`` for ``<root>/.diarykg/graph.sqlite``.
+    :param vectors_path: sqlite-vec store; ``None`` for
+        ``<root>/.diarykg/vectors.sqlite``.
     """
 
     KG_DIR = ".diarykg"
@@ -111,6 +116,9 @@ class DiaryKG:
         root: str | Path,
         source_file: str | None = None,
         model: str = DEFAULT_MODEL,
+        *,
+        db_path: str | Path | None = None,
+        vectors_path: str | Path | None = None,
     ) -> None:
         self.root = Path(root).resolve()
         self._source_file_override = source_file
@@ -118,8 +126,8 @@ class DiaryKG:
 
         self._kg_dir = self.root / self.KG_DIR
         self._corpus_dir = self._kg_dir / "corpus"
-        self._db_path = self._kg_dir / "graph.sqlite"
-        self._vectors_path = self._kg_dir / "vectors.sqlite"
+        self._db_path = Path(db_path) if db_path else self._kg_dir / "graph.sqlite"
+        self._vectors_path = Path(vectors_path) if vectors_path else self._kg_dir / "vectors.sqlite"
         self._config_path = self._kg_dir / "config.json"
         self._snapshot_dir = self._kg_dir / "snapshots"
 
@@ -128,6 +136,26 @@ class DiaryKG:
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
+
+    @property
+    def repo_root(self) -> Path:
+        """Project root the ``.diarykg/`` directory lives in."""
+        return self.root
+
+    @property
+    def db_path(self) -> Path:
+        """SQLite graph database."""
+        return self._db_path
+
+    @property
+    def vectors_path(self) -> Path:
+        """sqlite-vec vector store."""
+        return self._vectors_path
+
+    @property
+    def model_name(self) -> str:
+        """Resolved sentence-transformer model name."""
+        return self._model
 
     @property
     def source_path(self) -> Path | None:
@@ -199,16 +227,13 @@ class DiaryKG:
         """Return the ``dockg`` CLI flags matching :meth:`_dockg_vector_kwargs`.
 
         Used by the subprocess fallback taken when ``doc_kg`` is installed as a
-        CLI but not importable in this interpreter.
+        CLI but not importable in this interpreter. Only the store path: doc-kg
+        0.29.0 removed ``--vector-backend`` with LanceDB, sqlite-vec being the
+        only backend, and rejects the flag.
 
         :return: Argument list to splice into a ``dockg build`` invocation.
         """
-        return [
-            "--vector-backend",
-            "sqlite-vec",
-            "--vectors-path",
-            str(self._vectors_path),
-        ]
+        return ["--vectors-path", str(self._vectors_path)]
 
     # ------------------------------------------------------------------
     # Lazy DocKG loader
@@ -659,32 +684,92 @@ class DiaryKG:
         fused.sort(key=lambda t: -t[1])
         return fused
 
-    def query(self, q: str, k: int = 8) -> list[dict[str, Any]]:
+    def _ranked(
+        self,
+        dockg: Any,
+        q: str,
+        *,
+        k: int,
+        hop: int,
+        rels: tuple[str, ...] | list[str] | None,
+        max_nodes: int | None,
+    ) -> list[tuple[str, float, int, str]]:
+        """Rank the fused chunk seeds, then the nodes *hop* graph hops from them.
+
+        With ``hop=0`` this is exactly the fused seed list. Each expanded node
+        is ranked after every seed, by hop distance and then by the score of
+        the seed it was reached from, and scored ``seed_score / (1 + hops)``.
+
+        :param dockg: The backing :class:`~doc_kg.kg.DocKG` instance.
+        :param q: Natural-language query string.
+        :param k: Number of fused chunk seeds.
+        :param hop: Graph hops to expand from the seeds (0-5).
+        :param rels: Relations to expand along; ``None`` for DocKG's defaults.
+        :param max_nodes: Most results, seeds included; ``None`` for no cap.
+        :return: ``(node_id, score, hop, via_seed)`` tuples, best first.
+        :raises ValueError: If *hop* or *max_nodes* is out of range.
+        """
+        bounded_int("hop", hop, 0, MAX_HOP)
+        if max_nodes is not None:
+            bounded_int("max_nodes", max_nodes, 1, MAX_MAX_NODES)
+        fused = self._fused_chunk_seeds(dockg, q, k)
+        ranked = [(nid, score, 0, nid) for nid, score in fused]
+        if hop and fused:
+            seed_score = dict(fused)
+            expand_kw: dict[str, Any] = {"hop": hop}
+            if rels:
+                expand_kw["rels"] = tuple(rels)
+            reached = [
+                (nid, m)
+                for nid, m in dockg.store.expand(set(seed_score), **expand_kw).items()
+                if nid not in seed_score
+            ]
+            reached.sort(key=lambda t: (t[1].best_hop, -seed_score[t[1].via_seed], t[0]))
+            ranked += [
+                (nid, seed_score[m.via_seed] / (1 + m.best_hop), m.best_hop, m.via_seed)
+                for nid, m in reached
+            ]
+        return ranked if max_nodes is None else ranked[:max_nodes]
+
+    def query(
+        self,
+        q: str,
+        k: int = 8,
+        *,
+        hop: int = 0,
+        max_nodes: int | None = None,
+        rels: tuple[str, ...] | list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """Semantic search over the diary corpus.
 
         Hybrid dense + lexical (BM25) search over chunk nodes, with scores and
-        diary metadata sourced from the enriched SQLite ``nodes`` table.
+        diary metadata sourced from the enriched SQLite ``nodes`` table. With
+        ``hop`` > 0 the graph neighbourhood of those chunks follows them
+        (adjacent entries, shared topics), ranked after every seed.
 
         :param q: Natural-language query string.
-        :param k: Number of results to return.
+        :param k: Number of chunk seeds.
+        :param hop: Graph hops to expand from the seeds (0-5, default 0: seeds only).
+        :param max_nodes: Most results, seeds included; ``None`` for no cap.
+        :param rels: Relations to expand along; ``None`` for DocKG's defaults.
         :return: List of result dicts with keys: ``score``, ``summary``,
             ``source_file``, ``timestamp``, ``category``, ``context``,
             ``metadata`` (the shared temporal contract, for federated
-            time-scoped queries),
-            ``node_id``.
+            time-scoped queries), ``node_id``, ``hop`` (0 for a seed) and
+            ``via_seed``.
         """
         import sqlite3  # pylint: disable=import-outside-toplevel
 
         dockg = self._load_dockg()
         sf = self.source_file
 
-        fused = self._fused_chunk_seeds(dockg, q, k)
-        if not fused:
+        ranked = self._ranked(dockg, q, k=k, hop=hop, rels=rels, max_nodes=max_nodes)
+        if not ranked:
             return []
 
         hits = []
         with sqlite3.connect(str(self._db_path)) as con:
-            for node_id, score in fused:
+            for node_id, score, hops, via_seed in ranked:
                 row = con.execute(
                     """
                     SELECT text, timestamp, category, context, diary_source_file, file_path
@@ -705,31 +790,44 @@ class DiaryKG:
                         "category": category or "",
                         "context": context or "",
                         "metadata": _temporal_for(timestamp),
+                        "hop": hops,
+                        "via_seed": via_seed,
                     }
                 )
         return hits
 
-    def pack(self, q: str, k: int = 8) -> list[dict[str, Any]]:
+    def pack(
+        self,
+        q: str,
+        k: int = 8,
+        *,
+        hop: int = 0,
+        max_nodes: int | None = None,
+        rels: tuple[str, ...] | list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """Return source snippets for LLM ingestion.
 
         :param q: Natural-language query string.
-        :param k: Number of snippets.
+        :param k: Number of chunk seeds.
+        :param hop: Graph hops to expand from the seeds (0-5, default 0: seeds only).
+        :param max_nodes: Most snippets, seeds included; ``None`` for no cap.
+        :param rels: Relations to expand along; ``None`` for DocKG's defaults.
         :return: List of snippet dicts with keys: ``content``, ``source_file``,
-            ``timestamp``, ``score``, ``node_id``, and ``metadata`` carrying the
-            shared temporal contract.
+            ``timestamp``, ``score``, ``node_id``, ``hop``, ``via_seed``, and
+            ``metadata`` carrying the shared temporal contract.
         """
         import sqlite3  # pylint: disable=import-outside-toplevel
 
         dockg = self._load_dockg()
         sf = self.source_file
 
-        fused = self._fused_chunk_seeds(dockg, q, k)
-        if not fused:
+        ranked = self._ranked(dockg, q, k=k, hop=hop, rels=rels, max_nodes=max_nodes)
+        if not ranked:
             return []
 
         snippets = []
         with sqlite3.connect(str(self._db_path)) as con:
-            for node_id, score in fused:
+            for node_id, score, hops, via_seed in ranked:
                 row = con.execute(
                     """
                     SELECT text, timestamp, diary_source_file, file_path
@@ -748,9 +846,46 @@ class DiaryKG:
                         "source_file": diary_sf or sf or file_path or "",
                         "timestamp": timestamp or "",
                         "metadata": _temporal_for(timestamp),
+                        "hop": hops,
+                        "via_seed": via_seed,
                     }
                 )
         return snippets
+
+    def node(self, node_id: str) -> dict[str, Any] | None:
+        """Fetch one node of the diary graph by its ID.
+
+        Reads the graph only; never loads the embedding model.
+
+        :param node_id: Node ID, e.g. a ``chunk:`` ID from :meth:`query`.
+        :return: The node dict, or ``None`` if there is no such node.
+        """
+        return self._load_dockg().node(node_id)
+
+    def neighbors(
+        self,
+        node_id: str,
+        *,
+        rels: tuple[str, ...] | list[str] | None = None,
+        direction: str = "both",
+        limit: int = 50,
+    ) -> dict[str, Any] | None:
+        """Return a node's one-hop neighbourhood: its edges and the nodes at their far ends.
+
+        The same contract as :meth:`kg_utils.pipeline.KGModule.neighbors`,
+        answered by the backing DocKG: an entry's adjacent chunks (NEXT), its
+        topics (HAS_TOPIC), similar entries (SIMILAR_TO). Graph only.
+
+        :param node_id: The node whose neighbours to return.
+        :param rels: Relation types to follow, or ``None`` for all of them.
+        :param direction: ``"out"``, ``"in"`` or ``"both"``.
+        :param limit: Maximum number of edges, between 1 and 500.
+        :return: ``{"node": ..., "edges": [...], "nodes": [...]}``, or ``None``
+            if *node_id* is not in the graph.
+        :raises ValueError: On an empty *node_id*, an unknown *direction* or an
+            out-of-range *limit*.
+        """
+        return self._load_dockg().neighbors(node_id, rels=rels, direction=direction, limit=limit)
 
     # ------------------------------------------------------------------
     # Info / Stats / Analyze

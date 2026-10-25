@@ -74,7 +74,7 @@ diarykg query "office work and the navy board"
 diarykg pack "Pepys at the theatre" --output context.md
 
 # Start the MCP server (stdio transport for Claude Code / Cline / etc.)
-diarykg-mcp
+diarykg mcp --repo .
 ```
 
 ---
@@ -121,7 +121,7 @@ poetry run pytest
 
 ## CLI Reference
 
-The `diarykg` console script is the primary entry point. The MCP server ships as a separate `diarykg-mcp` script.
+The `diarykg` console script is the entry point; the MCP server is its `mcp` subcommand. The older `diarykg-mcp` script is the same command, kept for configs that name it.
 
 | Command | Purpose |
 |---|---|
@@ -134,7 +134,7 @@ The `diarykg` console script is the primary entry point. The MCP server ships as
 | `diarykg snapshot save` | Capture point-in-time corpus metrics |
 | `diarykg snapshot list / show / diff / prune` | Inspect and prune snapshots |
 | `diarykg install-hooks` | Install the DiaryKG pre-commit git hook |
-| `diarykg-mcp` | Run the MCP server (stdio / SSE transport) |
+| `diarykg mcp` | Run the MCP server (stdio or streamable-HTTP transport); `--manifest` prints its tools |
 
 Every command accepts a `ROOT` positional argument (default: current directory) pointing at the project that contains `.diarykg/`. Run `diarykg <command> --help` for the full option list.
 
@@ -203,23 +203,36 @@ diarykg reindex
 
 ## MCP Server
 
-DiaryKG ships an MCP server that exposes three tools to AI agents.
+DiaryKG's MCP server is built on the fleet's shared base, `kg_utils.mcp`, and
+serves the fleet's five canonical tools, under the same names as every other KG
+server.
 
 | Tool | Returns | Description |
 |---|---|---|
-| `query_diary(q, k)` | JSON | Semantic search over the diary corpus; ranked hit list with `node_id`, `score`, `summary`, `source_file`, `timestamp`, `category`, `context`. |
-| `pack_diary(q, k)` | Markdown | Top-k diary snippets formatted as Markdown sections, ready to paste into an LLM context window. |
-| `diary_stats()` | JSON | Combined corpus metadata (`info()`) and KG stats (`stats()`): chunk/entry counts, temporal span, topic/context distributions, node/edge counts. |
+| `stats()` | JSON | Combined corpus metadata (`info()`) and KG stats (`stats()`): chunk/entry counts, temporal span, topic/context distributions, node/edge counts. |
+| `query(q, k, hop, max_nodes, rels)` | JSON | Hybrid dense + keyword search over diary entries: `{"query", "hits"}`, each hit with `node_id`, `score`, `summary`, `source_file`, `timestamp`, `category`, `context`, `hop`, `via_seed`. `hop` defaults to 0 (the matching entries alone); `hop=1` brings each one's graph neighbourhood after them. |
+| `pack(q, k, hop, max_nodes, rels)` | Markdown | The matching entries' text as dated, sourced Markdown sections, ready for an LLM context window. |
+| `get_node(node_id)` | JSON | One node of the diary graph. |
+| `neighbors(node_id, rels, direction, limit)` | JSON | The edges touching one node and the nodes at their other ends: an entry's adjacent entries (`NEXT`), its topics, similar entries. |
+
+`stats`, `get_node` and `neighbors` read the graph only and never load the
+embedding model. `diarykg mcp --manifest` prints the tool list as JSON without
+opening the graph.
 
 ### Run the server
 
 ```bash
 # Stdio transport (default — for Claude Code / Cline / Claude Desktop / Kilo Code)
-diarykg-mcp --repo /path/to/diary_project
+diarykg mcp --repo /path/to/diary_project
 
-# SSE transport
-diarykg-mcp --repo /path/to/diary_project --transport sse
+# Streamable HTTP
+diarykg mcp --repo /path/to/diary_project --transport streamable-http --port 8000
 ```
+
+The standard flags are `--repo`, `--db`, `--vectors`, `--model`, `--transport`,
+`--host`, `--port` and `--manifest`; `--db` and `--vectors` default to the
+project's `.diarykg/` files. The diary's source file is read from
+`.diarykg/config.json`, so serving takes no `--source`.
 
 ### Wire it up in an MCP client
 
@@ -229,8 +242,8 @@ Most MCP clients use a JSON config file. Example `.mcp.json` for Claude Code or 
 {
   "mcpServers": {
     "diarykg": {
-      "command": "diarykg-mcp",
-      "args": ["--repo", "/absolute/path/to/diary_project"]
+      "command": "diarykg",
+      "args": ["mcp", "--repo", "/absolute/path/to/diary_project"]
     }
   }
 }
@@ -299,7 +312,7 @@ diary_kg/
 │   ├── diary_kg/                 DiaryKG package
 │   │   ├── kg.py                 DiaryKG class (build, query, pack, analyze, snapshots)
 │   │   ├── cli.py                Click CLI — `diarykg` console script
-│   │   ├── mcp_server.py         MCP server — `diarykg-mcp` console script
+│   │   ├── mcp_server.py         MCP server — `diarykg mcp`
 │   │   ├── primitives.py         CrossHit, CrossSnippet, KGEntry, KGKind
 │   │   ├── snapshots.py          DiarySnapshotManager
 │   │   └── module/               Pluggable KGModule interface

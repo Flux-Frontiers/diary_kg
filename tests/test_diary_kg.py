@@ -105,12 +105,19 @@ class TestVectorStoreWiring:
         assert set(kwargs) == {"vector_backend", "vectors_path"}
         assert not any("lance" in k.lower() for k in kwargs)
 
-    def test_cli_args_pin_backend_and_path(self, tmp_kg_root):
+    def test_cli_args_name_the_store_path_only(self, tmp_kg_root):
+        """doc-kg 0.29.0 removed --vector-backend (sqlite-vec is its only
+        backend) and exits 2 on it, so the subprocess fallback must not pass it."""
         kg = DiaryKG(tmp_kg_root)
-        args = kg._dockg_cli_vector_args()
-        assert "--lancedb" not in args
-        assert args[args.index("--vector-backend") + 1] == "sqlite-vec"
-        assert args[args.index("--vectors-path") + 1] == str(kg._vectors_path)
+        assert kg._dockg_cli_vector_args() == ["--vectors-path", str(kg._vectors_path)]
+
+    def test_every_cli_arg_is_a_dockg_build_option(self, tmp_kg_root):
+        """The fallback's flags are checked against the installed ``dockg build``,
+        so the next flag doc-kg removes fails here, not in a user's build."""
+        cli = pytest.importorskip("doc_kg.cli.main").cli
+        known = {o for p in cli.commands["build"].params for o in getattr(p, "opts", [])}
+        flags = [a for a in DiaryKG(tmp_kg_root)._dockg_cli_vector_args() if a.startswith("--")]
+        assert set(flags) <= known
 
 
 # ---------------------------------------------------------------------------

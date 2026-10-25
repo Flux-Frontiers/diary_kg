@@ -2,89 +2,113 @@
 """
 mcp_server.py — DiaryKG MCP Server
 
-Exposes the DiaryKG semantic search and text-pack pipeline as Model Context
-Protocol (MCP) tools for MCP-compatible agents (Claude Code, Claude Desktop,
-GitHub Copilot, etc.).
+Serves a diary corpus's knowledge graph to any MCP-compatible agent over the
+fleet's shared server base, :mod:`kg_utils.mcp`.
 
-Tools
------
-query_diary   — semantic search; returns ranked JSON hit list
-pack_diary    — semantic search + Markdown text pack for LLM ingestion
-diary_stats   — corpus metadata + KG node/edge counts
+The server answers the fleet's canonical tools -- ``stats``, ``query``,
+``pack``, ``get_node``, ``neighbors`` -- under the same names as every other
+KG server. ``stats``, ``query`` and ``pack`` are DiaryKG's own: ``stats``
+adds the corpus's temporal span and topic counts, and ``query`` and ``pack``
+rank diary entries by fused dense + keyword (BM25) retrieval, carrying each
+entry's date and source. ``get_node`` and ``neighbors`` are the shared ones.
+
+The tool list is not kept by hand anywhere: each tool's docstring is its
+description, the server's instructions are generated from them, and::
+
+    diarykg mcp --manifest
+
+prints the whole list as JSON without opening the graph.
 
 Usage
 -----
-    diarykg-mcp --repo /path/to/project [--source diary.txt] [--model <name>]
+::
+
+    diarykg mcp --repo /path/to/project
+
+``--db`` and ``--vectors`` default to ``.diarykg/graph.sqlite`` and
+``.diarykg/vectors.sqlite``; a relative path is taken from ``--repo``.
+``diarykg-mcp`` is the same command under its older name.
 """
 
 from __future__ import annotations
 
-import argparse
-import json
 import sys
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from kg_utils.mcp import Context, KGServer, kg_from, make_server
 
+from diary_kg import __version__
 from diary_kg.kg import DEFAULT_MODEL, DiaryKG
 
-_kg: DiaryKG | None = None  # pylint: disable=invalid-name
-
-
-def _get_kg() -> DiaryKG:
-    """Return the global DiaryKG instance, raising if not initialised."""
-    if _kg is None:
-        raise RuntimeError("DiaryKG not initialised. Run via 'diarykg-mcp --repo /path/to/project'")
-    return _kg
-
-
-@asynccontextmanager
-async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
-    """Close the graph's SQLite connection(s) when the server shuts down.
-
-    ``main()`` sets the module-level ``_kg`` before ``mcp.run()`` calls into
-    this, and both the stdio and SSE transports route through the same
-    underlying ``Server.run()``, so this fires on either one.
-    """
-    try:
-        yield
-    finally:
-        if _kg is not None:
-            _kg.close()
-
-
-mcp = FastMCP(
-    "diarykg",
-    instructions=(
-        "DiaryKG is a semantic knowledge graph for diary and journal corpora. "
-        "Use these tools to search diary entries, retrieve source text, and "
-        "inspect corpus statistics."
-    ),
-    lifespan=_lifespan,
+PREAMBLE = (
+    "DiaryKG is a semantic knowledge graph for diary and journal corpora. Each "
+    "diary entry is chunked into 'chunk:<file>:<0000>' nodes carrying its date "
+    "(timestamp), topic category and context; documents ('doc:<file>'), sections "
+    "and topics ('topic:<slug>') hold them together. Edges: CONTAINS, NEXT "
+    "(adjacent entries), SIMILAR_TO, HAS_TOPIC, MENTIONS_ENTITY, HAS_KEYWORD.\n\n"
+    "## Recommended workflows\n\n"
+    "- **Orientation**: stats (entry count, temporal span, topic distribution)\n"
+    "- **Find entries on a subject**: query → get_node\n"
+    "- **Read them**: pack with a descriptive query\n"
+    "- **Read around an entry**: neighbors(node_id, rels=['NEXT']) for the entries "
+    "beside it; query/pack with hop=1 to bring each hit's neighbourhood along"
 )
 
 
-@mcp.tool()
-def query_diary(q: str, k: int = 8) -> str:
-    """Semantic search over the diary corpus; returns ranked JSON hit list.
-
-    Each hit contains: node_id, score, summary, source_file, timestamp,
-    category, context.
+def stats(*, ctx: Context) -> dict[str, Any]:
     """
-    hits = _get_kg().query(q, k=k)
-    return json.dumps(hits, indent=2, ensure_ascii=False, default=str)
-
-
-@mcp.tool()
-def pack_diary(q: str, k: int = 8) -> str:
-    """Semantic search + Markdown text pack for LLM ingestion.
-
-    Returns the top-k diary snippets matching *q* formatted as Markdown
-    sections, ready to paste into an LLM context window.
+    Corpus overview: entry and chunk counts, temporal span, topic and context counts, node and edge totals.
     """
-    snippets = _get_kg().pack(q, k=k)
+    kg: DiaryKG = kg_from(ctx)
+    return {**kg.info(), **kg.stats()}
+
+
+def query(
+    q: str,
+    k: int = 8,
+    hop: int = 0,
+    max_nodes: int = 25,
+    rels: list[str] | None = None,
+    *,
+    ctx: Context,
+) -> dict[str, Any]:
+    """
+    Search the diary: ranked entries with their dates, topics, context and source.
+
+    Seeds fuse dense (vector) and keyword (BM25) matches over entry chunks. Use
+    ``pack`` instead when you want the entries' text.
+
+    :param q: Natural-language query.
+    :param k: Entry chunks to seed from (default 8).
+    :param hop: Graph hops to bring along from each seed (0-5, default 0:
+        the seeds alone).
+    :param max_nodes: Most results, seeds included (default 25).
+    :param rels: Edge types to expand along when hop > 0; omit for the defaults.
+    """
+    hits = kg_from(ctx).query(q, k=k, hop=hop, max_nodes=max_nodes, rels=rels)
+    return {"query": q, "hits": hits}
+
+
+def pack(
+    q: str,
+    k: int = 8,
+    hop: int = 0,
+    max_nodes: int = 15,
+    rels: list[str] | None = None,
+    *,
+    ctx: Context,
+) -> str:
+    """
+    Search the diary and return the matching entries' text as Markdown, dated and sourced.
+
+    :param q: Natural-language query.
+    :param k: Entry chunks to seed from (default 8).
+    :param hop: Graph hops to bring along from each seed (0-5, default 0).
+    :param max_nodes: Most entries, seeds included (default 15).
+    :param rels: Edge types to expand along when hop > 0; omit for the defaults.
+    """
+    snippets = kg_from(ctx).pack(q, k=k, hop=hop, max_nodes=max_nodes, rels=rels)
     if not snippets:
         return f"_No diary snippets found for query: {q!r}_"
 
@@ -100,80 +124,73 @@ def pack_diary(q: str, k: int = 8) -> str:
     return "\n\n".join(parts)
 
 
-@mcp.tool()
-def diary_stats() -> str:
-    """Return corpus metadata and KG node/edge counts as JSON.
+def build_server(
+    repo: str | Path,
+    db: str | Path | None = None,
+    vectors: str | Path | None = None,
+    model: str | None = None,
+) -> KGServer:
+    """Build the DiaryKG MCP server for one project, without opening its graph.
 
-    Combines DiaryKG.info() (chunk count, entry count, temporal span,
-    topic/context distributions) with DiaryKG.stats() (node_count,
-    edge_count).
+    The diary's source file is read from ``.diarykg/config.json``, written by
+    ``diarykg build``.
+
+    :param repo: Project root holding ``.diarykg/``.
+    :param db: Graph database; ``None`` for ``<repo>/.diarykg/graph.sqlite``.
+    :param vectors: Vector store; ``None`` for ``<repo>/.diarykg/vectors.sqlite``.
+    :param model: Embedding model; ``None`` for :data:`DEFAULT_MODEL`.
+    :return: The server; serve it with :func:`kg_utils.mcp.run`.
     """
-    kg = _get_kg()
-    info = kg.info()
-    stats = kg.stats()
-    combined = {**info, **stats}
-    return json.dumps(combined, indent=2, ensure_ascii=False, default=str)
+    root = Path(repo).resolve()
 
+    def open_kg() -> DiaryKG:
+        return DiaryKG(root, model=model or DEFAULT_MODEL, db_path=db, vectors_path=vectors)
 
-def _parse_args(argv: list | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(
-        prog="diarykg-mcp",
-        description="DiaryKG MCP server — exposes diary knowledge graph tools to AI agents.",
+    server = make_server(
+        open_kg, name="diarykg", kind="diary", version=__version__, instructions=PREAMBLE
     )
-    p.add_argument("--repo", default=".", help="Project root directory (default: .)")
-    p.add_argument(
-        "--source",
-        default=None,
-        help="Relative path to diary .txt source inside --repo (required on first build)",
-    )
-    p.add_argument(
-        "--model",
-        default=DEFAULT_MODEL,
-        help=f"Sentence-transformer model name (default: {DEFAULT_MODEL})",
-    )
-    p.add_argument(
-        "--transport",
-        choices=["stdio", "sse"],
-        default="stdio",
-        help="MCP transport: stdio (default) or sse",
-    )
-    return p.parse_args(argv)
+    server.canonical("stats")(stats)
+    server.canonical("query")(query)
+    server.canonical("pack")(pack)
+    return server
 
 
-def main(argv: list | None = None) -> None:
-    """Start the DiaryKG MCP server and expose tools over the chosen transport."""
-    global _kg  # pylint: disable=global-statement
+def _drop_source(argv: list[str]) -> list[str]:
+    """Drop the pre-0.101.0 ``--source`` flag, which serving never needed.
 
-    args = _parse_args(argv)
-    repo = Path(args.repo).resolve()
-
-    if not repo.is_dir():
-        print(f"ERROR: --repo '{repo}' is not a directory.", file=sys.stderr)
-        sys.exit(1)
-
-    kg_dir = repo / DiaryKG.KG_DIR
-    db = kg_dir / "graph.sqlite"
-    vectors_path = kg_dir / "vectors.sqlite"
-
-    if not db.exists():
+    Claude Desktop and Copilot configs hard-code ``diarykg-mcp`` with it; the
+    source file comes from ``.diarykg/config.json``. Accepted, with a note, for
+    one minor release.
+    """
+    out: list[str] = []
+    dropped = False
+    it = iter(argv)
+    for arg in it:
+        if arg == "--source":
+            next(it, None)
+            dropped = True
+        elif arg.startswith("--source="):
+            dropped = True
+        else:
+            out.append(arg)
+    if dropped:
         print(
-            f"WARNING: SQLite database not found at '{db}'.\n"
-            f"Run 'diarykg build --source <file>' first.",
+            "diarykg-mcp: --source is ignored (read from .diarykg/config.json) "
+            "and will be refused after 0.101.x",
             file=sys.stderr,
         )
+    return out
 
-    print(
-        f"DiaryKG MCP server starting\n"
-        f"  repo     : {repo}\n"
-        f"  db       : {db}\n"
-        f"  vectors  : {vectors_path}\n"
-        f"  model    : {args.model}\n"
-        f"  transport: {args.transport}",
-        file=sys.stderr,
-    )
 
-    _kg = DiaryKG(root=repo, source_file=args.source, model=args.model)
-    mcp.run(transport=args.transport)
+def main(argv: list[str] | None = None) -> None:
+    """Entry point for ``diarykg-mcp``: the same command as ``diarykg mcp``.
+
+    :param argv: Arguments; ``None`` for ``sys.argv[1:]``.
+    """
+    from diary_kg.cli import mcp_command  # pylint: disable=import-outside-toplevel
+
+    args = _drop_source(sys.argv[1:] if argv is None else argv)
+    mcp_command.main(args=args, prog_name="diarykg-mcp")
 
 
 if __name__ == "__main__":

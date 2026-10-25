@@ -1,8 +1,9 @@
 {
   "mcpServers": {
     "diarykg": {
-      "command": ".venv/bin/diarykg-mcp",
+      "command": ".venv/bin/diarykg",
       "args": [
+        "mcp",
         "--repo",
         "."
       ]

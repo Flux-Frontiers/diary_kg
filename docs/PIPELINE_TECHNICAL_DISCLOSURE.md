@@ -379,7 +379,7 @@ As of 2026-03-26, the following components are working and validated:
 | DiaryKG.build() (full pipeline) | Working | Full corpus, ~3 min |
 | DocKG SQLite index | Working | 29,402 nodes, 355,250 edges |
 | DocKG LanceDB vector index | Working | 768-dim, 6,647 chunks |
-| Semantic query (query_diary) | Working | Sub-millisecond |
+| Semantic query (`query`) | Working | Sub-millisecond |
 | pepys_embedder.py (multi-process) | Working | 8,413 entries, 4 workers |
 | Manifold analysis (TwoNN, MRL-MRR) | Working | ID=14.26, MRR@768=0.9615 |
 | Temporal dimension augmentation | Working | 769-dim, alpha=1.0 |
