@@ -15,6 +15,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from kg_utils.stats import kg_stats, stats_problems
 
 from diary_kg.module import DiaryKGAdapter
 from diary_kg.primitives import CrossHit, CrossSnippet, KGEntry, KGKind
@@ -45,7 +46,7 @@ def _mock_kg(
     kg = MagicMock()
     kg.query.return_value = query_result or []
     kg.pack.return_value = pack_result or []
-    kg.stats.return_value = stats_result or {"node_count": 10, "edge_count": 5, "kind": "diary"}
+    kg.stats.return_value = stats_result or kg_stats("diary", {"chunk": 10}, {"NEXT": 5})
     kg.info.return_value = info_result or {"chunk_count": 5, "entry_count": 3}
     kg.analyze.return_value = analyze_result
     return kg
@@ -233,10 +234,18 @@ class TestStatsInfoAnalyze:
     def test_stats_delegates_to_kg(self):
         entry = _entry()
         adapter = DiaryKGAdapter(entry)
-        adapter._kg = _mock_kg(stats_result={"node_count": 42, "edge_count": 20, "kind": "diary"})
+        adapter._kg = _mock_kg(stats_result=kg_stats("diary", {"chunk": 42}, {"NEXT": 20}))
         result = adapter.stats()
-        assert result["node_count"] == 42
+        assert result["nodes"]["total"] == 42
         assert result["kind"] == "diary"
+
+    def test_stats_error_keeps_the_shape(self):
+        adapter = DiaryKGAdapter(_entry())
+        kg = _mock_kg()
+        kg.stats.side_effect = RuntimeError("boom")
+        adapter._kg = kg
+        result = adapter.stats()
+        assert result["error"] == "boom" and stats_problems(result) == []
 
     def test_info_delegates_to_kg(self):
         entry = _entry()

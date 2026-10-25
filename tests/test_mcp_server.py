@@ -32,6 +32,7 @@ import anyio
 import pytest
 from click.testing import CliRunner
 from kg_utils.mcp import CANONICAL_TOOLS, manifest
+from kg_utils.stats import stats_problems
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.shared.memory import create_connected_server_and_client_session
@@ -214,7 +215,8 @@ def test_graph_tools_answer_without_a_model(diary, monkeypatch):
     assert not stats.isError
     assert stats.structuredContent["kind"] == "diary"
     assert stats.structuredContent["temporal_span"]["start"] == "1660-01-01T00:00"
-    assert stats.structuredContent["node_count"] > 0
+    assert stats.structuredContent["nodes"]["total"] > 0
+    assert stats_problems(stats.structuredContent) == []
     assert not node.isError and node.structuredContent["id"] == chunk
     assert not near.isError and near.structuredContent["edges"]
     assert missing.isError and "no node with id 'nope'" in missing.content[0].text

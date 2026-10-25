@@ -273,7 +273,7 @@ snippets = kg.pack("Navy corruption", k=8)
 
 # Corpus metadata + KG stats
 info = kg.info()        # chunk_count, entry_count, temporal_span, topic/context distributions
-stats = kg.stats()      # node_count, edge_count
+stats = kg.stats()      # {"kind", "nodes": {"total", "by_kind"}, "edges": {"total", "by_rel"}}
 
 # Markdown analysis report
 report = kg.analyze()

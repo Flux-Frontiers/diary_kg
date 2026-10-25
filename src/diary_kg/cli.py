@@ -546,8 +546,8 @@ def snapshot_show(key, root, as_json):
     console.print(f"  Source file : {snap.get('source_file')}")
     console.print(f"  Chunks      : {m.get('chunk_count')}")
     console.print(f"  Entries     : {m.get('entry_count')}")
-    console.print(f"  Nodes       : {m.get('node_count')}")
-    console.print(f"  Edges       : {m.get('edge_count')}")
+    console.print(f"  Nodes       : {m.get('total_nodes')}")
+    console.print(f"  Edges       : {m.get('total_edges')}")
     console.print(f"  Time span   : {span_str}")
     console.print(f"  Strategy    : {m.get('chunking_strategy')}  chunk_size={m.get('chunk_size')}")
 

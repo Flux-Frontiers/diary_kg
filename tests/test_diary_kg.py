@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from kg_utils.stats import stats_problems
 
 from diary_kg.kg import DiaryKG, _parse_frontmatter
 
@@ -234,15 +235,16 @@ class TestStats:
     def test_stats_returns_kind_diary(self, built_kg_root):
         kg = DiaryKG(built_kg_root)
         mock_store = MagicMock()
-        mock_store.stats.return_value = {"total_nodes": 42, "total_edges": 30}
+        mock_store.stats.return_value = {"node_counts": {"chunk": 42}, "edge_counts": {"NEXT": 30}}
         mock_dockg = MagicMock()
         mock_dockg.store = mock_store
         kg._dockg = mock_dockg
         with patch.object(kg, "_load_dockg", return_value=mock_dockg):
             result = kg.stats()
         assert result["kind"] == "diary"
-        assert result["node_count"] == 42
-        assert result["edge_count"] == 30
+        assert result["nodes"] == {"total": 42, "by_kind": {"chunk": 42}}
+        assert result["edges"] == {"total": 30, "by_rel": {"NEXT": 30}}
+        assert stats_problems(result) == []
 
     def test_stats_fallback_on_exception(self, built_kg_root):
         kg = DiaryKG(built_kg_root)
@@ -251,8 +253,9 @@ class TestStats:
         kg._dockg = mock_dockg
         with patch.object(kg, "_load_dockg", return_value=mock_dockg):
             result = kg.stats()
-        assert result["kind"] == "diary"
-        assert result["node_count"] == "n/a"
+        assert result["kind"] == "diary" and result["error"] == "db error"
+        assert (result["nodes"]["total"], result["edges"]["total"]) == (0, 0)
+        assert stats_problems(result) == []
 
 
 # ---------------------------------------------------------------------------
@@ -264,7 +267,7 @@ class TestAnalyze:
     def test_analyze_returns_markdown_string(self, built_kg_root):
         kg = DiaryKG(built_kg_root)
         mock_store = MagicMock()
-        mock_store.stats.return_value = {"total_nodes": 10, "total_edges": 5}
+        mock_store.stats.return_value = {"node_counts": {"chunk": 10}, "edge_counts": {"NEXT": 5}}
         mock_dockg = MagicMock()
         mock_dockg.store = mock_store
         kg._dockg = mock_dockg
@@ -276,7 +279,7 @@ class TestAnalyze:
     def test_analyze_includes_chunk_count(self, built_kg_root):
         kg = DiaryKG(built_kg_root)
         mock_store = MagicMock()
-        mock_store.stats.return_value = {"total_nodes": 10, "total_edges": 5}
+        mock_store.stats.return_value = {"node_counts": {"chunk": 10}, "edge_counts": {"NEXT": 5}}
         mock_dockg = MagicMock()
         mock_dockg.store = mock_store
         kg._dockg = mock_dockg
@@ -314,7 +317,7 @@ class TestSnapshotHelpers:
         kg = DiaryKG(built_kg_root)
         # Mock DocKG so stats() works without a real DB
         mock_store = MagicMock()
-        mock_store.stats.return_value = {"total_nodes": 10, "total_edges": 5}
+        mock_store.stats.return_value = {"node_counts": {"chunk": 10}, "edge_counts": {"NEXT": 5}}
         mock_dockg = MagicMock()
         mock_dockg.store = mock_store
         kg._dockg = mock_dockg
@@ -330,7 +333,7 @@ class TestSnapshotHelpers:
     def test_snapshot_show_after_save(self, built_kg_root):
         kg = DiaryKG(built_kg_root)
         mock_store = MagicMock()
-        mock_store.stats.return_value = {"total_nodes": 5, "total_edges": 3}
+        mock_store.stats.return_value = {"node_counts": {"chunk": 5}, "edge_counts": {"NEXT": 3}}
         mock_dockg = MagicMock()
         mock_dockg.store = mock_store
         kg._dockg = mock_dockg

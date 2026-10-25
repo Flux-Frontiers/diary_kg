@@ -16,6 +16,17 @@ lap passes.
 
 ### Changed
 
+- **`DiaryKG.stats()` returns the fleet stats shape.** It was
+  `{"node_count", "edge_count", "kind"}`, with `"n/a"` counts on failure; it is
+  now `{"kind": "diary", "nodes": {"total", "by_kind"}, "edges": {"total",
+  "by_rel"}}` (kgrag_priv FLEET_STANDARDS, "KG stats shape"), built from the
+  DocKG store by `kg_utils.stats.stats_from_store`, so it carries the per-kind
+  and per-relation breakdowns too. A failure, including one loading the DocKG,
+  gives empty counts and an `error`. The `stats` MCP tool is the same shape
+  plus `info()`'s corpus measures, and passes the server base's shape check;
+  the adapter's `stats()`, `analyze()` and `snapshot save` read it. Snapshot
+  metrics keep `total_nodes`/`total_edges`.
+
 - **The MCP server is built on `kg_utils.mcp`.** It serves the fleet's five
   canonical tools under the same names as every other KG server: `stats`,
   `query`, `pack`, `get_node` and `neighbors`. `stats`, `query` and `pack` are
@@ -47,6 +58,10 @@ lap passes.
   limit)`, answered by the backing DocKG. Graph only; no model is loaded.
 
 ### Fixed
+
+- **`diarykg snapshot show` printed `None` for nodes and edges.** It read
+  `node_count`/`edge_count` from the snapshot metrics, which record
+  `total_nodes`/`total_edges`.
 
 - The `dockg build` subprocess fallback (in `DiaryKG.build()` and
   `rebuild_index()`) and `diary-transformer`'s build command no longer pass

@@ -13,6 +13,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from click.testing import CliRunner
+from kg_utils.stats import kg_stats
 
 from diary_kg.cli import cli
 
@@ -43,7 +44,7 @@ def _mock_kg(
         "topic_counts": {"work": 2, "domestic": 1},
         "context_counts": {"Home": 2},
     }
-    kg.stats.return_value = stats_result or {"node_count": 10, "edge_count": 5, "kind": "diary"}
+    kg.stats.return_value = stats_result or kg_stats("diary", {"chunk": 10}, {"NEXT": 5})
     kg.snapshot_list.return_value = snapshot_list_result or []
     return kg
 
@@ -271,8 +272,8 @@ class TestSnapshotListCommand:
                 "metrics": {
                     "chunk_count": 5,
                     "entry_count": 3,
-                    "node_count": 10,
-                    "edge_count": 5,
+                    "total_nodes": 10,
+                    "total_edges": 5,
                     "topic_counts": {},
                     "context_counts": {},
                     "temporal_span": {},
@@ -316,8 +317,8 @@ class TestSnapshotShowCommand:
             "metrics": {
                 "chunk_count": 5,
                 "entry_count": 3,
-                "node_count": 10,
-                "edge_count": 5,
+                "total_nodes": 10,
+                "total_edges": 5,
                 "topic_counts": {},
                 "context_counts": {},
                 "temporal_span": {},
@@ -336,6 +337,21 @@ class TestSnapshotShowCommand:
 
         data = json.loads(result.output)
         assert data["key"] == "abc123"
+
+    def test_text_output_shows_node_and_edge_totals(self, tmp_path):
+        snap = {
+            "key": "abc123",
+            "branch": "main",
+            "timestamp": "2024-01-01T00:00:00+00:00",
+            "metrics": {"chunk_count": 5, "entry_count": 3, "total_nodes": 10, "total_edges": 7},
+        }
+        mock_kg = _mock_kg()
+        mock_kg.snapshot_show.return_value = snap
+        with patch("diary_kg.cli._kg", return_value=mock_kg):
+            result = _runner().invoke(cli, ["snapshot", "show", "abc123", str(tmp_path)])
+        assert result.exit_code == 0, result.output
+        assert "Nodes       : 10" in result.output
+        assert "Edges       : 7" in result.output
 
 
 # ---------------------------------------------------------------------------

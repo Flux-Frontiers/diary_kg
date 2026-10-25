@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from kg_utils.stats import kg_stats
+
 from diary_kg.primitives import CrossHit, CrossSnippet, KGEntry, KGKind
 
 if TYPE_CHECKING:
@@ -166,15 +168,15 @@ class DiaryKGAdapter:
 
         Delegates to :meth:`~diary_kg.kg.DiaryKG.stats`.
 
-        :return: Dict containing at minimum ``"kind"``, ``"node_count"``,
-                 and ``"edge_count"``.  Returns ``{"kind": "diary", "error": ...}``
-                 on failure.
+        :return: The fleet stats shape -- ``{"kind": "diary", "nodes": {"total",
+                 "by_kind"}, "edges": {"total", "by_rel"}}`` -- with empty
+                 counts and an ``"error"`` on failure.
         """
         self._load()
         try:
             return self._kg.stats()  # type: ignore
         except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
-            return {"kind": "diary", "error": str(exc)}
+            return kg_stats("diary", {}, {}, error=str(exc))
 
     def analyze(self) -> str:
         """Run a full analysis and return a Markdown report.

@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 from kg_utils.snapshots import Snapshot
+from kg_utils.stats import kg_stats
 
 from diary_kg.snapshots import DiarySnapshotManager
 
@@ -257,7 +258,7 @@ class TestCapture:
             "chunking_strategy": "sentence_group",
             "chunk_size": 512,
         }
-        db_stats = {"node_count": 20, "edge_count": 15}
+        db_stats = kg_stats("diary", {"chunk": 20}, {"NEXT": 15})
         snap = mgr.capture_diary(
             version="0.1.0",
             info=info,
@@ -309,7 +310,7 @@ class TestCapture:
             "chunking_strategy": "",
             "chunk_size": 512,
         }
-        db_stats = {"node_count": 20, "edge_count": 0}
+        db_stats = kg_stats("diary", {"chunk": 20}, {"NEXT": 0})
         snap = mgr.capture_diary(
             version="0.2.0",
             info=info,
@@ -348,17 +349,28 @@ class TestCapture:
         save("C", datetime(2024, 2, 1, tzinfo=UTC).isoformat(), 20)
         assert mgr.load_snapshot("B").vs_previous["chunks"] == 10  # now vs C
 
-    def test_capture_non_int_node_count_treated_as_zero(self, tmp_path):
+    def test_capture_failed_stats_record_zero(self, tmp_path):
         mgr = _make_mgr(tmp_path)
         snap = mgr.capture_diary(
             version="0.1.0",
             info={"chunk_count": 5, "entry_count": 2},
-            db_stats={"node_count": "n/a", "edge_count": "n/a"},
+            db_stats=kg_stats("diary", {}, {}, error="db error"),
             branch="main",
             tree_hash="xyz",
         )
         assert snap.metrics["total_nodes"] == 0
         assert snap.metrics["total_edges"] == 0
+
+    def test_capture_reads_flat_store_totals(self, tmp_path):
+        mgr = _make_mgr(tmp_path)
+        snap = mgr.capture_diary(
+            version="0.1.0",
+            info={"chunk_count": 5, "entry_count": 2},
+            db_stats={"total_nodes": 7, "total_edges": 4},
+            branch="main",
+            tree_hash="xyz",
+        )
+        assert (snap.metrics["total_nodes"], snap.metrics["total_edges"]) == (7, 4)
 
 
 # ---------------------------------------------------------------------------
@@ -481,7 +493,7 @@ class TestSnapshotKeyFromVersion:
                 "chunking_strategy": "",
                 "chunk_size": 512,
             },
-            db_stats={"node_count": 20, "edge_count": 0},
+            db_stats=kg_stats("diary", {"chunk": 20}, {"NEXT": 0}),
             branch="main",
             tree_hash="f" * 40,
             key="v1.0.0",
@@ -508,7 +520,7 @@ class TestSnapshotKeyFromVersion:
                 "chunking_strategy": "",
                 "chunk_size": 512,
             },
-            db_stats={"node_count": 20, "edge_count": 0},
+            db_stats=kg_stats("diary", {"chunk": 20}, {"NEXT": 0}),
             branch="main",
             tree_hash="f" * 40,
         )

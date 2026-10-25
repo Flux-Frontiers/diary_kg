@@ -58,9 +58,10 @@ PREAMBLE = (
 
 def stats(*, ctx: Context) -> dict[str, Any]:
     """
-    Corpus overview: entry and chunk counts, temporal span, topic and context counts, node and edge totals.
+    Corpus overview in the fleet stats shape: kind, nodes {total, by_kind}, edges {total, by_rel}, plus entry and chunk counts, temporal span, topic and context counts.
     """
     kg: DiaryKG = kg_from(ctx)
+    # The graph's kind/nodes/edges come last, so no corpus measure can shadow them.
     return {**kg.info(), **kg.stats()}
 
 

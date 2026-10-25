@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 from kg_utils.embed import DEFAULT_MODEL as DEFAULT_MODEL
 from kg_utils.embed import KNOWN_MODELS
 from kg_utils.embedder import wrap_embedder
+from kg_utils.stats import kg_stats, stats_from_store
 from kg_utils.temporal import temporal_metadata
 from kg_utils.validation import MAX_HOP, MAX_MAX_NODES, bounded_int
 
@@ -941,23 +942,21 @@ class DiaryKG:
         }
 
     def stats(self) -> dict[str, Any]:
-        """Return KG storage statistics (node + edge counts).
+        """Return the DocKG graph's statistics in the fleet shape.
 
-        Matches the contract expected by the KGRAG cross-KG ``analyze``
-        command so the system can report total indexed size across all KGs.
+        ``{"kind": "diary", "nodes": {"total", "by_kind"}, "edges": {"total",
+        "by_rel"}}`` (FLEET_STANDARDS, "KG stats shape"), read from the
+        underlying DocKG store. Corpus measures -- entry count, temporal span,
+        topic counts -- are :meth:`info`'s. On failure the counts are empty and
+        ``error`` says why.
 
-        :return: Dict with node_count, edge_count, kind.
+        :return: The statistics dict.
         """
-        self._load_dockg()
         try:
-            s = self._dockg.store.stats()
-            return {
-                "node_count": s.get("total_nodes", "n/a"),
-                "edge_count": s.get("total_edges", "n/a"),
-                "kind": "diary",
-            }
-        except Exception:  # pylint: disable=broad-exception-caught
-            return {"node_count": "n/a", "edge_count": "n/a", "kind": "diary"}
+            self._load_dockg()
+            return stats_from_store("diary", self._dockg.store.stats())
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            return kg_stats("diary", {}, {}, error=str(exc))
 
     def analyze(self) -> str:
         """Return a Markdown analysis report.
@@ -981,8 +980,8 @@ class DiaryKG:
             f"- Diary entries : **{info['entry_count']}**",
             f"- Temporal span : **{span_str}**",
             f"- Built at      : {info.get('built_at', 'n/a')}",
-            f"- DocKG nodes   : {db_stats['node_count']}",
-            f"- DocKG edges   : {db_stats['edge_count']}",
+            f"- DocKG nodes   : {db_stats['nodes']['total']}",
+            f"- DocKG edges   : {db_stats['edges']['total']}",
             "",
             "## Topic Distribution",
             "",
