@@ -321,10 +321,9 @@ def _build_dockg(corpus_dir: str, update: bool, kg_name, registry) -> None:
     """Shared implementation for build and build-update commands."""
     corpus = Path(corpus_dir).resolve()
 
-    # Pin the vector backend rather than leaving DocKG on "auto": auto resolves
-    # from whatever is on disk, so a directory left over from a pre-0.94.0 build
-    # would keep this build on the retired backend.
-    cmd = ["dockg", "build", "--repo", str(corpus), "--vector-backend", "sqlite-vec"]
+    # sqlite-vec is doc-kg's only backend since 0.29.0, which also removed the
+    # --vector-backend flag this used to pin it with.
+    cmd = ["dockg", "build", "--repo", str(corpus)]
     if update:
         cmd.append("--update")
 

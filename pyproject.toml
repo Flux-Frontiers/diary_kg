@@ -52,7 +52,7 @@ packages = [
 # ---------------------------------------------------------------------------
 [project]
 name = "diary-kg"
-version = "0.100.1"
+version = "0.101.0"
 description = "A knowledge graph builder and semantic search engine for diaries and journals"
 readme = "README.md"
 license = "Elastic-2.0"
@@ -80,7 +80,9 @@ dependencies = [
     # straight past it keeps a known-bad release out of any resolution here.
     # (Earlier floors read 0.20.0 for sqlite-vec as a core doc-kg dependency,
     # which 0.24.1 still satisfies.)
-    "doc-kg>=0.27.0",
+    # 0.29.0: DocKG.neighbors() and the fleet stats shape, which the MCP server
+    # and DiaryKG.stats() read.
+    "doc-kg>=0.29.0",
     # 0.18.0: DiaryKG writes the shared kg_utils.temporal contract alongside its
     # own `timestamp` column, so a federated query can scope this KG by time
     # without knowing DiaryKG's private column names.
@@ -92,14 +94,9 @@ dependencies = [
     # through the package_name and dict_metric_deltas class attributes, neither
     # of which exists before 0.20.0. Against 0.19.x the manager reports itself
     # as "kg-utils" and loses topic_counts_delta from every diff.
-    "kgmodule-utils>=0.23.0",
-    # Upper-bounded: mcp 2.0 removed the bundled `mcp.server.fastmcp` module
-    # (FastMCP was split out into the standalone `fastmcp` package) and rebuilt
-    # mcp.server around new submodules. src/diary_kg/mcp_server.py imports
-    # FastMCP from mcp, so an unbounded floor lets a clean install pull 2.x and
-    # break `diarykg-mcp` at import time. Lift this only alongside a port to
-    # the standalone fastmcp package.
-    "mcp>=1.3.0,<2",
+    # 0.29.0: the MCP server is kg_utils.mcp's ([mcp] brings mcp itself),
+    # stats() is the fleet stats shape, and LanceDB is gone.
+    "kgmodule-utils[mcp]>=0.29.0",
     "numpy>=1.24.0",
     "pandas>=2.0.0",
     "rich>=14.3.3,<15",

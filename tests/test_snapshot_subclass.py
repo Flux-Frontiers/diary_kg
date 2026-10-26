@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pytest
 from kg_utils.snapshots import Snapshot, SnapshotManager
+from kg_utils.stats import kg_stats
 
 from diary_kg.snapshots import DiarySnapshotManager
 
@@ -34,7 +35,7 @@ def sample_info() -> dict:
 
 @pytest.fixture
 def sample_db_stats() -> dict:
-    return {"node_count": 350, "edge_count": 480}
+    return kg_stats("diary", {"chunk": 350}, {"NEXT": 480})
 
 
 def test_inherits_from_base() -> None:

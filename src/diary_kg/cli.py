@@ -22,6 +22,7 @@ from pathlib import Path
 
 import click
 from click.core import ParameterSource
+from kg_utils.mcp import add_mcp_command
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -545,8 +546,8 @@ def snapshot_show(key, root, as_json):
     console.print(f"  Source file : {snap.get('source_file')}")
     console.print(f"  Chunks      : {m.get('chunk_count')}")
     console.print(f"  Entries     : {m.get('entry_count')}")
-    console.print(f"  Nodes       : {m.get('node_count')}")
-    console.print(f"  Edges       : {m.get('edge_count')}")
+    console.print(f"  Nodes       : {m.get('total_nodes')}")
+    console.print(f"  Edges       : {m.get('total_edges')}")
     console.print(f"  Time span   : {span_str}")
     console.print(f"  Strategy    : {m.get('chunking_strategy')}  chunk_size={m.get('chunk_size')}")
 
@@ -802,6 +803,24 @@ def install_hooks(repo: str, force: bool) -> None:
     console.print(
         "  Run 'pycodekg build --repo .' and 'dockg build --repo .' first if not yet built."
     )
+
+
+# ---------------------------------------------------------------------------
+# mcp -- the fleet's standard MCP command, from kg_utils.mcp
+# ---------------------------------------------------------------------------
+
+
+def _build_server(repo: Path, db: Path | None, vectors: Path | None, model: str | None):
+    """Build the DiaryKG server; imported lazily so other commands skip ``mcp``."""
+    from diary_kg.mcp_server import build_server  # pylint: disable=import-outside-toplevel
+
+    return build_server(repo, db, vectors, model)
+
+
+#: ``diarykg mcp [--repo DIR] [--db FILE] [--vectors FILE] [--model NAME]
+#: [--transport stdio|streamable-http] [--host H] [--port N] [--manifest]``.
+#: Registering it imports neither ``mcp`` nor the server module.
+mcp_command = add_mcp_command(cli, _build_server)
 
 
 # ---------------------------------------------------------------------------

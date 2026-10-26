@@ -23,6 +23,7 @@ from typing import Any
 
 from kg_utils.snapshots import PruneResult as PruneResult  # noqa: F401 — re-export
 from kg_utils.snapshots import Snapshot, SnapshotManager
+from kg_utils.stats import flat_stats
 
 # ---------------------------------------------------------------------------
 # Manager
@@ -65,7 +66,8 @@ class DiarySnapshotManager(SnapshotManager):
 
         :param version: Version string (e.g. ``"0.1.0"``).
         :param info: Output of ``DiaryKG.info()``.
-        :param db_stats: Output of ``DiaryKG.stats()`` (node/edge counts).
+        :param db_stats: Output of ``DiaryKG.stats()``, in the fleet shape; a
+            flat ``total_nodes``/``total_edges`` dict is read too.
         :param branch: Git branch; auto-detected if ``None``.
         :param tree_hash: Git tree hash, recorded as provenance; auto-detected
             if empty. It is not the snapshot's key -- it is read before
@@ -80,8 +82,9 @@ class DiarySnapshotManager(SnapshotManager):
             the measuring tool.
         :return: New :class:`~kg_utils.snapshots.Snapshot` instance (not yet saved).
         """
-        node_count = db_stats.get("node_count", 0)
-        edge_count = db_stats.get("edge_count", 0)
+        flat = flat_stats(db_stats)
+        node_count = flat.get("total_nodes", 0)
+        edge_count = flat.get("total_edges", 0)
         if not isinstance(node_count, int):
             node_count = 0
         if not isinstance(edge_count, int):
