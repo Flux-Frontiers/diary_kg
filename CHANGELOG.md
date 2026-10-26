@@ -7,12 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.0] - 2026-10-25
+
 Step 3 of the fleet's MCP centralization (kgrag_priv
 `docs/MCP_CENTRALIZATION_PLAN.md`, sweep item 93). **Needs kgmodule-utils
 0.29.0** (for `kg_utils.mcp`) **and doc-kg 0.29.0** (for `DocKG.neighbors()`,
-and because it removed `dockg build --vector-backend`). Until those releases it
-is tested against their local wheels, and the floors are raised when the fleet
-lap passes.
+and because it removed `dockg build --vector-backend`). The floors are
+`kgmodule-utils[mcp]>=0.29.0` and `doc-kg>=0.29.0`, and the `[mcp]` extra
+replaces the direct `mcp` pin.
 
 ### Changed
 

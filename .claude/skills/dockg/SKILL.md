@@ -1,31 +1,34 @@
 ---
 name: dockg
-description: Expert knowledge for installing, configuring, and using DocKG — a hybrid semantic + structural knowledge graph for document corpora (.md and .txt files). Use this skill when the user asks about: setting up DocKG in a project, adding doc-kg as a Poetry dependency, building the SQLite or LanceDB knowledge graph from documents, running the multipass analysis pipeline (dockg pipeline run/embed/manifold), configuring .mcp.json for Claude Code or Kilo Code, configuring .vscode/mcp.json for GitHub Copilot, configuring claude_desktop_config.json for Claude Desktop, using the dockg CLI (dockg build, dockg build-graph, dockg build-index, dockg query, dockg pack, dockg analyze, dockg semantic-analyze, dockg pipeline, dockg viz, dockg mcp, dockg snapshot), using the graph_stats / query_docs / pack_docs / get_node MCP tools, or troubleshooting DocKG errors.
+description: Expert knowledge for installing, configuring, and using DocKG — a hybrid semantic + structural knowledge graph for document corpora (.md and .txt files). Use this skill when the user asks about: setting up DocKG in a project, adding doc-kg as a Poetry dependency, building the SQLite or sqlite-vec knowledge graph from documents, running the multipass analysis pipeline (dockg pipeline run/embed/manifold), configuring .mcp.json for Claude Code or Kilo Code, configuring .vscode/mcp.json for GitHub Copilot, configuring claude_desktop_config.json for Claude Desktop, using the dockg CLI (dockg build, dockg build-graph, dockg build-index, dockg query, dockg pack, dockg analyze, dockg semantic-analyze, dockg pipeline, dockg viz, dockg mcp, dockg snapshot), using the stats / query / pack / get_node / neighbors MCP tools, or troubleshooting DocKG errors.
 ---
 
 # DocKG Skill
 
 > **Use DocKG first — before grep, file reads, or text search.**
 >
-> Text search finds strings. DocKG understands documents. It knows which sections contain which chunks, how topics and entities cross-reference across files, and surfaces the most semantically relevant excerpts in a single query. One `pack_docs` call replaces five rounds of search-and-read and gives the agent real structural insight into the corpus — not just keyword matches.
+> Text search finds strings. DocKG understands documents. It knows which sections contain which chunks, how topics and entities cross-reference across files, and surfaces the most semantically relevant excerpts in a single query. One `pack` call replaces five rounds of search-and-read and gives the agent real structural insight into the corpus — not just keyword matches.
 
-DocKG indexes `.md` and `.txt` document corpora into a hybrid knowledge graph (SQLite + LanceDB) and exposes it as MCP tools for AI agents. It also provides a **multipass analysis pipeline** (diary_kg-style) for deep NLP transformation with diversity sampling, hybrid topic classification, corpus embedding, and manifold analysis.
+DocKG indexes `.md` and `.txt` document corpora into a hybrid knowledge graph (SQLite + sqlite-vec) and exposes it as MCP tools for AI agents. It also provides a **multipass analysis pipeline** (diary_kg-style) for deep NLP transformation with diversity sampling, hybrid topic classification, corpus embedding, and manifold analysis.
 
 ## Installation (Poetry)
 
 ```bash
-# With MCP server support
-poetry add "doc-kg[mcp] @ git+https://github.com/Flux-Frontiers/doc_kg.git"
+# Core runtime — includes the CLI and the MCP server
+poetry add doc-kg
 ```
 
 Adds to `pyproject.toml`:
 ```toml
-doc-kg = { git = "https://github.com/Flux-Frontiers/doc_kg.git", extras = ["mcp"] }
+doc-kg = "^0.29.0"
 ```
+
+There is no `[mcp]` extra: the `mcp` package is a core dependency, so
+`dockg mcp` works off a plain install.
 
 ## Build the Knowledge Graph
 
-DocKG uses a **single build command** that runs corpus parsing, SQLite persistence, and LanceDB vector indexing in one step:
+DocKG uses a **single build command** that runs corpus parsing, SQLite persistence, and sqlite-vec vector indexing in one step:
 
 ```bash
 # Full rebuild from scratch (default — wipes existing data)
@@ -51,7 +54,7 @@ dockg build-graph docs
 # Step 1 incremental — keep existing SQLite, upsert changes
 dockg build-graph docs --update
 
-# Step 2 — build LanceDB vector index from existing SQLite (full rebuild by default)
+# Step 2 — build the vector index from existing SQLite (full rebuild by default)
 dockg build-index
 
 # Step 2 incremental — keep existing vectors, upsert changes
@@ -86,12 +89,15 @@ The knowledge graph is a snapshot of the corpus at build time. It does **not** u
 | Minor edits within existing documents | `dockg build --update` is usually sufficient |
 | New file added | `dockg build --update` is sufficient |
 
-> **Why full rebuild matters:** Deleted or renamed documents remain as phantom entries in `--update` mode. The default full rebuild clears orphan nodes from both SQLite and LanceDB automatically.
+> **Why full rebuild matters:** Deleted or renamed documents remain as phantom entries in `--update` mode. The default full rebuild clears orphan nodes from both the graph and the vector index automatically.
 
 ## Additional CLI Commands
 
 | Command | Purpose |
 |---|---|
+| `dockg build-index` | Rebuild the vector index from existing SQLite (wipes by default; use `--update` to keep) |
+| `dockg build-index --no-similar` | Skip SIMILAR_TO edge discovery |
+| `dockg build-index --encode-batch N` | Embedding batch size (default: 1024; lower to reduce RAM on large corpora) |
 | `dockg query <QUERY>` | Hybrid semantic + graph query, prints ranked result summary |
 | `dockg pack <QUERY>` | Hybrid query + text excerpt pack, outputs Markdown or JSON |
 | `dockg analyze` | Structural analysis — metrics, coverage, hotspots, orphaned nodes |
@@ -102,6 +108,57 @@ The knowledge graph is a snapshot of the corpus at build time. It does **not** u
 | `dockg snapshot show <commit>` | Full details for a single snapshot |
 | `dockg snapshot diff <a> <b>` | Compare two snapshots side-by-side |
 | `dockg mcp` | Start the MCP server (stdio transport) |
+
+## Verse Corpus Ingestion (KJV Bible, Quran, Sacred Texts)
+
+DocKG auto-detects `chapter:verse`-structured files and uses `VerseChunker` automatically.
+
+### 5-Phase Workflow
+
+```bash
+# Phase 1 — discover topics from corpus (K-means on embeddings)
+dockg pipeline discover-topics --repo /path/to/corpus --n-clusters 16
+
+# Phase 2 — review/rename cluster labels in discovered_topics.yaml
+
+# Phase 3 — build graph with embedding-based topic assignment (~100% coverage)
+dockg build-graph /path/to/corpus \
+    --chunk-strategy verse \
+    --kmeans-model /path/to/corpus/discovered_topics.kmeans.joblib
+
+# Phase 4 — build the vector index (wipes by default)
+dockg build-index --repo /path/to/corpus
+
+# Phase 5 — query
+dockg pack "covenant and sacrifice"
+```
+
+### Key Options
+
+| Option | Purpose |
+|---|---|
+| `--chunk-strategy verse` | Force verse chunker (auto-detected by default) |
+| `--kmeans-model FILE` | Use embedding-based topic assignment (~100% coverage vs ~7% keyword) |
+| `--topics-file FILE` | Use keyword-based YAML topic catalog |
+| `--n-clusters N` | Number of K-means topic clusters (default: 16) |
+
+### Verse Chunk Metadata
+
+Verse chunks carry five extra fields: `content_type="verse"`, `book`, `chapter`, `verse_start`, `verse_end`.
+
+## Large Corpus Tips (>100K nodes)
+
+For very large corpora, tune `build-index` to avoid OOM:
+
+```bash
+# Reduce encode batch size if embedding OOMs (default: 1024)
+dockg build-index --encode-batch 256
+
+# Skip SIMILAR_TO on first pass, add later
+dockg build-index --no-similar
+```
+
+The indexer streams nodes from SQLite in `--encode-batch` pages — it never loads the full node list into RAM.
 
 ## Multipass Analysis Pipeline
 
@@ -114,6 +171,7 @@ DocKG includes a diary_kg-style multipass analysis pipeline for deep NLP transfo
 | `dockg pipeline run` | 5-phase analysis: sampling → chunking → classification → memory → output |
 | `dockg pipeline embed` | Multi-process corpus embedding (BAAI/bge-small-en-v1.5, 384-d) |
 | `dockg pipeline manifold` | Intrinsic dimensionality, PCA elbow, MRL truncation quality |
+| `dockg pipeline discover-topics` | K-means topic discovery — writes YAML catalog + `.kmeans.joblib` model |
 
 ### The 5 Phases
 
@@ -160,7 +218,7 @@ Output files are written to `.dockg/pipeline/`:
 | Pipeline | Model | Dims | Notes |
 |---|---|---|---|
 | Core build (`dockg build`) | `BAAI/bge-small-en-v1.5` | 384 | Default; fast, general-text, SIMILAR_TO discovery |
-| Multipass (`dockg pipeline`) | `BAAI/bge-small-en-v1.5` | 384 | Same model stack-wide; consistent with diary_kg and kg_utils defaults |
+| Multipass (`dockg pipeline`) | `BAAI/bge-small-en-v1.5` | 384 | Asymmetric retrieval with `search_document:` prefix, matches diary_kg |
 
 ## Configure Claude Code / Kilo Code (.mcp.json)
 
@@ -170,12 +228,10 @@ Both Claude Code and Kilo Code read per-repo config from `.mcp.json` in the proj
 {
   "mcpServers": {
     "dockg": {
-      "command": "/absolute/path/to/repo/.venv/bin/dockg",
+      "command": "dockg",
       "args": [
         "mcp",
-        "--repo",   "/absolute/path/to/repo",
-        "--db",     "/absolute/path/to/repo/.dockg/graph.sqlite",
-        "--lancedb","/absolute/path/to/repo/.dockg/lancedb"
+        "--repo",   "/absolute/path/to/repo"
       ]
     }
   }
@@ -195,12 +251,10 @@ GitHub Copilot requires `"servers"` key and `"type": "stdio"`:
   "servers": {
     "dockg": {
       "type": "stdio",
-      "command": "/absolute/path/to/repo/.venv/bin/dockg",
+      "command": "dockg",
       "args": [
         "mcp",
-        "--repo",    "/absolute/path/to/repo",
-        "--db",      "/absolute/path/to/repo/.dockg/graph.sqlite",
-        "--lancedb", "/absolute/path/to/repo/.dockg/lancedb"
+        "--repo",    "/absolute/path/to/repo"
       ]
     }
   }
@@ -228,9 +282,7 @@ Config path: `~/Library/Application Support/Claude/claude_desktop_config.json` (
       "command": "/path/to/venv/bin/dockg",
       "args": [
         "mcp",
-        "--repo",    "/abs/path",
-        "--db",      "/abs/path/.dockg/graph.sqlite",
-        "--lancedb", "/abs/path/.dockg/lancedb"
+        "--repo",    "/abs/path"
       ]
     }
   }
@@ -241,10 +293,14 @@ Config path: `~/Library/Application Support/Claude/claude_desktop_config.json` (
 
 | Tool | When to use |
 |---|---|
-| `graph_stats()` | First call — understand corpus size, node/edge breakdown |
-| `query_docs(q)` | Structural exploration — find relevant nodes and relationships |
-| `pack_docs(q)` | Read actual document text (prefer over `query_docs`) |
+| `stats()` | First call — understand corpus size, node/edge breakdown |
+| `query(q)` | Structural exploration — find relevant nodes and relationships |
+| `pack(q)` | Read actual document text (prefer over `query`) |
 | `get_node(node_id)` | Fetch one node by its stable ID — metadata, title, file path |
+| `neighbors(node_id)` | Walk the structure — a section's chunks, a chunk's NEXT / SIMILAR_TO neighbours; graph only, no model |
+
+These are the fleet's canonical names, the same on every KG server. `rels` is a
+list (`["HAS_TOPIC", "SIMILAR_TO"]`). `dockg mcp --manifest` prints the live list.
 
 ## Node & Edge Reference
 
@@ -252,8 +308,8 @@ Config path: `~/Library/Application Support/Claude/claude_desktop_config.json` (
 
 | Kind | ID prefix | Description |
 |---|---|---|
-| `document` | `document:<file_path>` | Top-level document (one per file) |
-| `section` | `section:<file_path>:<heading-slug>` | Markdown heading block |
+| `document` | `doc:<file_path>` | Top-level document (one per file) |
+| `section` | `sec:<file_path>:<heading-slug>` | Markdown heading block |
 | `chunk` | `chunk:<file_path>:<index:04d>` | Text fragment (≈512 chars, overlapping) |
 | `topic` | `topic:<slug>` | Inferred topic category (e.g. `topic:architecture`) |
 | `entity` | `entity:<slug>` | Named entity extracted from chunk text |
@@ -281,9 +337,9 @@ Config path: `~/Library/Application Support/Claude/claude_desktop_config.json` (
 | Narrow, precise lookup | `k=4, hop=0` |
 | Standard exploration | `k=8, hop=1` (default) |
 | Broad topic sweep | `k=12, hop=2` |
-| Follow document structure | `k=8, hop=1, rels="CONTAINS,NEXT"` |
-| Trace topics and entities | `k=8, hop=2, rels="HAS_TOPIC,MENTIONS_ENTITY"` |
-| Find semantically similar chunks | `k=6, hop=1, rels="SIMILAR_TO"` |
+| Follow document structure | `k=8, hop=1, rels=["CONTAINS", "NEXT"]` |
+| Trace topics and entities | `k=8, hop=2, rels=["HAS_TOPIC", "MENTIONS_ENTITY"]` |
+| Find semantically similar chunks | `k=6, hop=1, rels=["SIMILAR_TO"]` |
 
 ### Choosing `rels`
 
@@ -301,35 +357,35 @@ Config path: `~/Library/Application Support/Claude/claude_desktop_config.json` (
 ### Typical session workflow
 
 ```
-1. graph_stats()                                              → orientation: corpus size and shape
-2. query_docs("authentication flow", k=8, hop=1)             → find relevant nodes
-3. pack_docs("JWT token validation", k=6, hop=1)             → read actual document text
-4. pack_docs("error handling", k=4, hop=2, rels="SIMILAR_TO")→ related chunks across files
-5. get_node("document:docs/auth.md")                         → single node metadata
-6. query_docs("topic overview", rels="HAS_TOPIC", hop=2)     → topic-centric traversal
+1. stats()                                                 → orientation: corpus size and shape
+2. query("authentication flow", k=8, hop=1)                → find relevant nodes
+3. pack("JWT token validation", k=6, hop=1)                → read actual document text
+4. pack("error handling", k=4, hop=2, rels=["SIMILAR_TO"]) → related chunks across files
+5. get_node("doc:docs/auth.md")                            → single node metadata
+6. query("topic overview", rels=["HAS_TOPIC"], hop=2)      → topic-centric traversal
 ```
 
 ### Common query patterns
 
 | Goal | Query |
 |---|---|
-| "What does this corpus say about X?" | `pack_docs("X concept")` |
-| "Find all documents about topic T" | `query_docs("T", rels="HAS_TOPIC")` |
-| "What chunks mention entity E?" | `query_docs("E", rels="MENTIONS_ENTITY")` |
-| "Find chunks similar to this one" | `query_docs("concept", rels="SIMILAR_TO")` |
-| "Show the structure of a document" | `query_docs("doc name", rels="CONTAINS", hop=2)` |
-| "Find cross-references between docs" | `query_docs("topic", rels="REFERENCES")` |
-| "Get adjacent context around a chunk" | `query_docs("chunk text", rels="CONTAINS,NEXT")` |
+| "What does this corpus say about X?" | `pack("X concept")` |
+| "Find all documents about topic T" | `query("T", rels=["HAS_TOPIC"])` |
+| "What chunks mention entity E?" | `query("E", rels=["MENTIONS_ENTITY"])` |
+| "Find chunks similar to this one" | `query("concept", rels=["SIMILAR_TO"])` |
+| "Show the structure of a document" | `query("doc name", rels=["CONTAINS"], hop=2)` |
+| "Find cross-references between docs" | `query("topic", rels=["REFERENCES"])` |
+| "Get adjacent context around a chunk" | `query("chunk text", rels=["CONTAINS", "NEXT"])` |
 
 ## Key Defaults
 
-- `k=8, hop=1, rels="CONTAINS,NEXT,REFERENCES,SIMILAR_TO,HAS_TOPIC,MENTIONS_ENTITY,HAS_KEYWORD,CO_OCCURS_WITH"`
-- `max_chars=2000` (pack_docs), `max_nodes=15` (pack_docs), `max_nodes=25` (query_docs)
+- `k=8, hop=1`, `rels` omitted = every relation above
+- `max_chars=2000` (pack), `max_nodes=15` (pack), `max_nodes=25` (query)
 - Embedding model (all pipelines): `BAAI/bge-small-en-v1.5` (384-d)
-- Storage: `.dockg/graph.sqlite` (SQLite) + `.dockg/lancedb/` (LanceDB)
+- Storage: `.dockg/graph.sqlite` (SQLite) + `.dockg/vectors.sqlite` (sqlite-vec)
 - Pipeline output: `.dockg/pipeline/` (`.psv` runs, `embeddings.json` cache)
 - Feature cache: `.dockg/cache/` (pickle, per-file with SHA-256 invalidation)
-- Transport: `stdio` (Claude Code/Desktop), `sse` (HTTP clients)
+- Transport: `stdio` (Claude Code/Desktop), `streamable-http` (HTTP clients)
 
 ## .gitignore Setup
 
@@ -337,7 +393,7 @@ Config path: `~/Library/Application Support/Claude/claude_desktop_config.json` (
 .dockg/
 ```
 
-The `.dockg/` directory holds the SQLite graph, LanceDB vector index, snapshots, pipeline outputs, feature caches, and embedding caches. All are local reproducible artifacts. Add this to `.gitignore` when installing DocKG in a new repo.
+The `.dockg/` directory holds the SQLite graph, sqlite-vec vector index, snapshots, pipeline outputs, feature caches, and embedding caches. All are local reproducible artifacts. Add this to `.gitignore` when installing DocKG in a new repo.
 
 ## Offline Setup
 
@@ -356,11 +412,12 @@ export DOCKG_MODEL_DIR=/path/to/shared/models
 
 | Error | Fix |
 |---|---|
-| `WARNING: SQLite database not found` | Run `dockg build <corpus_root>` first |
-| `mcp package not found` | `poetry install` (ensure `[mcp]` extra is included) |
+| `no graph at ...` | Run `dockg build <corpus_root>` first |
+| `no such option: --vectors-path` | Rename it `--vectors` in the MCP config (0.29.0) |
+| `mcp package not found` | `poetry install` — `mcp` is a core dependency, no extra needed |
 | No tools visible in MCP client | Use absolute paths in config; restart the client |
 | Empty query results | Run `dockg build <corpus_root>` (full rebuild, no flags needed) |
-| Wrong corpus queried | Verify `--repo`, `--db`, and `--lancedb` all point to the same repo |
+| Wrong corpus queried | Verify `--repo` points to the intended repo; artifacts default to its `.dockg/` |
 | Stale nodes after deleting files | Run `dockg build` without `--update` — default is a full wipe-and-rebuild |
 
 ## Full Reference
