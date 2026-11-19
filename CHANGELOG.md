@@ -35,6 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   logo. `scripts/build_logo.py` draws the Art Techno logo and writes every
   size, so nothing uses it, and it would overwrite the new files.
 
+### Fixed
+
+- **The pdoc and wiki logos are written.** `scripts/build_logo.py` also
+  writes `src/logo.png`, which the pdoc task passes as `--logo`, and
+  `assets/logo-md-256x256.png`, which `scripts/generate_wiki.py` reads. Both
+  had been missing, so neither showed a logo.
+
 ## [0.101.0] - 2026-10-25
 
 Step 3 of the fleet's MCP centralization (kgrag_priv
