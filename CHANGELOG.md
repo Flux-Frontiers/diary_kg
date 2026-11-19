@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is centered on the banner's height; `scripts/build_logo.py` draws it this
   way and the banner is redrawn.
 
+- **The line under the name is a tagline.** The mark and banner read
+  "A LIFE, ENTRY BY ENTRY" instead of the organization and repository name.
+
 ## [0.101.0] - 2026-10-25
 
 Step 3 of the fleet's MCP centralization (kgrag_priv
