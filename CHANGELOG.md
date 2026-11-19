@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The line under the name is a tagline.** The mark and banner read
   "A LIFE, ENTRY BY ENTRY" instead of the organization and repository name.
 
+- **`assets/brands.md` describes the Art Techno marks.** The KG family
+  section replaces the cybernetic-brain prompts with the shared rules,
+  palette, each repo's mark and tagline, and how to rebuild them. The README's
+  brand section points to it; the WaveRider section is unchanged.
+
 ### Removed
 
 - **`scripts/process_logo.py`**, the raster pipeline for the old brain
