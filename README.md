@@ -409,10 +409,9 @@ corpus as a portable, air-gapped Docker service.
 
 ## Brand & Logo
 
-Logo generation prompt and brand guidelines (color palette, style rules,
-family DNA) are in [assets/brands.md](assets/brands.md).
-
-DiaryKG accent color: **Rose `#FF6B8A`**.
+The DiaryKG mark is the nib, an Art Techno drawing made by
+`scripts/build_logo.py`. The fleet's marks, palette and shared rules are in
+[assets/brands.md](assets/brands.md).
 
 ---
 
