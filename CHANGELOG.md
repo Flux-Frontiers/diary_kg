@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and smaller logo sizes and the small badges now come from the icon. The
   README header shows the banner.
 
+- **The banner lettering is larger.** The name is set as large as the
+  space beside the mark allows, the part line at the same width, and the pair
+  is centered on the banner's height; `scripts/build_logo.py` draws it this
+  way and the banner is redrawn.
+
 ## [0.101.0] - 2026-10-25
 
 Step 3 of the fleet's MCP centralization (kgrag_priv
