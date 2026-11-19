@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The logo is redrawn in Art Techno.** The brain is replaced by a pen nib
+  whose breather hole is a die; it writes a line of dated nodes with a clock
+  wave under it. `scripts/build_logo.py` draws the square mark, a 64 px icon
+  and a banner as SVG and writes every PNG size under `assets/`; the 64 px
+  and smaller logo sizes and the small badges now come from the icon. The
+  README header shows the banner.
+
 ## [0.101.0] - 2026-10-25
 
 Step 3 of the fleet's MCP centralization (kgrag_priv
