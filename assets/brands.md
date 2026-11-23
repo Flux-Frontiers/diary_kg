@@ -60,11 +60,12 @@ identical.
 | `kgrag` | The federation fan: five member chips on thin traces into one large chip, three spokes fanning out | ONE QUERY, MANY GRAPHS | `scripts/build_logo.py` |
 | `pycode_kg` | The call tree: a module die containing two classes of two functions each, one copper call edge across | PYTHON CODE AS A GRAPH | `scripts/build_logo.py` |
 | `agent_kg` | The dialogue: user and agent turns on one bus into a memory die, topic, entity and task nodes below | CONVERSATION AS MEMORY | `scripts/build_logo.py` |
+| `imagewright` | The contract: three prompt lines into a die, one gold line out to a framed picture, a lighthouse whose lamp room is the die | PROMPT IN, PICTURE OUT | `scripts/build_logo.py` |
 
 The KGRAG app keeps its owl (`kg_rag/owl.py`) as a live status avatar; the
-owl is the app's voice, not the logo. Other fleet repos have no mark yet; the
-shared Flux-Frontiers fleet icon and per-repo baseline banners are in
-`kgrag_priv/brands/`.
+owl is the app's voice, not the logo. Most other fleet repos now draw their
+own mark the same way; all of them, with the shared Flux-Frontiers fleet icon
+and the baseline banners, are in `kgrag_priv/brands/`.
 
 **Rebuilding.** Each repo's `scripts/build_logo.py` imports the palette,
 drawing helpers and lettering from a clone of `art_techno` beside the repo
