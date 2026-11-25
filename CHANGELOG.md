@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.1] - 2026-11-25
+
 ### Fixed
 
 - **A failed build no longer wipes the index.** `diarykg build` deleted the
@@ -14,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `en_core_web_sm` missing it exited and left no index. It now loads the NLP
   models first, so a missing model stops the build with the old index
   intact.
+
+- **The pdoc and wiki logos are written.** `scripts/build_logo.py` also
+  writes `src/logo.png`, which the pdoc task passes as `--logo`, and
+  `assets/logo-md-256x256.png`, which `scripts/generate_wiki.py` reads. Both
+  had been missing, so neither showed a logo.
+- **README images show on PyPI.** The README's images used repository-relative
+  paths, which PyPI cannot resolve, so its project page showed broken images.
+  They now use absolute `raw.githubusercontent.com` URLs pinned to `main`.
 
 ### Changed
 
@@ -44,16 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`scripts/process_logo.py`**, the raster pipeline for the old brain
   logo. `scripts/build_logo.py` draws the Art Techno logo and writes every
   size, so nothing uses it, and it would overwrite the new files.
-
-### Fixed
-
-- **The pdoc and wiki logos are written.** `scripts/build_logo.py` also
-  writes `src/logo.png`, which the pdoc task passes as `--logo`, and
-  `assets/logo-md-256x256.png`, which `scripts/generate_wiki.py` reads. Both
-  had been missing, so neither showed a logo.
-- **README images show on PyPI.** The README's images used repository-relative
-  paths, which PyPI cannot resolve, so its project page showed broken images.
-  They now use absolute `raw.githubusercontent.com` URLs pinned to `main`.
 
 ## [0.101.0] - 2026-10-25
 
