@@ -1,0 +1,141 @@
+{
+  "key": "0.101.1",
+  "branch": "release/0.101.1",
+  "timestamp": "2026-11-25T15:03:22.385220+00:00",
+  "version": "0.101.1",
+  "subject": "",
+  "tool": "pycode-kg",
+  "tool_version": "0.30.0",
+  "tree_hash": "7175db4bb7336781defa1bfd3f3b47066ceeb493",
+  "metrics": {
+    "db_path": ".pycodekg/graph.sqlite",
+    "total_nodes": 3071,
+    "meaningful_nodes": 200,
+    "total_edges": 2354,
+    "node_counts": {
+      "class": 20,
+      "function": 85,
+      "method": 71,
+      "module": 24,
+      "symbol": 2871
+    },
+    "edge_counts": {
+      "ATTR_ACCESS": 812,
+      "CALLS": 1072,
+      "CONTAINS": 176,
+      "IMPORTS": 227,
+      "INHERITS": 4,
+      "RESOLVES_TO": 63
+    },
+    "module_count": 24,
+    "class_count": 20,
+    "function_count": 85,
+    "method_count": 71,
+    "docstring_coverage": 0.855,
+    "snapshot_count": 2,
+    "module_node_counts": {
+      "src/diary_kg/__init__.py": 3,
+      "src/diary_kg/cli.py": 305,
+      "src/diary_kg/kg.py": 486,
+      "src/diary_kg/layout_temporal.py": 89,
+      "src/diary_kg/layout_tree.py": 97,
+      "src/diary_kg/loader.py": 57,
+      "src/diary_kg/mcp_server.py": 68,
+      "src/diary_kg/module/__init__.py": 2,
+      "src/diary_kg/module/base.py": 61,
+      "src/diary_kg/module/types.py": 11,
+      "src/diary_kg/primitives.py": 10,
+      "src/diary_kg/scene.py": 97,
+      "src/diary_kg/snapshots.py": 32,
+      "src/diary_transformer/__init__.py": 2,
+      "src/diary_transformer/chunker.py": 94,
+      "src/diary_transformer/classifier.py": 87,
+      "src/diary_transformer/cli.py": 178,
+      "src/diary_transformer/diary_embedder.py": 194,
+      "src/diary_transformer/features.py": 133,
+      "src/diary_transformer/models.py": 4,
+      "src/diary_transformer/parser.py": 37,
+      "src/diary_transformer/state.py": 107,
+      "src/diary_transformer/topic_classifier.py": 91,
+      "src/diary_transformer/transformer.py": 293
+    },
+    "coverage_documented": 171,
+    "coverage_total": 200,
+    "critical_issues": 3,
+    "complexity_median": 3
+  },
+  "hotspots": [
+    {
+      "name": "fn:src/diary_kg/cli.py:_kg",
+      "callers": 10,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG._read_config",
+      "callers": 6,
+      "callees": 0,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/module/base.py:DiaryKGAdapter._load",
+      "callers": 5,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG._load_dockg",
+      "callers": 5,
+      "callees": 2,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG._snapshot_mgr",
+      "callers": 4,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG.is_built",
+      "callers": 4,
+      "callees": 0,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG.close",
+      "callers": 3,
+      "callees": 1,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG._dockg_vector_kwargs",
+      "callers": 3,
+      "callees": 0,
+      "risk_level": "low"
+    },
+    {
+      "name": "fn:src/diary_kg/kg.py:_temporal_for",
+      "callers": 3,
+      "callees": 0,
+      "risk_level": "low"
+    },
+    {
+      "name": "m:src/diary_kg/kg.py:DiaryKG.source_file",
+      "callers": 3,
+      "callees": 1,
+      "risk_level": "low"
+    }
+  ],
+  "issues": [
+    "[WARN] 6 dead-code candidates found (`topic_classifier.py:classify_with_confidence`, `types.py:semantic_score_from_distance`, `types.py:normalize_score`, `topic_classifier.py:RuleSet`, `kg.py:_source_from_node`, `kg.py:_timestamp_from_node`) -- no callers in code or tests; verify against downstream consumers, then remove or archive",
+    "[INFO] 16 definitions are unused in production code but exercised by tests -- likely public API for downstream packages; not counted against the quality grade",
+    "[WARN] `kg.py` has 39 functions/methods/classes -- consider splitting into focused submodules"
+  ],
+  "vs_previous": null,
+  "vs_baseline": {
+    "nodes": -5140,
+    "edges": -9222,
+    "coverage_delta": 0.487,
+    "critical_issues_delta": 1
+  }
+}
