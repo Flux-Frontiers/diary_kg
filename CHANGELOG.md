@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The lock now carries doc-kg 0.30.0 and kgmodule-utils 0.32.0.
+
 - **The logo is redrawn in Art Techno.** The brain is replaced by a pen nib
   whose breather hole is a die; it writes a line of dated nodes with a clock
   wave under it. `scripts/build_logo.py` draws the square mark, a 64 px icon
