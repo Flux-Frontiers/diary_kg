@@ -475,3 +475,30 @@ class TestClose:
             kg.rebuild_index()
 
         assert order == ["close", "unlink"]
+
+
+# ---------------------------------------------------------------------------
+# DiaryKG.build() -- a failed model load must not wipe the index
+# ---------------------------------------------------------------------------
+
+
+def test_missing_spacy_model_leaves_the_index_in_place(
+    built_kg_root, sample_diary_txt, monkeypatch
+):
+    """Regression for sweep item 117: the build wiped, then exited on a missing
+    spaCy model, leaving no graph.sqlite. The model is the only thing faked."""
+    import diary_transformer.transformer as transformer
+
+    def _no_model(name):
+        raise OSError(f"[E050] Can't find model '{name}'")
+
+    monkeypatch.setattr(transformer.spacy, "load", _no_model)
+    kg_dir = built_kg_root / ".diarykg"
+    before = sorted(p.name for p in (kg_dir / "corpus").iterdir())
+
+    kg = DiaryKG(built_kg_root, source_file=str(sample_diary_txt))
+    with pytest.raises(SystemExit):
+        kg.build(wipe=True)
+
+    assert (kg_dir / "graph.sqlite").exists()
+    assert sorted(p.name for p in (kg_dir / "corpus").iterdir()) == before
