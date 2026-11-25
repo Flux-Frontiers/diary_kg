@@ -324,6 +324,18 @@ class DiaryKG:
         if not src_path.exists():
             raise FileNotFoundError(f"Source file not found: {sf}")
 
+        # Load the NLP models before wiping: DiaryTransformer exits when the
+        # spaCy model is missing, and a wipe ahead of that leaves no index.
+        from diary_transformer import DiaryTransformer  # pylint: disable=import-outside-toplevel
+
+        dt = DiaryTransformer(
+            max_chunk_length=chunk_size,
+            num_workers=workers,
+            topics_file=topics_file,
+            chunking_strategy=chunking_strategy,
+            sentences_per_chunk=sentences_per_chunk,
+        )
+
         if wipe:
             import shutil  # pylint: disable=import-outside-toplevel
 
@@ -347,15 +359,6 @@ class DiaryKG:
         self._corpus_dir.mkdir(parents=True, exist_ok=True)
 
         # Step 1 — ingest via DiaryTransformer
-        from diary_transformer import DiaryTransformer  # pylint: disable=import-outside-toplevel
-
-        dt = DiaryTransformer(
-            max_chunk_length=chunk_size,
-            num_workers=workers,
-            topics_file=topics_file,
-            chunking_strategy=chunking_strategy,
-            sentences_per_chunk=sentences_per_chunk,
-        )
         n = dt.ingest_to_corpus(
             str(src_path),
             str(self._corpus_dir),

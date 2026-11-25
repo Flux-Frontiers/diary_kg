@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A failed build no longer wipes the index.** `diarykg build` deleted the
+  corpus, `graph.sqlite` and `vectors.sqlite`, then loaded spaCy; with
+  `en_core_web_sm` missing it exited and left no index. It now loads the NLP
+  models first, so a missing model stops the build with the old index
+  intact.
+
 ### Changed
 
 - **The logo is redrawn in Art Techno.** The brain is replaced by a pen nib
